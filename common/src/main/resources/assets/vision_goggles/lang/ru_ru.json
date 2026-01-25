@@ -1,0 +1,23 @@
+{
+  "itemGroup.vision_goggles.vision_tab": "Vision Goggles",
+  "item.vision_goggles.night_vision_goggles": "Очки ночного видения",
+  "item.vision_goggles.thermal_goggles": "Тепловизионные очки",
+  "item.vision_goggles.nvg_battery": "Батарея",
+  "message.vision_goggles.recharged": "§aВизор заряжен (%s%%)!",
+  "message.vision_goggles.equip_warning": "§cНаденьте очки для зарядки",
+  "hud.vision_goggles.mode_thermal": "РЕЖИМ: ТЕПЛОВИЗОР",
+  "hud.vision_goggles.mode_night": "РЕЖИМ: НОЧНОЙ",
+  "hud.vision_goggles.battery": "ЗАРЯД: %s%%",
+  "config.vision_goggles.title": "Настройка Vision Goggles",
+  "config.vision_goggles.general": "Общие настройки",
+  "config.vision_goggles.nvg_duration": "Длительность ПНВ (в тиках)",
+  "config.vision_goggles.nvg_duration.tooltip": "Как долго работает батарея ПНВ.",
+  "config.vision_goggles.thermal_duration": "Длительность тепловизора (в тиках)",
+  "config.vision_goggles.thermal_duration.tooltip": "Как долго работает батарея тепловизора.",
+  "config.vision_goggles.extra_batteries": "Список доп. батарей",
+  "config.vision_goggles.extra_batteries.tooltip": "Формат: 'modid:item|заряд' (0.5 = 50%)",
+  "accessories.slot.eyes": "Глаза",
+  "accessories.slot.face": "Лицо",
+  "curios.identifier.eyes": "Глаза",
+  "curios.identifier.eyewear": "Очки"
+}

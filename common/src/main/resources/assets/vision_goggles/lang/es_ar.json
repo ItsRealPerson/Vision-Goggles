@@ -1,24 +1,23 @@
 {
   "itemGroup.vision_goggles.vision_tab": "Vision Goggles",
-  "item.vision_goggles.night_vision_goggles": "Gafas de Visión Nocturna",
-  "item.vision_goggles.thermal_goggles": "Gafas de Visión Térmica",
+  "item.vision_goggles.night_vision_goggles": "Anteojos de Visión Nocturna",
+  "item.vision_goggles.thermal_goggles": "Anteojos de Visión Térmica",
   "item.vision_goggles.nvg_battery": "Batería",
   "message.vision_goggles.recharged": "§a¡Visor Recargado (%s%%)!",
-  "message.vision_goggles.equip_warning": "§cEquipa un visor para recargar",
+  "message.vision_goggles.equip_warning": "§cEquipá un visor para recargar",
   "hud.vision_goggles.mode_thermal": "MODO: TÉRMICA",
   "hud.vision_goggles.mode_night": "MODO: NOCTURNA",
   "hud.vision_goggles.battery": "BAT: %s%%",
   "config.vision_goggles.title": "Configuración de Vision Goggles",
   "config.vision_goggles.general": "Ajustes Generales",
   "config.vision_goggles.nvg_duration": "Duración Visión Nocturna (Ticks)",
-  "config.vision_goggles.nvg_duration.tooltip": "Cuánto dura la batería de las gafas nocturnas.",
+  "config.vision_goggles.nvg_duration.tooltip": "Cuánto dura la batería de los anteojos nocturnos.",
   "config.vision_goggles.thermal_duration": "Duración Visión Térmica (Ticks)",
-  "config.vision_goggles.thermal_duration.tooltip": "Cuánto dura la batería de las gafas térmicas.",
+  "config.vision_goggles.thermal_duration.tooltip": "Cuánto dura la batería de los anteojos térmicos.",
   "config.vision_goggles.extra_batteries": "Lista de Baterías Extra",
   "config.vision_goggles.extra_batteries.tooltip": "Formato: 'modid:item|carga' (0.5 = 50%)",
   "accessories.slot.eyes": "Ojos",
   "accessories.slot.face": "Cara",
   "curios.identifier.eyes": "Ojos",
-  "curios.identifier.eyewear": "Gafas"
+  "curios.identifier.eyewear": "Anteojos"
 }
-
