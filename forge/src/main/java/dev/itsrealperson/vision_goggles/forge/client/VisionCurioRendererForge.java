@@ -3,7 +3,7 @@ package dev.itsrealperson.vision_goggles.forge.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
-import dev.itsrealperson.vision_goggles.client.ExoHelmetModel;
+import dev.itsrealperson.vision_goggles.client.VisionGoggleModel;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
@@ -19,7 +19,7 @@ import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.client.ICurioRenderer;
 
 public class VisionCurioRendererForge implements ICurioRenderer {
-    private ExoHelmetModel<LivingEntity> model;
+    private VisionGoggleModel<LivingEntity> model;
     
     private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
     private static final ResourceLocation NVG_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_glow.png");
@@ -30,7 +30,7 @@ public class VisionCurioRendererForge implements ICurioRenderer {
     @Override
     public <T extends LivingEntity, M extends EntityModel<T>> void render(ItemStack stack, SlotContext slotContext, PoseStack matrixStack, RenderLayerParent<T, M> renderLayerParent, MultiBufferSource renderTypeBuffer, int light, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
         if (this.model == null) {
-            this.model = new ExoHelmetModel<>(Minecraft.getInstance().getEntityModels().bakeLayer(ExoHelmetModel.LAYER_LOCATION));
+            this.model = new VisionGoggleModel<>(Minecraft.getInstance().getEntityModels().bakeLayer(VisionGoggleModel.LAYER_LOCATION));
         }
 
         matrixStack.pushPose();

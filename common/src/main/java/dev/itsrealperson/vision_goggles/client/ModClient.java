@@ -4,7 +4,7 @@ import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry;
 
 public class ModClient {
     public static void init() {
-        EntityModelLayerRegistry.register(ExoHelmetModel.LAYER_LOCATION, ExoHelmetModel::createBodyLayer);
+        EntityModelLayerRegistry.register(VisionGoggleModel.LAYER_LOCATION, VisionGoggleModel::createBodyLayer);
         ModKeyMappings.init();
         VisionRenderer.init();
     }

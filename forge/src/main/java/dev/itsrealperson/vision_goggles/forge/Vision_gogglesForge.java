@@ -30,7 +30,7 @@ public final class Vision_gogglesForge {
     }
 
     private void onRegisterLayers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterLayerDefinitions event) {
-        event.registerLayerDefinition(dev.itsrealperson.vision_goggles.client.ExoHelmetModel.LAYER_LOCATION, dev.itsrealperson.vision_goggles.client.ExoHelmetModel::createBodyLayer);
+        event.registerLayerDefinition(dev.itsrealperson.vision_goggles.client.VisionGoggleModel.LAYER_LOCATION, dev.itsrealperson.vision_goggles.client.VisionGoggleModel::createBodyLayer);
     }
 
     private void onAddLayers(net.minecraftforge.client.event.EntityRenderersEvent.AddLayers event) {
