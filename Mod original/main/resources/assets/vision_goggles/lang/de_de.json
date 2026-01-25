@@ -1,0 +1,10 @@
+{
+  "item.vision_goggles.night_vision_goggles_helmet": "Nachtsichtgerät",
+  "item.vision_goggles.thermal_goggles_helmet": "Wärmebildbrille",
+  "item.vision_goggles.nvg_battery": "NVG-Batterie",
+  "message.vision_goggles.recharged": "§aVisier aufgeladen (%s%%)!",
+  "message.vision_goggles.equip_warning": "§cRüste die Brille in Curios aus zum Aufladen",
+  "hud.vision_goggles.mode_thermal": "MODUS: WÄRME",
+  "hud.vision_goggles.mode_night": "MODUS: NACHT",
+  "hud.vision_goggles.battery": "BATT: %s%%"
+}

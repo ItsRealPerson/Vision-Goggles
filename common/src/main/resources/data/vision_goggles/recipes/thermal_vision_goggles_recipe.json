@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "GPG",
+    "R R"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "G": { "item": "minecraft:glass_pane" },
+    "P": { "item": "minecraft:phantom_membrane" },
+    "R": { "item": "minecraft:redstone" }
+  },
+  "result": {
+    "item": "vision_goggles:thermal_goggles",
+    "count": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "item.vision_goggles.night_vision_goggles": "Lunettes de Vision Nocturne",
+  "item.vision_goggles.thermal_goggles": "Lunettes Thermiques",
+  "item.vision_goggles.nvg_battery": "Batterie NVG",
+  "message.vision_goggles.recharged": "§aViseur rechargé (%s%%) !",
+  "message.vision_goggles.equip_warning": "§cÉquipez les lunettes dans Curios pour recharger",
+  "hud.vision_goggles.mode_thermal": "MODE : THERMIQUE",
+  "hud.vision_goggles.mode_night": "MODE : NOCTURNE",
+  "hud.vision_goggles.battery": "BATT : %s%%",
+  "accessories.slot.eyes": "Yeux",
+  "curios.identifier.eyes": "Yeux",
+  "curios.identifier.eyewear": "Lunettes"
+}
+
