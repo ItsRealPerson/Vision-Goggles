@@ -8,11 +8,13 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+
 public class PlatformMethodsImpl {
     public static boolean equipInSlot(Player player, ItemStack stack) {
         AtomicBoolean success = new AtomicBoolean(false);
         CuriosApi.getCuriosHelper().getCuriosHandler(player).ifPresent(handler -> {
-            String[] possibleSlots = {"eyes", "eyewear", "head"};
+            String[] possibleSlots = {"eyes", "eyewear"};
             for (String slotId : possibleSlots) {
                 handler.getStacksHandler(slotId).ifPresent(stacksHandler -> {
                     IDynamicStackHandler dynamicHandler = stacksHandler.getStacks();
@@ -33,8 +35,7 @@ public class PlatformMethodsImpl {
 
     public static ItemStack getEquippedHelmet(Player player) {
         return CuriosApi.getCuriosHelper().findFirstCurio(player, stack -> 
-            stack.getItem() == ModItems.NIGHT_VISION_GOGGLES.get() || 
-            stack.getItem() == ModItems.THERMAL_GOGGLES.get()
+            stack.getItem() instanceof VisionGogglesItem
         ).map(slot -> slot.stack()).orElse(ItemStack.EMPTY);
     }
 }

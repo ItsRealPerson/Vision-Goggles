@@ -2,6 +2,9 @@
   "replace": false,
   "values": [
     "vision_goggles:night_vision_goggles",
-    "vision_goggles:thermal_goggles"
+    "vision_goggles:thermal_goggles",
+    "vision_goggles:hydro_goggles",
+    "vision_goggles:biometric_goggles",
+    "vision_goggles:modular_goggles"
   ]
 }

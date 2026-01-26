@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "EEE",
+    "EBE",
+    "EEE"
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "B": { "item": "vision_goggles:nvg_battery" }
+  },
+  "result": { "item": "vision_goggles:battery_expansion_module" }
+}

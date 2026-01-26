@@ -4,7 +4,7 @@
     ],
     "passes": [
         {
-            "name": "vision_goggles:nvg",
+            "name": "vision_goggles:bio",
             "intarget": "minecraft:main",
             "outtarget": "swap"
         },

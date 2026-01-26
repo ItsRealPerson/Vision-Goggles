@@ -59,6 +59,9 @@ public class ModEvents {
                 NetworkManager.INSTANCE.sendToPlayer(serverPlayer, new ConfigSyncPacket(
                         ModConfig.getNvgDuration(),
                         ModConfig.getThermalDuration(),
+                        ModConfig.getHydroDuration(),
+                        ModConfig.getBiometricDuration(),
+                        ModConfig.getModularDuration(),
                         ModConfig.getExtraBatteryItems()
                 ));
             }
@@ -76,17 +79,41 @@ public class ModEvents {
         CompoundTag nbt = helmet.getOrCreateTag();
         
         if (nbt.getBoolean(NBT_ACTIVE)) {
-            boolean isThermal = helmet.getItem() == ModItems.THERMAL_GOGGLES.get();
-            float maxBattery = isThermal ? (float)ModConfig.getThermalDuration() : (float)ModConfig.getNvgDuration();
+            // Determine Mode
+            int modeId = nbt.getInt(NBT_MODE);
+            dev.itsrealperson.vision_goggles.util.VisionMode mode = dev.itsrealperson.vision_goggles.util.VisionMode.byId(modeId);
+
+            float maxBattery = (float)ModConfig.getNvgDuration(); // Default fallback
+            if (helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem gogglesItem) {
+                if (gogglesItem instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modularGoggles) {
+                    maxBattery = (float) modularGoggles.getBatteryCapacity(helmet);
+                } else {
+                    maxBattery = (float) gogglesItem.getBatteryCapacity();
+                }
+            }
+
             if (!nbt.contains(NBT_BATTERY)) nbt.putFloat(NBT_BATTERY, maxBattery);
 
             float currentBattery = nbt.getFloat(NBT_BATTERY);
             if (currentBattery > 0) {
-                float drain = nbt.getInt(NBT_MODE) == 1 ? 2.0f : 1.0f;
+                float drain = (mode == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) ? 2.0f : 1.0f;
                 currentBattery = Math.max(0, currentBattery - drain);
                 nbt.putFloat(NBT_BATTERY, currentBattery);
                 
-                player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 215, 0, false, false, false));
+                // Effect Logic:
+                boolean shouldApplyNV = true;
+                if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
+                    shouldApplyNV = false;
+                } else if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.HYDRO && !player.isUnderWater()) {
+                    shouldApplyNV = false;
+                }
+
+                if (shouldApplyNV) {
+                    player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 215, 0, false, false, false));
+                } else {
+                    cleanUpEffect(player);
+                }
+                
                 if (currentBattery <= 0) nbt.putBoolean(NBT_ACTIVE, false);
             } else {
                 nbt.putBoolean(NBT_ACTIVE, false);

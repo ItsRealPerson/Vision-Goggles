@@ -1,9 +1,15 @@
 {
-    "blend": { "func": "add", "srcrgb": "srcalpha", "dstrgb": "1-srcalpha" },
+    "blend": {
+        "func": "add",
+        "srcrgb": "srcalpha",
+        "dstrgb": "1-srcalpha"
+    },
     "vertex": "blit",
-    "fragment": "vision_goggles:thermal",
+    "fragment": "vision_goggles:bio",
     "attributes": [ "Position" ],
-    "samplers": [ { "name": "DiffuseSampler" } ],
+    "samplers": [
+        { "name": "DiffuseSampler" }
+    ],
     "uniforms": [
         { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
         { "name": "OutSize", "type": "float", "count": 2, "values": [ 1.0, 1.0 ] },

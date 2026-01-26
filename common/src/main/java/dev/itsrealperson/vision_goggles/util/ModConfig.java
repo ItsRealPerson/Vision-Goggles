@@ -24,12 +24,15 @@ import java.util.Map;
 
 public class ModConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static ConfigData data = new ConfigData();
+    public static ConfigData data = new ConfigData();
     private static final Map<ResourceLocation, Float> BATTERY_MAP = new HashMap<>();
 
     public static class ConfigData {
         public int nvgDurationTicks = 6000;
         public int thermalDurationTicks = 9000;
+        public int hydroDurationTicks = 6000;
+        public int biometricDurationTicks = 4500;
+        public int modularDurationTicks = 6000;
         public List<String> extraBatteryItems = new ArrayList<>(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"));
     }
 
@@ -58,14 +61,17 @@ public class ModConfig {
         }
     }
 
-    public static void updateFromSync(int nvg, int thermal, List<String> extra) {
+    public static void updateFromSync(int nvg, int thermal, int hydro, int bio, int modular, List<String> extra) {
         data.nvgDurationTicks = nvg;
         data.thermalDurationTicks = thermal;
+        data.hydroDurationTicks = hydro;
+        data.biometricDurationTicks = bio;
+        data.modularDurationTicks = modular;
         data.extraBatteryItems = extra;
         updateBatteryMap();
     }
 
-    private static void updateBatteryMap() {
+    public static void updateBatteryMap() {
         BATTERY_MAP.clear();
         for (String entry : data.extraBatteryItems) {
             try {
@@ -88,6 +94,9 @@ public class ModConfig {
 
     public static int getNvgDuration() { return data.nvgDurationTicks; }
     public static int getThermalDuration() { return data.thermalDurationTicks; }
+    public static int getHydroDuration() { return data.hydroDurationTicks; }
+    public static int getBiometricDuration() { return data.biometricDurationTicks; }
+    public static int getModularDuration() { return data.modularDurationTicks; }
     public static List<String> getExtraBatteryItems() { return data.extraBatteryItems; }
 
     public static float getBatteryCharge(ItemStack stack) {
@@ -98,47 +107,5 @@ public class ModConfig {
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (BATTERY_MAP.containsKey(id)) return BATTERY_MAP.get(id);
         return 0.0f;
-    }
-
-    public static Screen createConfigScreen(Screen parent) {
-        // En un servidor, solo permitiríamos editar esto si somos OP o estamos en Singleplayer
-        ConfigBuilder builder = ConfigBuilder.create()
-                .setParentScreen(parent)
-                .setTitle(Component.translatable("config.vision_goggles.title"));
-
-        ConfigEntryBuilder entryBuilder = builder.entryBuilder();
-        ConfigCategory general = builder.getOrCreateCategory(Component.translatable("config.vision_goggles.general"));
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.nvg_duration"), data.nvgDurationTicks)
-                .setDefaultValue(6000)
-                .setTooltip(Component.translatable("config.vision_goggles.nvg_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.nvgDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.thermal_duration"), data.thermalDurationTicks)
-                .setDefaultValue(9000)
-                .setTooltip(Component.translatable("config.vision_goggles.thermal_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.thermalDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), data.extraBatteryItems)
-                .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
-                .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
-                .setSaveConsumer(newValue -> data.extraBatteryItems = newValue)
-                .build());
-
-        builder.setSavingRunnable(() -> {
-            save();
-            updateBatteryMap();
-            
-            // If on a client connected to a server, send changes to server
-            if (Platform.getEnv().name().equals("CLIENT")) {
-                dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToServer(
-                    new dev.itsrealperson.vision_goggles.network.ConfigSavePacket(data.nvgDurationTicks, data.thermalDurationTicks, data.extraBatteryItems)
-                );
-            }
-        });
-
-        return builder.build();
     }
 }
