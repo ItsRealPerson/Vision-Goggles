@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "N N",
+    "AMA",
+    "EBE"
+  ],
+  "key": {
+    "N": { "item": "minecraft:netherite_ingot" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "M": { "item": "vision_goggles:modular_goggles" },
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "B": { "item": "vision_goggles:nvg_battery" }
+  },
+  "result": { "item": "vision_goggles:pro_modular_goggles" }
+}

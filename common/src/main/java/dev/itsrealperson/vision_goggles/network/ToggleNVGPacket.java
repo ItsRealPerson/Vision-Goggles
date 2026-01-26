@@ -43,8 +43,10 @@ public class ToggleNVGPacket {
 
             CompoundTag nbt = helmet.getOrCreateTag();
             List<VisionMode> modes;
+            List<String> utils = new java.util.ArrayList<>();
             if (goggles instanceof ModularGogglesItem modular) {
                 modes = modular.getModes(helmet);
+                utils = modular.getUtilityModules(helmet);
             } else {
                 modes = goggles.getSupportedModes();
             }
@@ -53,8 +55,6 @@ public class ToggleNVGPacket {
                 if (nbt.getBoolean(ModEvents.NBT_ACTIVE)) {
                     if (modes.size() > 1) {
                         int currentModeId = nbt.getInt(ModEvents.NBT_MODE);
-                        
-                        // Find current index
                         int index = -1;
                         for (int i = 0; i < modes.size(); i++) {
                             if (modes.get(i).getId() == currentModeId) {
@@ -62,8 +62,6 @@ public class ToggleNVGPacket {
                                 break;
                             }
                         }
-                        
-                        // Next index
                         int nextIndex = (index + 1) % modes.size();
                         nbt.putInt(ModEvents.NBT_MODE, modes.get(nextIndex).getId());
                     }
@@ -71,23 +69,28 @@ public class ToggleNVGPacket {
             } else {
                 boolean newState = !nbt.getBoolean(ModEvents.NBT_ACTIVE);
                 if (newState) {
-                    // Ensure mode is valid on startup
-                    if (modes.isEmpty()) {
-                        newState = false; // Cannot activate if no modules
+                    // Can activate if has vision modes OR utility modules
+                    if (modes.isEmpty() && utils.isEmpty()) {
+                        newState = false; 
                     } else {
-                        if (!nbt.contains(ModEvents.NBT_MODE)) {
-                             nbt.putInt(ModEvents.NBT_MODE, modes.get(0).getId());
-                        } else {
-                            // Validate current mode still exists
-                            int currentModeId = nbt.getInt(ModEvents.NBT_MODE);
-                            boolean exists = false;
-                            for (VisionMode m : modes) {
-                                if (m.getId() == currentModeId) {
-                                    exists = true;
-                                    break;
+                        // If has modes, ensure one is selected
+                        if (!modes.isEmpty()) {
+                            if (!nbt.contains(ModEvents.NBT_MODE)) {
+                                 nbt.putInt(ModEvents.NBT_MODE, modes.get(0).getId());
+                            } else {
+                                int currentModeId = nbt.getInt(ModEvents.NBT_MODE);
+                                boolean exists = false;
+                                for (VisionMode m : modes) {
+                                    if (m.getId() == currentModeId) {
+                                        exists = true;
+                                        break;
+                                    }
                                 }
+                                if (!exists) nbt.putInt(ModEvents.NBT_MODE, modes.get(0).getId());
                             }
-                            if (!exists) nbt.putInt(ModEvents.NBT_MODE, modes.get(0).getId());
+                        } else {
+                            // If no vision modes, set mode to -1 (None)
+                            nbt.putInt(ModEvents.NBT_MODE, -1);
                         }
 
                         float max;

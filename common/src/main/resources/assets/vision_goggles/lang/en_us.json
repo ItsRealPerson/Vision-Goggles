@@ -12,8 +12,13 @@
   "item.vision_goggles.nvg_battery": "Battery",
   "item.vision_goggles.battery_expansion_module": "Battery Expansion Module",
   "item.vision_goggles.modular_goggles": "Modular Goggles",
+  "item.vision_goggles.pro_modular_goggles": "Pro Modular Goggles",
+  "item.vision_goggles.zoom_module": "Zoom Module",
+  "item.vision_goggles.solar_module": "Solar Recharge Module",
+  "item.vision_goggles.sonar_module": "Sonar Pulse Module",
   "block.vision_goggles.modification_station": "Modification Station",
   "tooltip.vision_goggles.battery_info": "Energy: %s / %s",
+  "tooltip.vision_goggles.pro_version": "PRO SERIES",
   "tooltip.vision_goggles.installed_modules": "Installed Modules:",
   "tooltip.vision_goggles.no_modules": "No modules installed",
   "message.vision_goggles.recharged": "§aVisor Recharged (%s%%)!",
@@ -22,6 +27,7 @@
   "hud.vision_goggles.mode_night": "MODE: NIGHT",
   "hud.vision_goggles.mode_hydro": "MODE: HYDRO",
   "hud.vision_goggles.mode_bio": "MODE: BIO-SCAN",
+  "hud.vision_goggles.mode_normal": "MODE: NORMAL",
   "hud.vision_goggles.battery": "BATT: %s%%",
   "config.vision_goggles.title": "Vision Goggles Configuration",
   "config.vision_goggles.general": "General Settings",
@@ -43,5 +49,6 @@
   "curios.identifier.eyewear": "Eyewear",
   "key.vision_goggles.toggle": "Toggle Goggles",
   "key.vision_goggles.switch": "Switch Vision Mode",
+  "key.vision_goggles.zoom": "Goggles Zoom",
   "key.categories.vision_goggles": "Vision Goggles"
 }

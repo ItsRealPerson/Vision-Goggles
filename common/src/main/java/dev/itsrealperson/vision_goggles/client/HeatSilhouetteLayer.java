@@ -33,29 +33,42 @@ public class HeatSilhouetteLayer<T extends LivingEntity, M extends EntityModel<T
         if (helmet.isEmpty()) return;
 
         CompoundTag nbt = helmet.getTag();
-        if (nbt == null || !nbt.getBoolean(ModEvents.NBT_ACTIVE) || nbt.getInt(ModEvents.NBT_MODE) != 1) return;
+        if (nbt == null || !nbt.getBoolean(ModEvents.NBT_ACTIVE)) return;
 
-        // Don't render undead (no heat)
-        if (entity.getMobType() == MobType.UNDEAD) return;
+        int mode = nbt.getInt(ModEvents.NBT_MODE);
+        // Only render player if in third person
+        boolean isSelf = (entity == mc.player);
+        if (isSelf && mc.options.getCameraType().isFirstPerson()) return;
+
+        boolean isThermal = (mode == 1 && entity.getMobType() != MobType.UNDEAD);
+        boolean isSonar = VisionRenderer.isSonarActive() && (isSelf || mc.player.distanceToSqr(entity) < 625);
+
+        if (!isThermal && !isSonar) return;
 
         poseStack.pushPose();
 
-        // Increased scale to cover armor and outer skin layers (prevents z-fighting/gaps)
-        float scale = 1.10f;
-        // Center the scaled model vertically, but shifted slightly upwards as requested
-        float verticalOffset = (entity.getBbHeight() * (scale - 1.0f)) / 4.0f;
-        poseStack.translate(0.0f, -verticalOffset, 0.0f);
+        // 1. Scale and Position Adjustments
+        float scale = 1.03f;
+        // Shift up 0.01 to cover the back better and avoid floor clipping
+        poseStack.translate(0, 0.01, 0);
         poseStack.scale(scale, scale, scale);
 
         M model = this.getParentModel();
-
         model.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.eyes(BLANK));
-
-        // Render as Cyan (Green + Blue) to distinguish from sand/warm blocks (Red bias)
-        model.renderToBuffer(poseStack, vertexConsumer, 15728880, OverlayTexture.NO_OVERLAY, 0.0F, 1.0F, 1.0F, 1.0F);
+        // 2. Render logic
+        if (isThermal) {
+            // Cyan for Thermal (Normal depth)
+            VertexConsumer thermalConsumer = bufferSource.getBuffer(RenderType.eyes(BLANK));
+            model.renderToBuffer(poseStack, thermalConsumer, 15728880, OverlayTexture.NO_OVERLAY, 0.0F, 1.0F, 1.0F, 1.0F);
+        }
+        
+        if (isSonar) {
+            // Blue for Sonar (Now respects blocks like a normal render)
+            VertexConsumer sonarConsumer = bufferSource.getBuffer(RenderType.eyes(BLANK));
+            model.renderToBuffer(poseStack, sonarConsumer, 15728880, OverlayTexture.NO_OVERLAY, 0.0F, 0.5F, 1.0F, 1.0F);
+        }
 
         poseStack.popPose();
     }

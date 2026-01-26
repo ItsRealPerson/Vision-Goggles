@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ICI",
+    "ERE",
+    "ICI"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "R": { "item": "minecraft:redstone_block" }
+  },
+  "result": { "item": "vision_goggles:modification_station" }
+}

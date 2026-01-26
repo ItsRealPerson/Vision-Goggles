@@ -47,6 +47,19 @@ public class ModItems {
     public static final RegistrySupplier<Item> MODULAR_GOGGLES = ITEMS.register("modular_goggles",
             () -> new dev.itsrealperson.vision_goggles.item.ModularGogglesItem());
 
+    public static final RegistrySupplier<Item> PRO_MODULAR_GOGGLES = ITEMS.register("pro_modular_goggles",
+            () -> new dev.itsrealperson.vision_goggles.item.ProModularGogglesItem());
+
+    // Utility Modules
+    public static final RegistrySupplier<Item> ZOOM_MODULE = ITEMS.register("zoom_module",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+    
+    public static final RegistrySupplier<Item> SOLAR_MODULE = ITEMS.register("solar_module",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+    
+    public static final RegistrySupplier<Item> SONAR_MODULE = ITEMS.register("sonar_module",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+
     public static final RegistrySupplier<Item> MODIFICATION_STATION = ITEMS.register("modification_station",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.MODIFICATION_STATION.get(), new Item.Properties()));
 

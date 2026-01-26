@@ -56,7 +56,7 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
         // Optimization: Only process if output is empty and we have inputs
         if (outputStack.isEmpty()) {
-            if (gogglesStack.getItem() == ModItems.MODULAR_GOGGLES.get() && !moduleStack.isEmpty()) {
+            if (gogglesStack.getItem() instanceof ModularGogglesItem && !moduleStack.isEmpty()) {
                 CompoundTag nbt = gogglesStack.getOrCreateTag();
                 ListTag modules = nbt.getList("Modules", Tag.TAG_STRING);
 
@@ -68,25 +68,36 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                 } else if (moduleStack.getItem() == ModItems.BATTERY_EXPANSION_MODULE.get()) {
                     newModuleId = "BATTERY_EXPANSION";
                     isBatteryExpansion = true;
+                } else if (moduleStack.getItem() == ModItems.ZOOM_MODULE.get()) {
+                    newModuleId = "ZOOM";
+                } else if (moduleStack.getItem() == ModItems.SOLAR_MODULE.get()) {
+                    newModuleId = "SOLAR";
+                } else if (moduleStack.getItem() == ModItems.SONAR_MODULE.get()) {
+                    newModuleId = "SONAR";
                 }
 
                 if (newModuleId != null) {
                     boolean alreadyInstalled = false;
                     int visionModuleCount = 0;
+                    int utilityModuleCount = 0;
                     boolean hasBatteryExpansion = false;
 
                     for (int i = 0; i < modules.size(); i++) {
                         String mod = modules.getString(i);
                         if (mod.equals(newModuleId)) alreadyInstalled = true;
                         if (mod.equals("BATTERY_EXPANSION")) hasBatteryExpansion = true;
+                        else if (mod.equals("ZOOM") || mod.equals("SOLAR") || mod.equals("SONAR")) utilityModuleCount++;
                         else visionModuleCount++; 
                     }
 
                     boolean canInstall = !alreadyInstalled;
+                    int maxTotal = ((ModularGogglesItem)gogglesStack.getItem()).getMaxModules();
+
                     if (isBatteryExpansion) {
                         if (hasBatteryExpansion) canInstall = false; 
                     } else {
-                        if (visionModuleCount >= 2) canInstall = false;
+                        // Total count of functional modules (Vision + Utility)
+                        if ((visionModuleCount + utilityModuleCount) >= maxTotal) canInstall = false;
                     }
 
                     if (canInstall) {

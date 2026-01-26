@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    " S ",
+    " E "
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "S": { "item": "minecraft:spyglass" }
+  },
+  "result": { "item": "vision_goggles:zoom_module" }
+}

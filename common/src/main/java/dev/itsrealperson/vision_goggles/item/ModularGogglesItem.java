@@ -75,6 +75,10 @@ public class ModularGogglesItem extends VisionGogglesItem {
         return base;
     }
 
+    public int getMaxModules() {
+        return 2; // Default for standard modular goggles
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
         // Battery Info
@@ -90,10 +94,15 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 .withStyle(ChatFormatting.GOLD));
 
         List<VisionMode> modes = getModes(stack);
-        if (!modes.isEmpty()) {
+        List<String> utils = getUtilityModules(stack);
+
+        if (!modes.isEmpty() || !utils.isEmpty()) {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.installed_modules").withStyle(ChatFormatting.GRAY));
             for (VisionMode mode : modes) {
                 tooltipComponents.add(Component.literal("- ").append(mode.getDisplayName()).withStyle(ChatFormatting.AQUA));
+            }
+            for (String util : utils) {
+                tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + util.toLowerCase() + "_module")).withStyle(ChatFormatting.YELLOW));
             }
         } else {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.no_modules").withStyle(ChatFormatting.RED));
@@ -102,5 +111,20 @@ public class ModularGogglesItem extends VisionGogglesItem {
         if (hasBatteryExpansion(stack)) {
             tooltipComponents.add(Component.translatable("item.vision_goggles.battery_expansion_module").withStyle(ChatFormatting.GREEN));
         }
+    }
+
+    public List<String> getUtilityModules(ItemStack stack) {
+        List<String> utils = new ArrayList<>();
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains("Modules")) {
+            ListTag modules = tag.getList("Modules", Tag.TAG_STRING);
+            for (int i = 0; i < modules.size(); i++) {
+                String mod = modules.getString(i);
+                if (mod.equals("ZOOM") || mod.equals("SOLAR") || mod.equals("SONAR")) {
+                    utils.add(mod);
+                }
+            }
+        }
+        return utils;
     }
 }

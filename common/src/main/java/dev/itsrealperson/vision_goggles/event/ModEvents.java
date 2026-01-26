@@ -62,6 +62,7 @@ public class ModEvents {
                         ModConfig.getHydroDuration(),
                         ModConfig.getBiometricDuration(),
                         ModConfig.getModularDuration(),
+                        ModConfig.getNvgColorTheme(),
                         ModConfig.getExtraBatteryItems()
                 ));
             }
@@ -77,24 +78,32 @@ public class ModEvents {
         }
 
         CompoundTag nbt = helmet.getOrCreateTag();
-        
-        if (nbt.getBoolean(NBT_ACTIVE)) {
-            // Determine Mode
-            int modeId = nbt.getInt(NBT_MODE);
-            dev.itsrealperson.vision_goggles.util.VisionMode mode = dev.itsrealperson.vision_goggles.util.VisionMode.byId(modeId);
+        float maxBattery = (float)ModConfig.getNvgDuration();
+        boolean hasSolar = false;
+        int modeId = nbt.getInt(NBT_MODE);
+        dev.itsrealperson.vision_goggles.util.VisionMode mode = dev.itsrealperson.vision_goggles.util.VisionMode.byId(modeId);
 
-            float maxBattery = (float)ModConfig.getNvgDuration(); // Default fallback
-            if (helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem gogglesItem) {
-                if (gogglesItem instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modularGoggles) {
-                    maxBattery = (float) modularGoggles.getBatteryCapacity(helmet);
-                } else {
-                    maxBattery = (float) gogglesItem.getBatteryCapacity();
-                }
+        if (helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem gogglesItem) {
+            if (gogglesItem instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modularGoggles) {
+                maxBattery = (float) modularGoggles.getBatteryCapacity(helmet);
+                hasSolar = modularGoggles.getUtilityModules(helmet).contains("SOLAR");
+            } else {
+                maxBattery = (float) gogglesItem.getBatteryCapacity();
             }
+        }
 
-            if (!nbt.contains(NBT_BATTERY)) nbt.putFloat(NBT_BATTERY, maxBattery);
+        if (!nbt.contains(NBT_BATTERY)) nbt.putFloat(NBT_BATTERY, maxBattery);
+        float currentBattery = nbt.getFloat(NBT_BATTERY);
 
-            float currentBattery = nbt.getFloat(NBT_BATTERY);
+        // SOLAR RECHARGE: Works even when goggles are OFF
+        if (hasSolar && player.level().isDay() && player.level().canSeeSky(player.blockPosition().above())) {
+            if (player.level().getMaxLocalRawBrightness(player.blockPosition().above()) > 10) {
+                currentBattery = Math.min(maxBattery, currentBattery + 1.5f);
+                nbt.putFloat(NBT_BATTERY, currentBattery);
+            }
+        }
+
+        if (nbt.getBoolean(NBT_ACTIVE)) {
             if (currentBattery > 0) {
                 float drain = (mode == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) ? 2.0f : 1.0f;
                 currentBattery = Math.max(0, currentBattery - drain);
@@ -102,7 +111,8 @@ public class ModEvents {
                 
                 // Effect Logic:
                 boolean shouldApplyNV = true;
-                if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
+                // DO NOT apply Night Vision in Biometric, Normal Mode (-1), or Hydro (if dry)
+                if (modeId == -1 || mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
                     shouldApplyNV = false;
                 } else if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.HYDRO && !player.isUnderWater()) {
                     shouldApplyNV = false;

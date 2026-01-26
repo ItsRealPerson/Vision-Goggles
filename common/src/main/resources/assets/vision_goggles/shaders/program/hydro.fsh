@@ -4,6 +4,7 @@ uniform sampler2D DiffuseSampler;
 varying vec2 texCoord;
 uniform float time;
 uniform float battery;
+uniform float focus;
 
 void main() {
     vec2 uv = texCoord;
@@ -24,19 +25,25 @@ void main() {
     vec3 hydroColor = vec3(lum * 0.1, lum * 0.8, lum * 1.0);
     
     // Boost brightness slightly
-    hydroColor *= 1.2;
+    hydroColor *= (1.2 + focus * 0.3);
 
     // Battery failure effect (flicker and darken)
     float globalAlpha = 1.0;
     if (battery < 0.15) {
-         hydroColor *= (battery / 0.15); // Dimming
-         if (battery < 0.05) {
-            if (fract(time * 20.0) < 0.5) globalAlpha = 0.5; // Flicker
-         }
+        float wear = (0.15 - battery) / 0.15;
+        hydroColor *= (battery / 0.15); // Dimming
+        
+        // IMPROVED CHAOTIC FLICKER AT < 6%
+        if (battery < 0.06) {
+            float death = (0.06 - battery) / 0.06;
+            float pulse = sin(time * (20.0 + death * 40.0));
+            if (pulse > (1.2 - death)) globalAlpha = 0.0;
+            if (fract(time * 100.0) < (death * 0.2)) globalAlpha = 0.0;
+        }
     }
 
-    // Heavy vignette for diving mask feel
-    float vignette = smoothstep(0.6, 0.3, dist);
+    // Heavy vignette for diving mask feel, tightens with focus
+    float vignette = smoothstep(0.6 - focus * 0.2, 0.3 - focus * 0.1, dist);
     hydroColor *= vignette;
 
     gl_FragColor = vec4(hydroColor * globalAlpha, 1.0);

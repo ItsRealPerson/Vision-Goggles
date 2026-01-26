@@ -19,8 +19,16 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
+    public static final KeyMapping zoomKey = new KeyMapping(
+            "key.vision_goggles.zoom",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_V,
+            "key.categories.vision_goggles"
+    );
+
     public static void init() {
         KeyMappingRegistry.register(toggleGrayscaleKey);
         KeyMappingRegistry.register(switchModeKey);
+        KeyMappingRegistry.register(zoomKey);
     }
 }

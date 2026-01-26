@@ -31,8 +31,12 @@ public class ModTabs {
             () -> new ItemStack(ModItems.HYDRO_MODULE.get()),
             () -> new ItemStack(ModItems.BIO_MODULE.get()),
             () -> new ItemStack(ModItems.ELECTRICAL_PARTS.get()),
+            () -> new ItemStack(ModItems.ZOOM_MODULE.get()),
+            () -> new ItemStack(ModItems.SOLAR_MODULE.get()),
+            () -> new ItemStack(ModItems.SONAR_MODULE.get()),
             () -> new ItemStack(ModItems.BATTERY_EXPANSION_MODULE.get()),
             () -> new ItemStack(ModItems.MODULAR_GOGGLES.get()),
+            () -> new ItemStack(ModItems.PRO_MODULAR_GOGGLES.get()),
             () -> new ItemStack(ModItems.MODIFICATION_STATION.get()),
             () -> new ItemStack(ModItems.NVG_BATTERY.get())
         );

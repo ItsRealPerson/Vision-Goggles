@@ -5,6 +5,7 @@
     "vision_goggles:thermal_goggles",
     "vision_goggles:hydro_goggles",
     "vision_goggles:biometric_goggles",
-    "vision_goggles:modular_goggles"
+    "vision_goggles:modular_goggles",
+    "vision_goggles:pro_modular_goggles"
   ]
 }

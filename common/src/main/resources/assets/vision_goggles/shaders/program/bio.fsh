@@ -4,9 +4,16 @@ uniform sampler2D DiffuseSampler;
 varying vec2 texCoord;
 uniform float time;
 uniform float battery;
+uniform float focus;
 
 void main() {
     vec2 uv = texCoord;
+    
+    // Zoom effect: Tighten the view slightly
+    if (focus > 0.0) {
+        vec2 center = vec2(0.5, 0.5);
+        uv = mix(uv, center + (uv - center) * 0.95, focus);
+    }
 
     // Digital Scanline (moving down)
     float scanline = sin(uv.y * 800.0 - time * 10.0) * 0.05;
@@ -23,9 +30,8 @@ void main() {
     // High Contrast Look
     float gray = dot(baseColor.rgb, vec3(0.299, 0.587, 0.114));
     
-    // Edge detectionish effect (simplified high pass)
-    // Actually let's just do a high-tech amber look
-    vec3 techColor = vec3(gray * 1.5, gray * 0.9, gray * 0.2); // Amber/Gold
+    // High-tech amber look
+    vec3 techColor = vec3(gray * 1.5, gray * 0.9, gray * 0.2); 
     
     // Add grid overlay
     float grid = 0.0;
@@ -35,11 +41,22 @@ void main() {
 
     vec3 finalColor = techColor + scanline + scanBar + grid;
 
-    // Battery logic
+    // Vignette that tightens with focus
+    vec2 distVec = uv - vec2(0.5, 0.5);
+    float dist = length(distVec);
+    float vignette = 1.0 - smoothstep(0.4 - focus * 0.1, 0.8 - focus * 0.2, dist);
+    finalColor *= vignette;
+
+    // Battery failure effect
     float globalAlpha = 1.0;
-    if (battery < 0.1) {
-        finalColor *= 0.5; // Dim
-        if (fract(time * 5.0) < 0.2) globalAlpha = 0.8; // Glitch
+    if (battery < 0.15) {
+        // ... (rest of the code)
+        if (battery < 0.06) {
+            float death = (0.06 - battery) / 0.06;
+            float pulse = sin(time * (20.0 + death * 40.0));
+            if (pulse > (1.2 - death)) globalAlpha = 0.0;
+            if (fract(time * 100.0) < (death * 0.2)) globalAlpha = 0.0;
+        }
     }
 
     gl_FragColor = vec4(finalColor * globalAlpha, 1.0);

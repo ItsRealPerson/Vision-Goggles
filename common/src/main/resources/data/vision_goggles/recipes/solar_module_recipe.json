@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    " D ",
+    " E "
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "D": { "item": "minecraft:daylight_detector" }
+  },
+  "result": { "item": "vision_goggles:solar_module" }
+}

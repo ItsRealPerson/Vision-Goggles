@@ -49,6 +49,17 @@ public class ModConfigGui {
                 .setSaveConsumer(newValue -> ModConfig.data.modularDurationTicks = newValue)
                 .build());
 
+        general.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.nvg_color_theme"), ModConfig.getNvgColorTheme(), 0, 2)
+                .setDefaultValue(0)
+                .setTooltip(Component.translatable("config.vision_goggles.nvg_color_theme.tooltip"))
+                .setSaveConsumer(newValue -> ModConfig.data.nvgColorTheme = newValue)
+                .setTextGetter(value -> {
+                    if (value == 0) return Component.literal("Green (Classic)");
+                    if (value == 1) return Component.literal("White Phosphor");
+                    return Component.literal("Digital Cyan");
+                })
+                .build());
+
         general.addEntry(entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), ModConfig.getExtraBatteryItems())
                 .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
                 .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
@@ -57,9 +68,6 @@ public class ModConfigGui {
 
         builder.setSavingRunnable(() -> {
             ModConfig.save();
-            // We need to trigger the internal map update
-            // Since data is package-private or we need a way to call updateBatteryMap
-            // I'll make it public in ModConfig
             ModConfig.updateBatteryMap();
             
             if (Platform.getEnv().name().equals("CLIENT")) {
@@ -70,6 +78,7 @@ public class ModConfigGui {
                         ModConfig.getHydroDuration(),
                         ModConfig.getBiometricDuration(),
                         ModConfig.getModularDuration(),
+                        ModConfig.getNvgColorTheme(),
                         ModConfig.getExtraBatteryItems()
                     )
                 );
