@@ -5,7 +5,7 @@
         "dstrgb": "1-srcalpha"
     },
     "vertex": "blit",
-    "fragment": "vision_goggles:nvg",
+    "fragment": "vision_goggles:hydro_dry",
     "attributes": [ "Position" ],
     "samplers": [
         { "name": "DiffuseSampler" }

@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "vision_goggles:block/modification_station" }
+  }
+}

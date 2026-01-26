@@ -54,6 +54,9 @@ public final class Vision_gogglesForge {
         event.enqueueWork(() -> {
             top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.NIGHT_VISION_GOGGLES.get(), dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge::new);
             top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.THERMAL_GOGGLES.get(), dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge::new);
+            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.HYDRO_GOGGLES.get(), dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge::new);
+            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.BIOMETRIC_GOGGLES.get(), dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge::new);
+            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.MODULAR_GOGGLES.get(), dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge::new);
         });
     }
 }

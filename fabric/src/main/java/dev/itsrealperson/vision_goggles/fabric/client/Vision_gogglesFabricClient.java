@@ -15,6 +15,9 @@ public final class Vision_gogglesFabricClient implements ClientModInitializer {
         
         AccessoriesRendererRegistry.registerRenderer(ModItems.NIGHT_VISION_GOGGLES.get(), VisionAccessoryRendererFabric::new);
         AccessoriesRendererRegistry.registerRenderer(ModItems.THERMAL_GOGGLES.get(), VisionAccessoryRendererFabric::new);
+        AccessoriesRendererRegistry.registerRenderer(ModItems.HYDRO_GOGGLES.get(), VisionAccessoryRendererFabric::new);
+        AccessoriesRendererRegistry.registerRenderer(ModItems.BIOMETRIC_GOGGLES.get(), VisionAccessoryRendererFabric::new);
+        AccessoriesRendererRegistry.registerRenderer(ModItems.MODULAR_GOGGLES.get(), VisionAccessoryRendererFabric::new);
     }
 }
 

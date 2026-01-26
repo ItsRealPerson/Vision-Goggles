@@ -99,6 +99,22 @@ public class VisionGoggleModel<T extends LivingEntity> extends HumanoidModel<T> 
         this.head_bone.copyFrom(this.head);
         this.head.visible = false;
         this.hat.visible = false;
+
+        // Flip-Up Logic
+        ModelPart visor = this.head_bone.getChild("visor");
+        visor.xRot = 0.0F; // Reset rotation
+
+        if (entity instanceof net.minecraft.world.entity.player.Player player) {
+            net.minecraft.world.item.ItemStack helmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(player);
+            if (!helmet.isEmpty() && helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
+                boolean isActive = helmet.getOrCreateTag().getBoolean(dev.itsrealperson.vision_goggles.event.ModEvents.NBT_ACTIVE);
+                
+                if (!isActive) {
+                    // Flip UP (approx -90 degrees)
+                    visor.xRot = -1.57F; 
+                }
+            }
+        }
     }
 
     @Override

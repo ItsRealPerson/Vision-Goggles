@@ -30,6 +30,9 @@ public class ModConfig {
     public static class ConfigData {
         public int nvgDurationTicks = 6000;
         public int thermalDurationTicks = 9000;
+        public int hydroDurationTicks = 6000;
+        public int biometricDurationTicks = 4500;
+        public int modularDurationTicks = 6000;
         public List<String> extraBatteryItems = new ArrayList<>(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"));
     }
 
@@ -58,9 +61,12 @@ public class ModConfig {
         }
     }
 
-    public static void updateFromSync(int nvg, int thermal, List<String> extra) {
+    public static void updateFromSync(int nvg, int thermal, int hydro, int bio, int modular, List<String> extra) {
         data.nvgDurationTicks = nvg;
         data.thermalDurationTicks = thermal;
+        data.hydroDurationTicks = hydro;
+        data.biometricDurationTicks = bio;
+        data.modularDurationTicks = modular;
         data.extraBatteryItems = extra;
         updateBatteryMap();
     }
@@ -88,6 +94,9 @@ public class ModConfig {
 
     public static int getNvgDuration() { return data.nvgDurationTicks; }
     public static int getThermalDuration() { return data.thermalDurationTicks; }
+    public static int getHydroDuration() { return data.hydroDurationTicks; }
+    public static int getBiometricDuration() { return data.biometricDurationTicks; }
+    public static int getModularDuration() { return data.modularDurationTicks; }
     public static List<String> getExtraBatteryItems() { return data.extraBatteryItems; }
 
     public static float getBatteryCharge(ItemStack stack) {
@@ -101,7 +110,6 @@ public class ModConfig {
     }
 
     public static Screen createConfigScreen(Screen parent) {
-        // En un servidor, solo permitiríamos editar esto si somos OP o estamos en Singleplayer
         ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
                 .setTitle(Component.translatable("config.vision_goggles.title"));
@@ -121,6 +129,24 @@ public class ModConfig {
                 .setSaveConsumer(newValue -> data.thermalDurationTicks = newValue)
                 .build());
 
+        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.hydro_duration"), data.hydroDurationTicks)
+                .setDefaultValue(6000)
+                .setTooltip(Component.translatable("config.vision_goggles.hydro_duration.tooltip"))
+                .setSaveConsumer(newValue -> data.hydroDurationTicks = newValue)
+                .build());
+
+        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.bio_duration"), data.biometricDurationTicks)
+                .setDefaultValue(4500)
+                .setTooltip(Component.translatable("config.vision_goggles.bio_duration.tooltip"))
+                .setSaveConsumer(newValue -> data.biometricDurationTicks = newValue)
+                .build());
+
+        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.modular_duration"), data.modularDurationTicks)
+                .setDefaultValue(6000)
+                .setTooltip(Component.translatable("config.vision_goggles.modular_duration.tooltip"))
+                .setSaveConsumer(newValue -> data.modularDurationTicks = newValue)
+                .build());
+
         general.addEntry(entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), data.extraBatteryItems)
                 .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
                 .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
@@ -131,10 +157,16 @@ public class ModConfig {
             save();
             updateBatteryMap();
             
-            // If on a client connected to a server, send changes to server
             if (Platform.getEnv().name().equals("CLIENT")) {
                 dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToServer(
-                    new dev.itsrealperson.vision_goggles.network.ConfigSavePacket(data.nvgDurationTicks, data.thermalDurationTicks, data.extraBatteryItems)
+                    new dev.itsrealperson.vision_goggles.network.ConfigSavePacket(
+                        data.nvgDurationTicks, 
+                        data.thermalDurationTicks, 
+                        data.hydroDurationTicks,
+                        data.biometricDurationTicks,
+                        data.modularDurationTicks,
+                        data.extraBatteryItems
+                    )
                 );
             }
         });

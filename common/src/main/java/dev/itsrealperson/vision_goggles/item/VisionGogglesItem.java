@@ -9,9 +9,33 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
+import java.util.Arrays;
+import java.util.List;
+import dev.itsrealperson.vision_goggles.util.VisionMode;
+
+import java.util.function.IntSupplier;
+
 public class VisionGogglesItem extends Item {
-    public VisionGogglesItem() {
+    private final List<VisionMode> supportedModes;
+    private final IntSupplier batteryCapacity;
+
+    public VisionGogglesItem(IntSupplier batteryCapacity, VisionMode... modes) {
         super(new Item.Properties().stacksTo(1));
+        this.batteryCapacity = batteryCapacity;
+        this.supportedModes = Arrays.asList(modes);
+        if (this.supportedModes.isEmpty()) throw new IllegalArgumentException("Must have at least one vision mode");
+    }
+
+    public int getBatteryCapacity() {
+        return batteryCapacity.getAsInt();
+    }
+
+    public VisionMode getVisionMode() {
+        return supportedModes.get(0); // Default mode
+    }
+
+    public List<VisionMode> getSupportedModes() {
+        return supportedModes;
     }
 
     @Override

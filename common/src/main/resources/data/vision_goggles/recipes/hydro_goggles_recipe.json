@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "I I",
+    "LML",
+    "EBE"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "L": { "item": "minecraft:leather" },
+    "M": { "item": "vision_goggles:hydro_module" },
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "B": { "item": "vision_goggles:nvg_battery" }
+  },
+  "result": { "item": "vision_goggles:hydro_goggles" }
+}

@@ -40,7 +40,11 @@ public class HeatSilhouetteLayer<T extends LivingEntity, M extends EntityModel<T
 
         poseStack.pushPose();
 
-        float scale = 1.015f;
+        // Increased scale to cover armor and outer skin layers (prevents z-fighting/gaps)
+        float scale = 1.10f;
+        // Center the scaled model vertically, but shifted slightly upwards as requested
+        float verticalOffset = (entity.getBbHeight() * (scale - 1.0f)) / 4.0f;
+        poseStack.translate(0.0f, -verticalOffset, 0.0f);
         poseStack.scale(scale, scale, scale);
 
         M model = this.getParentModel();
@@ -50,7 +54,8 @@ public class HeatSilhouetteLayer<T extends LivingEntity, M extends EntityModel<T
 
         VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.eyes(BLANK));
 
-        model.renderToBuffer(poseStack, vertexConsumer, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        // Render as Cyan (Green + Blue) to distinguish from sand/warm blocks (Red bias)
+        model.renderToBuffer(poseStack, vertexConsumer, 15728880, OverlayTexture.NO_OVERLAY, 0.0F, 1.0F, 1.0F, 1.0F);
 
         poseStack.popPose();
     }

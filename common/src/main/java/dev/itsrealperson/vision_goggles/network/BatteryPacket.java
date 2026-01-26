@@ -13,6 +13,10 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Supplier;
 
+import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import java.util.function.Supplier;
+
 public class BatteryPacket {
     public BatteryPacket() {}
     public BatteryPacket(FriendlyByteBuf buf) {}
@@ -25,11 +29,14 @@ public class BatteryPacket {
             if (player == null) return;
 
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-            if (helmet.isEmpty()) return;
+            if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) return;
+
+            float max = (float) goggles.getBatteryCapacity();
+            if (goggles instanceof ModularGogglesItem modular) {
+                max = (float) modular.getBatteryCapacity(helmet);
+            }
 
             CompoundTag nbt = helmet.getOrCreateTag();
-            boolean isThermal = helmet.getItem() == ModItems.THERMAL_GOGGLES.get();
-            float max = isThermal ? (float)ModConfig.getThermalDuration() : (float)ModConfig.getNvgDuration();
             float current = nbt.getFloat(ModEvents.NBT_BATTERY);
             
             if (current < max) {
@@ -56,6 +63,7 @@ public class BatteryPacket {
                         batteryStack.shrink(1);
                     }
                     
+                    // Recharge 50% of the CURRENT max capacity
                     float news = Math.min(max, current + (max * chargeAmount));
                     nbt.putFloat(ModEvents.NBT_BATTERY, news);
                     player.containerMenu.broadcastChanges();

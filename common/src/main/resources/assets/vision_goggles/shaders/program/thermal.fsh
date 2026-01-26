@@ -36,9 +36,24 @@ void main() {
     
     vec3 coldBackground = vec3(lum * 0.0, lum * 0.15, lum * 0.45);
     float heatSignal = 0.0;
-    if (baseColor.r > 0.9 && baseColor.g > 0.9 && baseColor.b > 0.9) {
+    
+    // Detect Cyan (Living Entities) - Robust Relative Check
+    // We check if Green and Blue are significantly higher than Red.
+    // This avoids false positives from Sand (Red+Green), Dirt (Red), etc.
+    // Pure Cyan (0,1,1) -> min(1,1) - 0 = 1.0
+    // Water (0.2, 0.4, 0.8) -> min(0.4, 0.8) - 0.2 = 0.2 (Below threshold)
+    // Sky (0.5, 0.7, 1.0) -> min(0.7, 1.0) - 0.5 = 0.2 (Below threshold)
+    float cyanBias = min(baseColor.g, baseColor.b) - baseColor.r;
+
+    if (cyanBias > 0.4) {
         heatSignal = 1.0;
-    } else if (lum > 0.85) {
+    } 
+    // Ignore Pure White (Snow, Wool, Quartz)
+    else if (baseColor.r > 0.9 && baseColor.g > 0.9 && baseColor.b > 0.9) {
+        heatSignal = 0.0;
+    }
+    // Fallback for natural heat (Lava, Fire) -> High lum + Warm tint (R > B)
+    else if (lum > 0.85 && baseColor.r > baseColor.b) {
         heatSignal = (lum - 0.85) * 4.0;
     }
     

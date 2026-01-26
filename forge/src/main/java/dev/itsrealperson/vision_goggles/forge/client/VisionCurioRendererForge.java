@@ -46,9 +46,28 @@ public class VisionCurioRendererForge implements ICurioRenderer {
         ResourceLocation baseTex = NVG_TEXTURE;
         ResourceLocation glowTex = NVG_GLOW;
         
-        if (stack.getItem() == ModItems.THERMAL_GOGGLES.get()) {
-            baseTex = THERMAL_TEXTURE;
-            glowTex = THERMAL_GLOW;
+        if (stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem goggles) {
+            dev.itsrealperson.vision_goggles.util.VisionMode mode = null;
+
+            if (goggles instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular) {
+                java.util.List<dev.itsrealperson.vision_goggles.util.VisionMode> modes = modular.getModes(stack);
+                if (!modes.isEmpty()) {
+                    for (dev.itsrealperson.vision_goggles.util.VisionMode m : modes) {
+                        if (m == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL || m == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
+                            mode = m;
+                            break;
+                        }
+                    }
+                    if (mode == null) mode = modes.get(0);
+                }
+            } else {
+                mode = goggles.getVisionMode();
+            }
+
+            if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL || mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
+                baseTex = THERMAL_TEXTURE;
+                glowTex = THERMAL_GLOW;
+            }
         }
 
         VertexConsumer baseConsumer = renderTypeBuffer.getBuffer(RenderType.entityCutoutNoCull(baseTex));

@@ -8,11 +8,13 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+
 public class PlatformMethodsImpl {
     public static boolean equipInSlot(Player player, ItemStack stack) {
         AccessoriesCapability capability = AccessoriesCapability.get(player);
         if (capability != null) {
-            String[] possibleSlots = {"face", "eyes", "eyewear", "head"};
+            String[] possibleSlots = {"face", "eyes", "eyewear"};
             for (String slotId : possibleSlots) {
                 var container = capability.getContainers().get(slotId);
                 if (container != null) {
@@ -32,14 +34,13 @@ public class PlatformMethodsImpl {
     public static ItemStack getEquippedHelmet(Player player) {
         AccessoriesCapability capability = AccessoriesCapability.get(player);
         if (capability != null) {
-            String[] possibleSlots = {"face", "eyes", "eyewear", "head"};
+            String[] possibleSlots = {"face", "eyes", "eyewear"};
             for (String slotId : possibleSlots) {
                 var container = capability.getContainers().get(slotId);
                 if (container != null) {
                     for (int i = 0; i < container.getSize(); i++) {
                         ItemStack stack = container.getAccessories().getItem(i);
-                        if (stack.getItem() == ModItems.NIGHT_VISION_GOGGLES.get() || 
-                            stack.getItem() == ModItems.THERMAL_GOGGLES.get()) {
+                        if (stack.getItem() instanceof VisionGogglesItem) {
                             return stack;
                         }
                     }

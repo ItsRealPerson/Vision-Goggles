@@ -1,18 +1,16 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "III",
-    "GPG",
-    "R R"
+    "I I",
+    "LML",
+    "EBE"
   ],
   "key": {
     "I": { "item": "minecraft:iron_ingot" },
-    "G": { "item": "minecraft:glass_pane" },
-    "P": { "item": "minecraft:phantom_membrane" },
-    "R": { "item": "minecraft:redstone" }
+    "L": { "item": "minecraft:leather" },
+    "M": { "item": "vision_goggles:thermal_module" },
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "B": { "item": "vision_goggles:night_vision_goggles" }
   },
-  "result": {
-    "item": "vision_goggles:thermal_goggles",
-    "count": 1
-  }
+  "result": { "item": "vision_goggles:thermal_goggles" }
 }

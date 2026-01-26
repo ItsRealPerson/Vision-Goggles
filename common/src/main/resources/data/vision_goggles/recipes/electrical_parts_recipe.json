@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " R ",
+    "CIC",
+    " R "
+  ],
+  "key": {
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "item": "vision_goggles:electrical_parts",
+    "count": 4
+  }
+}

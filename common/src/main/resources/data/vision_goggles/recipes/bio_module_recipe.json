@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "EAE",
+    "AHA",
+    "EAE"
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "H": { "item": "minecraft:dragon_head" }
+  },
+  "result": { "item": "vision_goggles:bio_module" }
+}
