@@ -1,4 +1,0 @@
-{
-  "visor_on":  { "sounds": [ { "name": "vision_goggles:visor_on",  "stream": false } ] },
-  "visor_off": { "sounds": [ { "name": "vision_goggles:visor_off", "stream": false } ] }
-}
