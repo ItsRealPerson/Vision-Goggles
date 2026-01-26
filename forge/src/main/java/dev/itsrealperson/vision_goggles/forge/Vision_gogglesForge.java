@@ -23,7 +23,7 @@ public final class Vision_gogglesForge {
         // Register Cloth Config Screen for Forge
         if (FMLEnvironment.dist == Dist.CLIENT) {
             net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory factory = new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> {
-                return dev.itsrealperson.vision_goggles.util.ModConfig.createConfigScreen(parent);
+                return dev.itsrealperson.vision_goggles.client.ModConfigGui.createConfigScreen(parent);
             });
             FMLJavaModLoadingContext.get().registerExtensionPoint(net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class, () -> factory);
         }

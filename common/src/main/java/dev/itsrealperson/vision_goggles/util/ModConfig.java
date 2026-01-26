@@ -24,7 +24,7 @@ import java.util.Map;
 
 public class ModConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static ConfigData data = new ConfigData();
+    public static ConfigData data = new ConfigData();
     private static final Map<ResourceLocation, Float> BATTERY_MAP = new HashMap<>();
 
     public static class ConfigData {
@@ -71,7 +71,7 @@ public class ModConfig {
         updateBatteryMap();
     }
 
-    private static void updateBatteryMap() {
+    public static void updateBatteryMap() {
         BATTERY_MAP.clear();
         for (String entry : data.extraBatteryItems) {
             try {
@@ -107,70 +107,5 @@ public class ModConfig {
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (BATTERY_MAP.containsKey(id)) return BATTERY_MAP.get(id);
         return 0.0f;
-    }
-
-    public static Screen createConfigScreen(Screen parent) {
-        ConfigBuilder builder = ConfigBuilder.create()
-                .setParentScreen(parent)
-                .setTitle(Component.translatable("config.vision_goggles.title"));
-
-        ConfigEntryBuilder entryBuilder = builder.entryBuilder();
-        ConfigCategory general = builder.getOrCreateCategory(Component.translatable("config.vision_goggles.general"));
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.nvg_duration"), data.nvgDurationTicks)
-                .setDefaultValue(6000)
-                .setTooltip(Component.translatable("config.vision_goggles.nvg_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.nvgDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.thermal_duration"), data.thermalDurationTicks)
-                .setDefaultValue(9000)
-                .setTooltip(Component.translatable("config.vision_goggles.thermal_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.thermalDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.hydro_duration"), data.hydroDurationTicks)
-                .setDefaultValue(6000)
-                .setTooltip(Component.translatable("config.vision_goggles.hydro_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.hydroDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.bio_duration"), data.biometricDurationTicks)
-                .setDefaultValue(4500)
-                .setTooltip(Component.translatable("config.vision_goggles.bio_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.biometricDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.modular_duration"), data.modularDurationTicks)
-                .setDefaultValue(6000)
-                .setTooltip(Component.translatable("config.vision_goggles.modular_duration.tooltip"))
-                .setSaveConsumer(newValue -> data.modularDurationTicks = newValue)
-                .build());
-
-        general.addEntry(entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), data.extraBatteryItems)
-                .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
-                .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
-                .setSaveConsumer(newValue -> data.extraBatteryItems = newValue)
-                .build());
-
-        builder.setSavingRunnable(() -> {
-            save();
-            updateBatteryMap();
-            
-            if (Platform.getEnv().name().equals("CLIENT")) {
-                dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToServer(
-                    new dev.itsrealperson.vision_goggles.network.ConfigSavePacket(
-                        data.nvgDurationTicks, 
-                        data.thermalDurationTicks, 
-                        data.hydroDurationTicks,
-                        data.biometricDurationTicks,
-                        data.modularDurationTicks,
-                        data.extraBatteryItems
-                    )
-                );
-            }
-        });
-
-        return builder.build();
     }
 }
