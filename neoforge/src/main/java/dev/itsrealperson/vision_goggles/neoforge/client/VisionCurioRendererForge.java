@@ -1,4 +1,4 @@
-package dev.itsrealperson.vision_goggles.forge.client;
+package dev.itsrealperson.vision_goggles.neoforge.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;

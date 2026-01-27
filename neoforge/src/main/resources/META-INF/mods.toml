@@ -1,6 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[47,)"
-#issueTrackerURL = ""
+loaderVersion = "[1,)"
 license = "GNU GPL 3.0"
 
 [[mods]]
@@ -9,27 +8,27 @@ version = "${version}"
 displayName = "Vision Goggles"
 authors = "ItsRealPerson"
 description = '''
-
+Vision Goggles Mod
 '''
 logoFile = "icon.png"
 
 [[dependencies.vision_goggles]]
-modId = "forge"
+modId = "neoforge"
 mandatory = true
-versionRange = "[47,)"
+versionRange = "[20.4,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.vision_goggles]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.20.1,)"
+versionRange = "[1.20.4,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.vision_goggles]]
 modId = "architectury"
 mandatory = true
-versionRange = "[9.2.14,)"
+versionRange = "[11.1.17,)"
 ordering = "AFTER"
 side = "BOTH"

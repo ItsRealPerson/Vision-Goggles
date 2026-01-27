@@ -15,7 +15,7 @@ public class ModBlocks {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Vision_goggles.MOD_ID, Registries.BLOCK);
 
     public static final RegistrySupplier<Block> MODIFICATION_STATION = BLOCKS.register("modification_station",
-            () -> new ModificationStationBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(4.0f).requiresCorrectToolForDrops().noOcclusion()));
+            () -> new ModificationStationBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).strength(4.0f).requiresCorrectToolForDrops().noOcclusion()));
 
     public static void register() {
         BLOCKS.register();

@@ -1,4 +1,4 @@
-package dev.itsrealperson.vision_goggles.util.forge;
+package dev.itsrealperson.vision_goggles.util.neoforge;
 
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import net.minecraft.world.entity.player.Player;
@@ -13,7 +13,7 @@ import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 public class PlatformMethodsImpl {
     public static boolean equipInSlot(Player player, ItemStack stack) {
         AtomicBoolean success = new AtomicBoolean(false);
-        CuriosApi.getCuriosHelper().getCuriosHandler(player).ifPresent(handler -> {
+        CuriosApi.getCuriosInventory(player).ifPresent(handler -> {
             String[] possibleSlots = {"eyes", "eyewear"};
             for (String slotId : possibleSlots) {
                 handler.getStacksHandler(slotId).ifPresent(stacksHandler -> {
@@ -34,9 +34,8 @@ public class PlatformMethodsImpl {
     }
 
     public static ItemStack getEquippedHelmet(Player player) {
-        return CuriosApi.getCuriosHelper().findFirstCurio(player, stack -> 
-            stack.getItem() instanceof VisionGogglesItem
+        return CuriosApi.getCuriosInventory(player).flatMap(handler -> 
+            handler.findFirstCurio(stack -> stack.getItem() instanceof VisionGogglesItem)
         ).map(slot -> slot.stack()).orElse(ItemStack.EMPTY);
     }
 }
-

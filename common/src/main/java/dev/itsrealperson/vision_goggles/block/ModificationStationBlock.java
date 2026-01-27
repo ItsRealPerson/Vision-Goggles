@@ -17,10 +17,18 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
+import com.mojang.serialization.MapCodec;
+
 public class ModificationStationBlock extends BaseEntityBlock {
+    public static final MapCodec<ModificationStationBlock> CODEC = simpleCodec(ModificationStationBlock::new);
 
     public ModificationStationBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Nullable
