@@ -28,4 +28,4 @@ The legacy stable version of Vision Goggles for Minecraft 1.20.1. This branch us
 - `N`: Toggle visor power.
 - `M`: Switch between modes.
 - `V`: Zoom (when module is installed).
-- **Recharging**: Right-click while holding a battery or Shift + Right-click to consume energy items from your hand.
+- **Recharging**: Right-click while holding a battery or compatible energy item.
