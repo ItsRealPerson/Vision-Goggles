@@ -77,7 +77,10 @@ public class VisionGogglesItem extends Item {
                     cleanUpEffect(player);
                 }
                 
-                if (currentBattery <= 0) nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                if (currentBattery <= 0) {
+                    nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                    cleanUpEffect(player);
+                }
             } else {
                 nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
                 cleanUpEffect(player);
@@ -97,7 +100,8 @@ public class VisionGogglesItem extends Item {
     public static void cleanUpEffect(ServerPlayer player) {
         if (player.hasEffect(MobEffects.NIGHT_VISION)) {
             MobEffectInstance effect = player.getEffect(MobEffects.NIGHT_VISION);
-            if (effect != null && effect.getDuration() <= 215) {
+            // Increased threshold to 300 to account for server lag or desync
+            if (effect != null && effect.getDuration() <= 300) {
                 player.removeEffect(MobEffects.NIGHT_VISION);
             }
         }
