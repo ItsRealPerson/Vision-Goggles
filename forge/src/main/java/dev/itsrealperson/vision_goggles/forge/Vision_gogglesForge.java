@@ -69,7 +69,7 @@ public final class Vision_gogglesForge {
             () -> new SlotTypeMessage.Builder("eyes")
                     .priority(10)
                     .size(1)
-                    .icon(new ResourceLocation("curios:slot/empty_eyewear_slot"))
+                    .icon(new ResourceLocation(Vision_goggles.MOD_ID, "slot/empty_eyes_slot"))
                     .build());
     }
 
