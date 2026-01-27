@@ -1,8 +1,8 @@
 package dev.itsrealperson.vision_goggles.mixin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Camera;
@@ -16,6 +16,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Objects;
+
 @Mixin(FogRenderer.class)
 public class MixinFogRenderer {
     @Inject(method = "setupFog", at = @At("RETURN"))
@@ -25,8 +27,9 @@ public class MixinFogRenderer {
             if (entity instanceof Player player) {
                 ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
                 if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-                    if (helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
-                        int modeId = helmet.getOrCreateTag().getInt(ModConstants.TAG_MODE);
+                    boolean isActive = Objects.requireNonNullElse(helmet.get(ModDataComponents.ACTIVE.get()), false);
+                    if (isActive) {
+                        int modeId = Objects.requireNonNullElse(helmet.get(ModDataComponents.MODE.get()), 0);
                         VisionMode mode = VisionMode.byId(modeId);
                         
                         if (mode == VisionMode.HYDRO) {

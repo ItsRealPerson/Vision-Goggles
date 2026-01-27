@@ -1,12 +1,13 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
-import dev.itsrealperson.vision_goggles.util.ModConfig;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.Vision_goggles;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
-import dev.itsrealperson.vision_goggles.util.ModuleType;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -14,26 +15,22 @@ import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.function.Supplier;
+import java.util.Objects;
 
-public class ToggleNVGPacket {
-    private final boolean switchMode;
+public record ToggleNVGPacket(boolean switchMode) implements CustomPacketPayload {
+    public static final Type<ToggleNVGPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "toggle_nvg"));
 
-    public ToggleNVGPacket(boolean switchMode) {
-        this.switchMode = switchMode;
+    public static final StreamCodec<FriendlyByteBuf, ToggleNVGPacket> CODEC = StreamCodec.of(
+            (buf, packet) -> buf.writeBoolean(packet.switchMode),
+            buf -> new ToggleNVGPacket(buf.readBoolean())
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public ToggleNVGPacket(FriendlyByteBuf buf) {
-        this.switchMode = buf.readBoolean();
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeBoolean(this.switchMode);
-    }
-
-    public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
-        NetworkManager.PacketContext context = contextSupplier.get();
+    public void handle(NetworkManager.PacketContext context) {
         context.queue(() -> {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
             if (player == null) return;
@@ -41,20 +38,18 @@ public class ToggleNVGPacket {
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
             if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) return;
 
-            CompoundTag nbt = helmet.getOrCreateTag();
             List<VisionMode> modes;
-            List<ModuleType> utils = new java.util.ArrayList<>();
             if (goggles instanceof ModularGogglesItem modular) {
                 modes = modular.getModes(helmet);
-                utils = modular.getUtilityModules(helmet);
             } else {
                 modes = goggles.getSupportedModes();
             }
             
             if (this.switchMode) {
-                if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
+                boolean isActive = Objects.requireNonNullElse(helmet.get(ModDataComponents.ACTIVE.get()), false);
+                if (isActive) {
                     if (modes.size() > 1) {
-                        int currentModeId = nbt.getInt(ModConstants.TAG_MODE);
+                        int currentModeId = Objects.requireNonNullElse(helmet.get(ModDataComponents.MODE.get()), 0);
                         int index = -1;
                         for (int i = 0; i < modes.size(); i++) {
                             if (modes.get(i).getId() == currentModeId) {
@@ -63,53 +58,36 @@ public class ToggleNVGPacket {
                             }
                         }
                         int nextIndex = (index + 1) % modes.size();
-                        nbt.putInt(ModConstants.TAG_MODE, modes.get(nextIndex).getId());
+                        helmet.set(ModDataComponents.MODE.get(), modes.get(nextIndex).getId());
                     }
                 }
             } else {
-                boolean newState = !nbt.getBoolean(ModConstants.TAG_ACTIVE);
+                boolean currentState = Objects.requireNonNullElse(helmet.get(ModDataComponents.ACTIVE.get()), false);
+                boolean newState = !currentState;
+                
                 if (newState) {
-                    // Can activate if has vision modes OR utility modules
-                    if (modes.isEmpty() && utils.isEmpty()) {
+                    if (modes.isEmpty() && (goggles instanceof ModularGogglesItem modular && modular.getUtilityModules(helmet).isEmpty())) {
                         newState = false; 
                     } else {
-                        // If has modes, ensure one is selected
                         if (!modes.isEmpty()) {
-                            if (!nbt.contains(ModConstants.TAG_MODE)) {
-                                 nbt.putInt(ModConstants.TAG_MODE, modes.get(0).getId());
-                            } else {
-                                int currentModeId = nbt.getInt(ModConstants.TAG_MODE);
-                                boolean exists = false;
-                                for (VisionMode m : modes) {
-                                    if (m.getId() == currentModeId) {
-                                        exists = true;
-                                        break;
-                                    }
-                                }
-                                if (!exists) nbt.putInt(ModConstants.TAG_MODE, modes.get(0).getId());
+                            if (!helmet.has(ModDataComponents.MODE.get())) {
+                                 helmet.set(ModDataComponents.MODE.get(), modes.get(0).getId());
                             }
                         } else {
-                            // If no vision modes, set mode to -1 (None)
-                            nbt.putInt(ModConstants.TAG_MODE, -1);
+                            helmet.set(ModDataComponents.MODE.get(), -1);
                         }
 
-                        float max;
-                        if (goggles instanceof ModularGogglesItem modular) {
-                            max = (float) modular.getBatteryCapacity(helmet);
-                        } else {
-                            max = (float) goggles.getBatteryCapacity();
-                        }
-
-                        if (!nbt.contains(ModConstants.TAG_BATTERY)) nbt.putFloat(ModConstants.TAG_BATTERY, max);
-                        if (nbt.getFloat(ModConstants.TAG_BATTERY) <= 0) newState = false;
+                        float currentBattery = Objects.requireNonNullElse(helmet.get(ModDataComponents.BATTERY.get()), 0.0f);
+                        if (currentBattery <= 0) newState = false;
                     }
                 }
-                nbt.putBoolean(ModConstants.TAG_ACTIVE, newState);
+                
+                helmet.set(ModDataComponents.ACTIVE.get(), newState);
+                
                 if (!newState) {
                     VisionGogglesItem.cleanUpEffect(player);
                 }
             }
-            player.containerMenu.broadcastChanges();
         });
     }
 }

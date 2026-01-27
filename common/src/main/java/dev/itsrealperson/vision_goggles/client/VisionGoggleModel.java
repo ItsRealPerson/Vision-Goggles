@@ -3,7 +3,7 @@ package dev.itsrealperson.vision_goggles.client;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -12,8 +12,10 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.Objects;
+
 public class VisionGoggleModel<T extends LivingEntity> extends HumanoidModel<T> {
-    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(Vision_goggles.MOD_ID, "exo_helmet"), "main");
+    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "exo_helmet"), "main");
     public final ModelPart head_bone;
 
     public VisionGoggleModel(ModelPart root) {
@@ -108,7 +110,7 @@ public class VisionGoggleModel<T extends LivingEntity> extends HumanoidModel<T> 
         if (entity instanceof net.minecraft.world.entity.player.Player player) {
             net.minecraft.world.item.ItemStack helmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(player);
             if (!helmet.isEmpty() && helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
-                boolean isActive = helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE);
+                boolean isActive = Objects.requireNonNullElse(helmet.get(ModDataComponents.ACTIVE.get()), false);
                 
                 if (!isActive) {
                     // Flip UP (approx -90 degrees)
@@ -119,7 +121,7 @@ public class VisionGoggleModel<T extends LivingEntity> extends HumanoidModel<T> 
     }
 
     @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        head_bone.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int color) {
+        head_bone.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
     }
 }

@@ -1,74 +1,60 @@
 package dev.itsrealperson.vision_goggles.network;
 
-import dev.architectury.networking.NetworkManager.PacketContext;
+import dev.architectury.networking.NetworkManager;
+import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class ConfigSavePacket {
-    private final int nvgDuration;
-    private final int thermalDuration;
-    private final int hydroDuration;
-    private final int biometricDuration;
-    private final int modularDuration;
-    private final int nvgColorTheme;
-    private final List<String> extraBatteries;
+public record ConfigSavePacket(
+        int nvg, int thermal, int hydro, int bio, int modular, int theme, List<String> batteries
+) implements CustomPacketPayload {
+    public static final Type<ConfigSavePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "config_save"));
 
-    public ConfigSavePacket(int nvg, int thermal, int hydro, int bio, int modular, int nvgColor, List<String> batteries) {
-        this.nvgDuration = nvg;
-        this.thermalDuration = thermal;
-        this.hydroDuration = hydro;
-        this.biometricDuration = bio;
-        this.modularDuration = modular;
-        this.nvgColorTheme = nvgColor;
-        this.extraBatteries = batteries;
+    public static final StreamCodec<FriendlyByteBuf, ConfigSavePacket> CODEC = StreamCodec.of(
+            (buf, packet) -> {
+                buf.writeInt(packet.nvg);
+                buf.writeInt(packet.thermal);
+                buf.writeInt(packet.hydro);
+                buf.writeInt(packet.bio);
+                buf.writeInt(packet.modular);
+                buf.writeInt(packet.theme);
+                buf.writeCollection(packet.batteries, FriendlyByteBuf::writeUtf);
+            },
+            buf -> new ConfigSavePacket(
+                    buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
+                    buf.readList(FriendlyByteBuf::readUtf)
+            )
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public ConfigSavePacket(FriendlyByteBuf buf) {
-        this.nvgDuration = buf.readInt();
-        this.thermalDuration = buf.readInt();
-        this.hydroDuration = buf.readInt();
-        this.biometricDuration = buf.readInt();
-        this.modularDuration = buf.readInt();
-        this.nvgColorTheme = buf.readInt();
-        int size = buf.readInt();
-        this.extraBatteries = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            this.extraBatteries.add(buf.readUtf());
-        }
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeInt(this.nvgDuration);
-        buf.writeInt(this.thermalDuration);
-        buf.writeInt(this.hydroDuration);
-        buf.writeInt(this.biometricDuration);
-        buf.writeInt(this.modularDuration);
-        buf.writeInt(this.nvgColorTheme);
-        buf.writeInt(this.extraBatteries.size());
-        for (String s : this.extraBatteries) {
-            buf.writeUtf(s);
-        }
-    }
-
-    public void handle(Supplier<PacketContext> contextSupplier) {
-        PacketContext context = contextSupplier.get();
+    public void handle(NetworkManager.PacketContext context) {
         context.queue(() -> {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
-            if (player != null && player.hasPermissions(2)) { // Check if OP
-                // Update server config
-                ModConfig.updateFromSync(nvgDuration, thermalDuration, hydroDuration, biometricDuration, modularDuration, nvgColorTheme, extraBatteries);
-                ModConfig.save();
-                
-                // Sync back to ALL players
-                for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-                    dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayer(p, new ConfigSyncPacket(nvgDuration, thermalDuration, hydroDuration, biometricDuration, modularDuration, nvgColorTheme, extraBatteries));
-                }
-                System.out.println("[Vision Goggles] Config updated by " + player.getName().getString() + " and broadcasted.");
+            if (player == null || !player.hasPermissions(2)) return;
+
+            ModConfig.data.nvgDurationTicks = nvg;
+            ModConfig.data.thermalDurationTicks = thermal;
+            ModConfig.data.hydroDurationTicks = hydro;
+            ModConfig.data.biometricDurationTicks = bio;
+            ModConfig.data.modularDurationTicks = modular;
+            ModConfig.data.nvgColorTheme = theme;
+            ModConfig.data.extraBatteryItems = batteries;
+            ModConfig.save();
+            ModConfig.updateBatteryMap();
+
+            // Sync to all players
+            for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+                NetworkManager.sendToPlayer(p, new ConfigSyncPacket(nvg, thermal, hydro, bio, modular, theme, batteries));
             }
         });
     }

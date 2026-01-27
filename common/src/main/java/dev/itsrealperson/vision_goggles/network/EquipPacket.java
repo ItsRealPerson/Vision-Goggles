@@ -1,27 +1,37 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
+import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 
-import java.util.function.Supplier;
+public record EquipPacket() implements CustomPacketPayload {
+    public static final Type<EquipPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "equip_packet"));
 
-public class EquipPacket {
-    public EquipPacket() {}
-    public EquipPacket(FriendlyByteBuf buf) {}
-    public void encode(FriendlyByteBuf buf) {}
+    public static final StreamCodec<FriendlyByteBuf, EquipPacket> CODEC = StreamCodec.of(
+            (buf, packet) -> {},
+            buf -> new EquipPacket()
+    );
 
-    public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
-        NetworkManager.PacketContext context = contextSupplier.get();
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+
+    public void handle(NetworkManager.PacketContext context) {
         context.queue(() -> {
-            Player player = context.getPlayer();
-            if (player != null) {
-                // Get item from hand
-                if (PlatformMethods.equipInSlot(player, player.getMainHandItem())) {
-                    // Success logic if needed
-                } else if (PlatformMethods.equipInSlot(player, player.getOffhandItem())) {
-                    // Success logic
+            ServerPlayer player = (ServerPlayer) context.getPlayer();
+            if (player == null) return;
+
+            ItemStack stack = player.getMainHandItem();
+            if (stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
+                if (PlatformMethods.equipInSlot(player, stack)) {
+                    // stack reduction is handled by the platform implementation if successful
                 }
             }
         });

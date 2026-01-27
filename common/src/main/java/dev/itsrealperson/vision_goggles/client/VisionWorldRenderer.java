@@ -2,8 +2,7 @@ package dev.itsrealperson.vision_goggles.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -11,7 +10,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
@@ -21,9 +19,10 @@ import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class VisionWorldRenderer {
-    private static final ResourceLocation WHITE = new ResourceLocation("minecraft", "textures/misc/white.png");
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
     private static final List<BlockPos> HOT_BLOCKS = new ArrayList<>();
     private static int scanTick = 0;
 
@@ -34,8 +33,9 @@ public class VisionWorldRenderer {
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
         if (helmet.isEmpty()) return;
 
-        CompoundTag nbt = helmet.getTag();
-        if (nbt == null || !nbt.getBoolean(ModConstants.TAG_ACTIVE) || nbt.getInt(ModConstants.TAG_MODE) != 1) return;
+        boolean isActive = Objects.requireNonNullElse(helmet.get(ModDataComponents.ACTIVE.get()), false);
+        int mode = Objects.requireNonNullElse(helmet.get(ModDataComponents.MODE.get()), 0);
+        if (!isActive || mode != 1) return;
 
         if (scanTick++ % 20 == 0) updateHotBlocks(mc);
         if (HOT_BLOCKS.isEmpty()) return;
@@ -46,7 +46,6 @@ public class VisionWorldRenderer {
 
         for (BlockPos pos : HOT_BLOCKS) {
             poseStack.pushPose();
-            // Static translation relative to world
             poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y, pos.getZ() - cameraPos.z);
             
             float s = 1.005f;
@@ -85,6 +84,6 @@ public class VisionWorldRenderer {
     }
 
     private static void addV(Matrix4f m, VertexConsumer b, float x, float y, float z, float r, float g, float bl, float a, float nx, float ny, float nz) {
-        b.vertex(m, x, y, z).color(r, g, bl, a).uv(0, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(15728880).normal(nx, ny, nz).endVertex();
+        b.addVertex(m, x, y, z).setColor(r, g, bl, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(15728880).setNormal(nx, ny, nz);
     }
 }

@@ -1,14 +1,15 @@
 {
   "required": true,
   "package": "dev.itsrealperson.vision_goggles.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "vision_goggles.refmap.json",
   "mixins": [
   ],
   "client": [
     "client.MixinFogRenderer",
     "client.MixinLevelRenderer",
-    "client.MixinGameRenderer"
+    "client.MixinGameRenderer",
+    "client.MixinAbstractClientPlayer"
   ],
   "injectors": {
     "defaultRequire": 1

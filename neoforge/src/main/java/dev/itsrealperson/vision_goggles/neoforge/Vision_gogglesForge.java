@@ -4,34 +4,26 @@ import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.client.ModClient;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.client.ConfigScreenHandler;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.fml.ModLoadingContext;
-
-import net.neoforged.fml.event.lifecycle.InterModEnqueueEvent;
-import net.neoforged.fml.InterModComms;
-import top.theillusivec4.curios.api.SlotTypeMessage;
-import top.theillusivec4.curios.api.CuriosApi;
-import net.minecraft.resources.ResourceLocation;
 
 @Mod(Vision_goggles.MOD_ID)
 public final class Vision_gogglesForge {
     public Vision_gogglesForge(IEventBus modEventBus) {
         
         modEventBus.addListener(this::clientSetup);
-        modEventBus.addListener(this::enqueueIMC);
         
-        // Register Cloth Config Screen for NeoForge
+        // Register Cloth Config Screen for NeoForge 1.21.1
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class, () -> 
-                new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> 
-                    dev.itsrealperson.vision_goggles.client.ModConfigGui.createConfigScreen(parent)
-                )
+            ModLoadingContext.get().registerExtensionPoint(IConfigScreenFactory.class, () -> 
+                (mc, parent) -> dev.itsrealperson.vision_goggles.client.ModConfigGui.createConfigScreen(parent)
             );
         }
 
@@ -39,8 +31,13 @@ public final class Vision_gogglesForge {
         Vision_goggles.init();
     }
 
-    @Mod.EventBusSubscriber(modid = Vision_goggles.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = Vision_goggles.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
+        @SubscribeEvent
+        public static void onRegisterScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+            event.register(dev.itsrealperson.vision_goggles.registry.ModMenus.MODIFICATION_STATION_MENU.get(), dev.itsrealperson.vision_goggles.client.gui.ModificationStationScreen::new);
+        }
+
         @SubscribeEvent
         public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
             event.registerLayerDefinition(dev.itsrealperson.vision_goggles.client.VisionGoggleModel.LAYER_LOCATION, dev.itsrealperson.vision_goggles.client.VisionGoggleModel::createBodyLayer);
@@ -62,15 +59,6 @@ public final class Vision_gogglesForge {
                 }
             }
         }
-    }
-
-    private void enqueueIMC(final InterModEnqueueEvent event) {
-        InterModComms.sendTo(CuriosApi.MODID, SlotTypeMessage.REGISTER_TYPE, 
-            () -> new SlotTypeMessage.Builder("eyes")
-                    .priority(10)
-                    .size(1)
-                    .icon(new ResourceLocation(Vision_goggles.MOD_ID, "slot/empty_eyes_slot"))
-                    .build());
     }
 
     private void clientSetup(FMLClientSetupEvent event) {

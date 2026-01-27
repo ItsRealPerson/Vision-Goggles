@@ -21,11 +21,11 @@ import top.theillusivec4.curios.api.client.ICurioRenderer;
 public class VisionCurioRendererForge implements ICurioRenderer {
     private VisionGoggleModel<LivingEntity> model;
     
-    private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
-    private static final ResourceLocation NVG_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_glow.png");
+    private static final ResourceLocation NVG_TEXTURE = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
+    private static final ResourceLocation NVG_GLOW = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "textures/entities/nvg_glow.png");
     
-    private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
-    private static final ResourceLocation THERMAL_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_glow.png");
+    private static final ResourceLocation THERMAL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
+    private static final ResourceLocation THERMAL_GLOW = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "textures/entities/thermal_glow.png");
 
     @Override
     public <T extends LivingEntity, M extends EntityModel<T>> void render(ItemStack stack, SlotContext slotContext, PoseStack matrixStack, RenderLayerParent<T, M> renderLayerParent, MultiBufferSource renderTypeBuffer, int light, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
@@ -71,13 +71,11 @@ public class VisionCurioRendererForge implements ICurioRenderer {
         }
 
         VertexConsumer baseConsumer = renderTypeBuffer.getBuffer(RenderType.entityCutoutNoCull(baseTex));
-        this.model.head_bone.render(matrixStack, baseConsumer, light, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        this.model.head_bone.render(matrixStack, baseConsumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
         VertexConsumer glowConsumer = renderTypeBuffer.getBuffer(RenderType.eyes(glowTex));
-        this.model.head_bone.render(matrixStack, glowConsumer, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        this.model.head_bone.render(matrixStack, glowConsumer, 15728880, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         
         matrixStack.popPose();
     }
 }
-
-

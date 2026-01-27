@@ -3,25 +3,26 @@ package dev.itsrealperson.vision_goggles.util;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import dev.architectury.platform.Platform;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class ModConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Map<ResourceLocation, Float> EXTRA_BATTERIES = new HashMap<>();
+    private static Path configPath;
+    
     public static ConfigData data = new ConfigData();
-    private static final Map<ResourceLocation, Float> BATTERY_MAP = new HashMap<>();
 
     public static class ConfigData {
         public int nvgDurationTicks = 6000;
@@ -34,12 +35,12 @@ public class ModConfig {
     }
 
     public static void load() {
-        Path configPath = Platform.getConfigFolder().resolve("vision_goggles.json");
-        File configFile = configPath.toFile();
-        if (configFile.exists()) {
-            try (FileReader reader = new FileReader(configFile)) {
+        configPath = Platform.getConfigFolder().resolve("vision_goggles.json");
+        File file = configPath.toFile();
+        if (file.exists()) {
+            try (FileReader reader = new FileReader(file)) {
                 data = GSON.fromJson(reader, ConfigData.class);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         } else {
@@ -49,42 +50,45 @@ public class ModConfig {
     }
 
     public static void save() {
-        Path configPath = Platform.getConfigFolder().resolve("vision_goggles.json");
         try (FileWriter writer = new FileWriter(configPath.toFile())) {
             GSON.toJson(data, writer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void updateFromSync(int nvg, int thermal, int hydro, int bio, int modular, int nvgColor, List<String> extra) {
+    public static void updateFromSync(int nvg, int thermal, int hydro, int bio, int modular, int theme, List<String> batteries) {
         data.nvgDurationTicks = nvg;
         data.thermalDurationTicks = thermal;
         data.hydroDurationTicks = hydro;
         data.biometricDurationTicks = bio;
         data.modularDurationTicks = modular;
-        data.nvgColorTheme = nvgColor;
-        data.extraBatteryItems = extra;
+        data.nvgColorTheme = theme;
+        data.extraBatteryItems = batteries;
         updateBatteryMap();
     }
 
     public static void updateBatteryMap() {
-        BATTERY_MAP.clear();
+        EXTRA_BATTERIES.clear();
         for (String entry : data.extraBatteryItems) {
             try {
-                String[] parts = entry.split("\\|");
-                String idStr = parts[0].trim();
-                float charge = 0.5f;
-                if (parts.length > 1) {
-                    float val = Float.parseFloat(parts[1].trim());
-                    charge = (val > 1.0f) ? val / 100.0f : val;
+                String[] parts = entry.split(Pattern.quote("|"));
+                if (parts.length == 2) {
+                    String idStr = parts[0].trim();
+                    float charge = Float.parseFloat(parts[1].trim());
+                    ResourceLocation loc = ResourceLocation.parse(idStr);
+                    EXTRA_BATTERIES.put(loc, charge);
                 }
-                ResourceLocation loc = idStr.contains(":") ? new ResourceLocation(idStr) : new ResourceLocation("minecraft", idStr);
-                BATTERY_MAP.put(loc, charge);
-            } catch (Exception e) {
-                System.err.println("[Vision Goggles] Failed to parse config entry: " + entry);
-            }
+            } catch (Exception ignored) {}
         }
+    }
+
+    public static float getBatteryCharge(ItemStack stack) {
+        if (stack.isEmpty()) return 0;
+        if (stack.getItem() == dev.itsrealperson.vision_goggles.registry.ModItems.NVG_BATTERY.get()) return 0.5f;
+        
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return EXTRA_BATTERIES.getOrDefault(id, 0.0f);
     }
 
     public static int getNvgDuration() { return data.nvgDurationTicks; }
@@ -94,12 +98,4 @@ public class ModConfig {
     public static int getModularDuration() { return data.modularDurationTicks; }
     public static int getNvgColorTheme() { return data.nvgColorTheme; }
     public static List<String> getExtraBatteryItems() { return data.extraBatteryItems; }
-
-    public static float getBatteryCharge(ItemStack stack) {
-        if (stack.isEmpty()) return 0.0f;
-        if (stack.getItem() == dev.itsrealperson.vision_goggles.registry.ModItems.NVG_BATTERY.get()) return 0.5f;
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        if (BATTERY_MAP.containsKey(id)) return BATTERY_MAP.get(id);
-        return 0.0f;
-    }
 }

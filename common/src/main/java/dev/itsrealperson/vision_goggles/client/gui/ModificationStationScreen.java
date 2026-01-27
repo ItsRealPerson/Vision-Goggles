@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public class ModificationStationScreen extends AbstractContainerScreen<ModificationStationMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/gui/modification_station.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "textures/gui/modification_station.png");
 
     public ModificationStationScreen(ModificationStationMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -20,7 +20,6 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
     @Override
     protected void init() {
         super.init();
-        // Set title position if needed
         this.titleLabelX = (this.imageWidth - this.font.width(this.title)) / 2;
     }
 
@@ -33,7 +32,6 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Render only the inventory label, skip the station title
         guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 4210752, false);
     }
 

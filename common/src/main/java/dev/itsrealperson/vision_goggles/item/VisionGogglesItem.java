@@ -1,11 +1,10 @@
 package dev.itsrealperson.vision_goggles.item;
 
-import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import dev.itsrealperson.vision_goggles.network.BatterySyncPacket;
 import dev.itsrealperson.vision_goggles.network.EquipPacket;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -18,6 +17,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.IntSupplier;
 
 public class VisionGogglesItem extends Item {
@@ -48,22 +48,21 @@ public class VisionGogglesItem extends Item {
     }
 
     public void serverTick(ItemStack stack, ServerPlayer player) {
-        CompoundTag nbt = stack.getOrCreateTag();
         float maxBattery = (float) getBatteryCapacity(stack);
         
-        if (!nbt.contains(ModConstants.TAG_BATTERY)) nbt.putFloat(ModConstants.TAG_BATTERY, maxBattery);
-        float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
+        if (!stack.has(ModDataComponents.BATTERY.get())) stack.set(ModDataComponents.BATTERY.get(), maxBattery);
+        float currentBattery = Objects.requireNonNullElse(stack.get(ModDataComponents.BATTERY.get()), maxBattery);
         
-        int modeId = nbt.getInt(ModConstants.TAG_MODE);
+        int modeId = Objects.requireNonNullElse(stack.get(ModDataComponents.MODE.get()), 0);
         VisionMode mode = VisionMode.byId(modeId);
+        boolean isActive = Objects.requireNonNullElse(stack.get(ModDataComponents.ACTIVE.get()), false);
 
-        if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
+        if (isActive) {
             if (currentBattery > 0) {
                 float drain = (mode == VisionMode.THERMAL) ? 2.0f : 1.0f;
                 currentBattery = Math.max(0, currentBattery - drain);
-                nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
+                stack.set(ModDataComponents.BATTERY.get(), currentBattery);
                 
-                // Effect Logic
                 boolean shouldApplyNV = true;
                 if (modeId == -1 || mode == VisionMode.BIOMETRIC) {
                     shouldApplyNV = false;
@@ -78,29 +77,25 @@ public class VisionGogglesItem extends Item {
                 }
                 
                 if (currentBattery <= 0) {
-                    nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                    stack.set(ModDataComponents.ACTIVE.get(), false);
                     cleanUpEffect(player);
                 }
             } else {
-                nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                stack.set(ModDataComponents.ACTIVE.get(), false);
                 cleanUpEffect(player);
             }
+        } else {
+            cleanUpEffect(player);
         }
 
-        // Optimization: Sync only if battery changed significantly or reached zero
         if (player.tickCount % 20 == 0) {
-            float lastSync = nbt.contains(ModConstants.TAG_LAST_SYNC) ? nbt.getFloat(ModConstants.TAG_LAST_SYNC) : -1.0f;
-            if (Math.abs(currentBattery - lastSync) >= 1.0f || (currentBattery <= 0 && lastSync > 0)) {
-                NetworkManager.INSTANCE.sendToPlayer(player, new BatterySyncPacket(currentBattery));
-                nbt.putFloat(ModConstants.TAG_LAST_SYNC, currentBattery);
-            }
+            NetworkManager.sendToPlayer(player, new BatterySyncPacket(currentBattery));
         }
     }
 
     public static void cleanUpEffect(ServerPlayer player) {
         if (player.hasEffect(MobEffects.NIGHT_VISION)) {
             MobEffectInstance effect = player.getEffect(MobEffects.NIGHT_VISION);
-            // Increased threshold to 300 to account for server lag or desync
             if (effect != null && effect.getDuration() <= 300) {
                 player.removeEffect(MobEffects.NIGHT_VISION);
             }
@@ -112,7 +107,7 @@ public class VisionGogglesItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         
         if (level.isClientSide) {
-            NetworkManager.INSTANCE.sendToServer(new EquipPacket());
+            NetworkManager.sendToServer(new EquipPacket());
             return InteractionResultHolder.sidedSuccess(stack, true);
         }
 

@@ -35,7 +35,7 @@ public class ModificationStationMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(container, 0, 44, 35));
         // Input 1: Module
         this.addSlot(new Slot(container, 1, 80, 35));
-        // Output 2
+        // Output 2: Result
         this.addSlot(new Slot(container, 2, 116, 35) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -44,6 +44,7 @@ public class ModificationStationMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack stack) {
+                // CONSUME inputs only when taking the result
                 ModificationStationMenu.this.container.removeItem(0, 1);
                 ModificationStationMenu.this.container.removeItem(1, 1);
                 super.onTake(player, stack);
@@ -74,6 +75,9 @@ public class ModificationStationMenu extends AbstractContainerMenu {
                 if (!this.moveItemStackTo(itemstack1, 3, 39, true)) {
                     return ItemStack.EMPTY;
                 }
+                if (index == 2) { // If taking from output slot
+                    slot.onTake(player, itemstack1);
+                }
             } else { // From Player to Station
                 if (this.moveItemStackTo(itemstack1, 0, 2, false)) { // Try inputs only
                     // success
@@ -96,7 +100,9 @@ public class ModificationStationMenu extends AbstractContainerMenu {
                 return ItemStack.EMPTY;
             }
 
-            slot.onTake(player, itemstack1);
+            if (index != 2) { // Output slot already calls onTake
+                slot.onTake(player, itemstack1);
+            }
         }
 
         return itemstack;

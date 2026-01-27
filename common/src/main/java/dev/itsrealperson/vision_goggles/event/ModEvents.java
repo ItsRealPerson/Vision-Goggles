@@ -1,13 +1,9 @@
 package dev.itsrealperson.vision_goggles.event;
 
 import dev.architectury.event.events.common.TickEvent;
-import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 
 import dev.architectury.event.CompoundEventResult;
@@ -33,11 +29,10 @@ public class ModEvents {
             if (stack.isEmpty()) return CompoundEventResult.pass();
 
             // If it's a battery according to config but NOT our own BatteryItem 
-            // (Our own item already handles this in its class)
             if (!(stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.BatteryItem) && ModConfig.getBatteryCharge(stack) > 0) {
                 if (player.level().isClientSide) {
                     if (!PlatformMethods.getEquippedHelmet(player).isEmpty()) {
-                        NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
+                        NetworkManager.sendToServer(new BatteryPacket());
                         float charge = ModConfig.getBatteryCharge(stack);
                         int pct = (int)(charge * 100);
                         player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.recharged", pct), true);
@@ -54,7 +49,7 @@ public class ModEvents {
         PlayerEvent.PLAYER_JOIN.register(player -> {
             if (player instanceof ServerPlayer) {
                 ServerPlayer serverPlayer = (ServerPlayer) player;
-                NetworkManager.INSTANCE.sendToPlayer(serverPlayer, new ConfigSyncPacket(
+                NetworkManager.sendToPlayer(serverPlayer, new ConfigSyncPacket(
                         ModConfig.getNvgDuration(),
                         ModConfig.getThermalDuration(),
                         ModConfig.getHydroDuration(),

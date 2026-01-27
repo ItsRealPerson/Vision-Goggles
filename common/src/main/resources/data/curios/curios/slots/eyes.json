@@ -1,0 +1,7 @@
+{
+  "icon": "vision_goggles:slot/empty_eyes_slot",
+  "priority": 10,
+  "size": 1,
+  "show_stats": false,
+  "has_visibility": true
+}

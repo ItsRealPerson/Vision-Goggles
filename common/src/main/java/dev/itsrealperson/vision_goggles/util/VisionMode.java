@@ -5,37 +5,33 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public enum VisionMode {
-    NIGHT_VISION(0, "hud.vision_goggles.mode_night", "shaders/post/nvg.json"),
-    THERMAL(1, "hud.vision_goggles.mode_thermal", "shaders/post/thermal.json"),
-    HYDRO(2, "hud.vision_goggles.mode_hydro", "shaders/post/hydro.json"),
-    BIOMETRIC(3, "hud.vision_goggles.mode_bio", "shaders/post/bio.json");
+    NIGHT_VISION(0, "night", "nvg"),
+    THERMAL(1, "thermal", "thermal"),
+    HYDRO(2, "hydro", "hydro"),
+    BIOMETRIC(3, "bio", "bio");
 
     private final int id;
-    private final String translationKey;
+    private final String name;
     private final ResourceLocation shaderLocation;
 
-    VisionMode(int id, String translationKey, String shaderPath) {
+    VisionMode(int id, String name, String shaderPath) {
         this.id = id;
-        this.translationKey = translationKey;
-        this.shaderLocation = new ResourceLocation(Vision_goggles.MOD_ID, shaderPath);
+        this.name = name;
+        this.shaderLocation = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "shaders/post/" + shaderPath + ".json");
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public ResourceLocation getShaderLocation() { return shaderLocation; }
 
     public Component getDisplayName() {
-        return Component.translatable(translationKey);
-    }
-
-    public ResourceLocation getShaderLocation() {
-        return shaderLocation;
+        return Component.translatable("hud.vision_goggles.mode_" + name);
     }
 
     public static VisionMode byId(int id) {
         for (VisionMode mode : values()) {
             if (mode.id == id) return mode;
         }
-        return NIGHT_VISION; // Default
+        return NIGHT_VISION;
     }
 }

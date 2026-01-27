@@ -6,7 +6,6 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import dev.architectury.platform.Platform;
 
 import java.util.List;
 
@@ -19,37 +18,37 @@ public class ModConfigGui {
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
         ConfigCategory general = builder.getOrCreateCategory(Component.translatable("config.vision_goggles.general"));
 
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.nvg_duration"), ModConfig.getNvgDuration())
+        var nvgEntry = entryBuilder.startIntField(Component.translatable("config.vision_goggles.nvg_duration"), ModConfig.getNvgDuration())
                 .setDefaultValue(6000)
                 .setTooltip(Component.translatable("config.vision_goggles.nvg_duration.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.nvgDurationTicks = newValue)
-                .build());
+                .build();
 
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.thermal_duration"), ModConfig.getThermalDuration())
+        var thermalEntry = entryBuilder.startIntField(Component.translatable("config.vision_goggles.thermal_duration"), ModConfig.getThermalDuration())
                 .setDefaultValue(9000)
                 .setTooltip(Component.translatable("config.vision_goggles.thermal_duration.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.thermalDurationTicks = newValue)
-                .build());
+                .build();
 
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.hydro_duration"), ModConfig.getHydroDuration())
+        var hydroEntry = entryBuilder.startIntField(Component.translatable("config.vision_goggles.hydro_duration"), ModConfig.getHydroDuration())
                 .setDefaultValue(6000)
                 .setTooltip(Component.translatable("config.vision_goggles.hydro_duration.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.hydroDurationTicks = newValue)
-                .build());
+                .build();
 
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.bio_duration"), ModConfig.getBiometricDuration())
+        var bioEntry = entryBuilder.startIntField(Component.translatable("config.vision_goggles.bio_duration"), ModConfig.getBiometricDuration())
                 .setDefaultValue(4500)
                 .setTooltip(Component.translatable("config.vision_goggles.bio_duration.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.biometricDurationTicks = newValue)
-                .build());
+                .build();
 
-        general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.modular_duration"), ModConfig.getModularDuration())
+        var modEntry = entryBuilder.startIntField(Component.translatable("config.vision_goggles.modular_duration"), ModConfig.getModularDuration())
                 .setDefaultValue(6000)
                 .setTooltip(Component.translatable("config.vision_goggles.modular_duration.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.modularDurationTicks = newValue)
-                .build());
+                .build();
 
-        general.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.nvg_color_theme"), ModConfig.getNvgColorTheme(), 0, 2)
+        var themeEntry = entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.nvg_color_theme"), ModConfig.getNvgColorTheme(), 0, 2)
                 .setDefaultValue(0)
                 .setTooltip(Component.translatable("config.vision_goggles.nvg_color_theme.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.nvgColorTheme = newValue)
@@ -58,31 +57,30 @@ public class ModConfigGui {
                     if (value == 1) return Component.literal("White Phosphor");
                     return Component.literal("Digital Cyan");
                 })
-                .build());
+                .build();
 
-        general.addEntry(entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), ModConfig.getExtraBatteryItems())
+        var extraBattEntry = entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), ModConfig.getExtraBatteryItems())
                 .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
                 .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.extraBatteryItems = newValue)
-                .build());
+                .build();
+
+        general.addEntry(nvgEntry);
+        general.addEntry(thermalEntry);
+        general.addEntry(hydroEntry);
+        general.addEntry(bioEntry);
+        general.addEntry(modEntry);
+        general.addEntry(themeEntry);
+        general.addEntry(extraBattEntry);
 
         builder.setSavingRunnable(() -> {
-            ModConfig.save();
-            ModConfig.updateBatteryMap();
-            
-            if (Platform.getEnv().name().equals("CLIENT")) {
-                dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToServer(
-                    new dev.itsrealperson.vision_goggles.network.ConfigSavePacket(
-                        ModConfig.getNvgDuration(), 
-                        ModConfig.getThermalDuration(), 
-                        ModConfig.getHydroDuration(),
-                        ModConfig.getBiometricDuration(),
-                        ModConfig.getModularDuration(),
-                        ModConfig.getNvgColorTheme(),
-                        ModConfig.getExtraBatteryItems()
-                    )
-                );
-            }
+            dev.itsrealperson.vision_goggles.network.NetworkManager.sendToServer(
+                new dev.itsrealperson.vision_goggles.network.ConfigSavePacket(
+                    nvgEntry.getValue(), thermalEntry.getValue(), hydroEntry.getValue(),
+                    bioEntry.getValue(), modEntry.getValue(), themeEntry.getValue(),
+                    extraBattEntry.getValue()
+                )
+            );
         });
 
         return builder.build();

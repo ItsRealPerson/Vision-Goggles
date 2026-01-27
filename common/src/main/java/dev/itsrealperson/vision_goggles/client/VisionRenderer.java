@@ -5,28 +5,25 @@ import dev.architectury.event.events.client.ClientGuiEvent;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
 import dev.itsrealperson.vision_goggles.network.ToggleNVGPacket;
-import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.effect.MobEffects;
 
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
@@ -34,6 +31,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Objects;
 
 import dev.architectury.event.EventResult;
 
@@ -68,8 +66,8 @@ public class VisionRenderer {
 
     public static void init() {
         ClientTickEvent.CLIENT_POST.register(VisionRenderer::onClientTick);
-        ClientGuiEvent.RENDER_HUD.register((guiGraphics, partialTicks) -> {
-            renderHUD(guiGraphics, partialTicks);
+        ClientGuiEvent.RENDER_HUD.register((guiGraphics, deltaTracker) -> {
+            renderHUD(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(true));
         });
 
         dev.architectury.event.events.common.EntityEvent.LIVING_HURT.register((entity, source, amount) -> {
@@ -94,12 +92,11 @@ public class VisionRenderer {
         boolean hasHelmet = !helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem;
         
         if (hasHelmet) {
-            CompoundTag nbt = helmet.getOrCreateTag();
-            boolean isServerActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
+            boolean isServerActive = Objects.requireNonNullElse(helmet.get(ModDataComponents.ACTIVE.get()), false);
             
             VisionGogglesItem goggles = (VisionGogglesItem) helmet.getItem();
             VisionMode itemMode = goggles.getVisionMode();
-            int nbtModeId = nbt.contains(ModConstants.TAG_MODE) ? nbt.getInt(ModConstants.TAG_MODE) : itemMode.getId();
+            int nbtModeId = Objects.requireNonNullElse(helmet.get(ModDataComponents.MODE.get()), itemMode.getId());
             
             if (nbtModeId != -1) {
                 currentVisionMode = VisionMode.byId(nbtModeId);
@@ -108,18 +105,17 @@ public class VisionRenderer {
             }
             int currentModeId = nbtModeId;
 
-            float maxBattery = (float) goggles.getBatteryCapacity();
+            float maxBattery = (float) goggles.getBatteryCapacity(helmet);
             boolean hasZoom = false;
             boolean hasSonar = false;
 
             if (goggles instanceof ModularGogglesItem modular) {
-                maxBattery = (float) modular.getBatteryCapacity(helmet);
                 List<ModuleType> utils = modular.getUtilityModules(helmet);
                 hasZoom = utils.contains(ModuleType.ZOOM);
                 hasSonar = utils.contains(ModuleType.SONAR);
             }
 
-            float currentBattery = nbt.contains(ModConstants.TAG_BATTERY) ? nbt.getFloat(ModConstants.TAG_BATTERY) : maxBattery;
+            float currentBattery = Objects.requireNonNullElse(helmet.get(ModDataComponents.BATTERY.get()), maxBattery);
             currentBatteryPct = currentBattery / maxBattery;
             visorActive = isServerActive;
 
@@ -164,10 +160,10 @@ public class VisionRenderer {
 
             // Key Controls
             if (ModKeyMappings.toggleGrayscaleKey.consumeClick()) {
-                NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(false));
+                NetworkManager.sendToServer(new ToggleNVGPacket(false));
             }
             if (ModKeyMappings.switchModeKey.consumeClick()) {
-                NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(true));
+                NetworkManager.sendToServer(new ToggleNVGPacket(true));
             }
 
             if (damageFlickerTimer > 0) damageFlickerTimer--;
@@ -217,6 +213,13 @@ public class VisionRenderer {
                         break;
                     }
                 }
+                if (postEffectField == null) {
+                    try {
+                        Field f = net.minecraft.client.renderer.GameRenderer.class.getDeclaredField("f_110009_"); // postEffect SRG
+                        f.setAccessible(true);
+                        postEffectField = f;
+                    } catch (Exception ignored) {}
+                }
             }
             return postEffectField != null ? (PostChain) postEffectField.get(mc.gameRenderer) : null;
         } catch (Exception e) {
@@ -254,7 +257,7 @@ public class VisionRenderer {
     private static void forceLoadShader(Minecraft mc, VisionMode mode) {
         ResourceLocation loc = mode.getShaderLocation();
         if (mode == VisionMode.HYDRO && !mc.player.isUnderWater()) {
-            loc = new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/hydro_dry.json");
+            loc = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "shaders/post/hydro_dry.json");
         }
         try {
             if (loadEffectMethod == null) {
@@ -286,10 +289,17 @@ public class VisionRenderer {
                             break;
                         }
                     }
+                    if (passesField == null) {
+                        try {
+                            Field f = PostChain.class.getDeclaredField("f_110082_"); // passes SRG
+                            f.setAccessible(true);
+                            passesField = f;
+                        } catch (Exception ignored) {}
+                    }
                 }
                 if (passesField != null) {
                     List<PostPass> passes = (List<PostPass>) passesField.get(effect);
-                    float time = (float)mc.level.getGameTime() + mc.getFrameTime();
+                    float time = (float)mc.level.getGameTime() + mc.getTimer().getGameTimeDeltaPartialTick(true);
                     float battery = currentBatteryPct;
                     
                     // Color Theme logic
@@ -314,7 +324,7 @@ public class VisionRenderer {
         }
     }
 
-    private static final ResourceLocation BATTERY_GUI = new ResourceLocation(Vision_goggles.MOD_ID, "textures/gui/battery_gui.png");
+    private static final ResourceLocation BATTERY_GUI = ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "textures/gui/battery_gui.png");
 
     public static void renderHUD(GuiGraphics g, float partialTicks) {
         Minecraft mc = Minecraft.getInstance();

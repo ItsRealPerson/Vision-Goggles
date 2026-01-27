@@ -1,0 +1,27 @@
+# PROGRESO DE MIGRACIÓN A 1.21.1 - VISION GOGGLES
+
+## ESTADO ACTUAL: 
+- El mod compila y carga en Fabric y NeoForge.
+- Traducciones funcionando.
+- Networking migrado a Payloads (1.21.1).
+
+## TAREAS COMPLETADAS:
+1. [X] Migración a Data Components.
+2. [X] Fix Mixins (Player FOV para Zoom).
+3. [X] Fix Networking (Architectury 13 Payloads).
+4. [X] Fix Slots (Face en Fabric, Eyes en Curios).
+5. [X] Traducciones de modos de visión.
+
+## BUGS PENDIENTES (Siguiente sesión):
+1. [ ] **Estación de Modificación (Fabric)**:
+   - El resultado NO se muestra en el slot 3 (cliente).
+   - El consumo de ítems es instantáneo (debe ser al retirar el resultado).
+   - El módulo de batería cuenta como slot de módulo (debe ser mejora independiente).
+   - Sincronización del contenedor servidor -> cliente fallida en Fabric.
+2. [ ] **NeoForge**:
+   - El zoom NO funciona (en Fabric sí funciona correctamente tras el Mixin de AbstractClientPlayer). Investigar por qué NeoForge ignora el modificador de FOV del jugador.
+
+## NOTAS TÉCNICAS PARA EL REINICIO:
+- Revisar 'ModificationStationMenu' y cómo Fabric sincroniza el slot 2.
+- Investigar por qué 'getFieldOfViewModifier' no se aplica en NeoForge (posible conflicto con la cámara de NeoForge o prioridad de Mixin).
+- Asegurar que 'BATTERY_UPGRADE' no se guarde nunca en la lista 'MODULES'.

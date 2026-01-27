@@ -1,4 +1,7 @@
 {
+  "entities": [
+    "minecraft:player"
+  ],
   "slots": [
     "accessories:face"
   ]

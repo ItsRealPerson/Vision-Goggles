@@ -28,7 +28,7 @@ public class BatteryItem extends Item {
 
         if (level.isClientSide) {
             if (!PlatformMethods.getEquippedHelmet(player).isEmpty()) {
-                NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
+                NetworkManager.sendToServer(new BatteryPacket());
                 float charge = ModConfig.getBatteryCharge(batteryStack);
                 int pct = (int)(charge * 100);
                 player.displayClientMessage(Component.translatable("message.vision_goggles.recharged", pct), true);

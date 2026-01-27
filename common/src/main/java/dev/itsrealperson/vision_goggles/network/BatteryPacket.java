@@ -1,26 +1,35 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
+import dev.itsrealperson.vision_goggles.Vision_goggles;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.function.Supplier;
+import java.util.Objects;
 
-import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 
-public class BatteryPacket {
-    public BatteryPacket() {}
-    public BatteryPacket(FriendlyByteBuf buf) {}
-    public void encode(FriendlyByteBuf buf) {}
+public record BatteryPacket() implements CustomPacketPayload {
+    public static final Type<BatteryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Vision_goggles.MOD_ID, "battery_packet"));
 
-    public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
-        NetworkManager.PacketContext context = contextSupplier.get();
+    public static final StreamCodec<FriendlyByteBuf, BatteryPacket> CODEC = StreamCodec.of(
+            (buf, packet) -> {},
+            buf -> new BatteryPacket()
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+
+    public void handle(NetworkManager.PacketContext context) {
         context.queue(() -> {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
             if (player == null) return;
@@ -28,13 +37,8 @@ public class BatteryPacket {
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
             if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) return;
 
-            float max = (float) goggles.getBatteryCapacity();
-            if (goggles instanceof ModularGogglesItem modular) {
-                max = (float) modular.getBatteryCapacity(helmet);
-            }
-
-            CompoundTag nbt = helmet.getOrCreateTag();
-            float current = nbt.getFloat(ModConstants.TAG_BATTERY);
+            float max = (float) goggles.getBatteryCapacity(helmet);
+            float current = Objects.requireNonNullElse(helmet.get(ModDataComponents.BATTERY.get()), 0.0f);
             
             if (current < max) {
                 boolean batteryFound = false;
@@ -60,9 +64,8 @@ public class BatteryPacket {
                         batteryStack.shrink(1);
                     }
                     
-                    // Recharge 50% of the CURRENT max capacity
                     float news = Math.min(max, current + (max * chargeAmount));
-                    nbt.putFloat(ModConstants.TAG_BATTERY, news);
+                    helmet.set(ModDataComponents.BATTERY.get(), news);
                     player.containerMenu.broadcastChanges();
                 }
             }

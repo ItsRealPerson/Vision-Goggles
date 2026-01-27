@@ -1,20 +1,16 @@
 package dev.itsrealperson.vision_goggles.item;
 
-import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.registry.ModDataComponents;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
 import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,15 +23,14 @@ public class ModularGogglesItem extends VisionGogglesItem {
     
     @Override
     public void serverTick(ItemStack stack, ServerPlayer player) {
-        CompoundTag nbt = stack.getOrCreateTag();
         boolean hasSolar = getUtilityModules(stack).contains(ModuleType.SOLAR);
         
         if (hasSolar && player.level().isDay() && player.level().canSeeSky(player.blockPosition().above())) {
             if (player.level().getMaxLocalRawBrightness(player.blockPosition().above()) > 10) {
                 float maxBattery = (float) getBatteryCapacity(stack);
-                float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
+                float currentBattery = Objects.requireNonNullElse(stack.get(ModDataComponents.BATTERY.get()), maxBattery);
                 currentBattery = Math.min(maxBattery, currentBattery + 1.5f);
-                nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
+                stack.set(ModDataComponents.BATTERY.get(), currentBattery);
             }
         }
         
@@ -49,11 +44,9 @@ public class ModularGogglesItem extends VisionGogglesItem {
 
     public List<VisionMode> getModes(ItemStack stack) {
         List<VisionMode> modes = new ArrayList<>();
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
-            ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
-            for (int i = 0; i < modules.size(); i++) {
-                String moduleName = modules.getString(i);
+        List<String> modules = stack.get(ModDataComponents.MODULES.get());
+        if (modules != null) {
+            for (String moduleName : modules) {
                 try {
                     VisionMode mode = VisionMode.valueOf(moduleName);
                     modes.add(mode);
@@ -65,7 +58,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
     }
     
     public boolean hasBatteryExpansion(ItemStack stack) {
-        return getUtilityModules(stack).contains(ModuleType.BATTERY_EXPANSION);
+        return Objects.requireNonNullElse(stack.get(ModDataComponents.BATTERY_UPGRADE.get()), false);
     }
 
     @Override
@@ -73,6 +66,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
         return super.getBatteryCapacity(); 
     }
     
+    @Override
     public int getBatteryCapacity(ItemStack stack) {
         int base = super.getBatteryCapacity();
         if (hasBatteryExpansion(stack)) {
@@ -86,18 +80,19 @@ public class ModularGogglesItem extends VisionGogglesItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
         // Battery Info
-        int current = 0;
-        if (stack.hasTag() && stack.getTag().contains(ModConstants.TAG_BATTERY)) {
-            current = (int) stack.getTag().getFloat(ModConstants.TAG_BATTERY);
-        }
+        float current = Objects.requireNonNullElse(stack.get(ModDataComponents.BATTERY.get()), 0.0f);
         int max = getBatteryCapacity(stack);
-        int percent = (int) (((float)current / (float)max) * 100);
+        int percent = (int) ((current / (float)max) * 100);
         
-        tooltipComponents.add(Component.translatable("tooltip.vision_goggles.battery_info", current, max)
+        tooltipComponents.add(Component.translatable("tooltip.vision_goggles.battery_info", (int)current, max)
                 .append(Component.literal(" (" + percent + "%)"))
                 .withStyle(ChatFormatting.GOLD));
+
+        if (hasBatteryExpansion(stack)) {
+            tooltipComponents.add(Component.literal("+ ").append(Component.translatable("item.vision_goggles.battery_expansion_module")).withStyle(ChatFormatting.GREEN));
+        }
 
         List<VisionMode> modes = getModes(stack);
         List<ModuleType> utils = getUtilityModules(stack);
@@ -108,6 +103,8 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 tooltipComponents.add(Component.literal("- ").append(mode.getDisplayName()).withStyle(ChatFormatting.AQUA));
             }
             for (ModuleType util : utils) {
+                // Skip battery expansion as it's handled above
+                if (util == ModuleType.BATTERY_EXPANSION) continue;
                 tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + util.getId().toLowerCase() + "_module")).withStyle(ChatFormatting.YELLOW));
             }
         } else {
@@ -117,11 +114,9 @@ public class ModularGogglesItem extends VisionGogglesItem {
 
     public List<ModuleType> getUtilityModules(ItemStack stack) {
         List<ModuleType> utils = new ArrayList<>();
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
-            ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
-            for (int i = 0; i < modules.size(); i++) {
-                String modStr = modules.getString(i);
+        List<String> modules = stack.get(ModDataComponents.MODULES.get());
+        if (modules != null) {
+            for (String modStr : modules) {
                 ModuleType type = ModuleType.byId(modStr);
                 if (type != null) {
                     utils.add(type);
