@@ -11,6 +11,12 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
+import net.minecraftforge.fml.InterModComms;
+import top.theillusivec4.curios.api.SlotTypeMessage;
+import top.theillusivec4.curios.api.CuriosApi;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
+
 @Mod(Vision_goggles.MOD_ID)
 public final class Vision_gogglesForge {
     public Vision_gogglesForge() {
@@ -19,6 +25,7 @@ public final class Vision_gogglesForge {
         EventBuses.registerModEventBus(Vision_goggles.MOD_ID, modEventBus);
 
         modEventBus.addListener(this::clientSetup);
+        modEventBus.addListener(this::enqueueIMC);
         
         // Register Cloth Config Screen for Forge
         if (FMLEnvironment.dist == Dist.CLIENT) {
@@ -55,6 +62,15 @@ public final class Vision_gogglesForge {
                 }
             }
         }
+    }
+
+    private void enqueueIMC(final InterModEnqueueEvent event) {
+        InterModComms.sendTo(CuriosApi.MODID, SlotTypeMessage.REGISTER_TYPE, 
+            () -> new SlotTypeMessage.Builder("eyes")
+                    .priority(10)
+                    .size(1)
+                    .icon(new ResourceLocation("curios:slot/empty_eyewear_slot"))
+                    .build());
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
