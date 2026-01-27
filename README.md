@@ -33,4 +33,4 @@ This version of Vision Goggles is fully functional and stable for Minecraft 1.20
 1. **Toggle**: Press `N` to activate/deactivate your goggles.
 2. **Switch Mode**: Press `M` to cycle through installed vision modules.
 3. **Zoom**: Hold `V` to zoom in (requires zoom module).
-4. **Recharge**: Shift + Right-click with a battery while wearing the goggles.
+4. **Recharge**: Right-click with a battery while wearing the goggles.
