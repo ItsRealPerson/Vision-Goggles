@@ -105,6 +105,9 @@ public class ToggleNVGPacket {
                     }
                 }
                 nbt.putBoolean(ModConstants.TAG_ACTIVE, newState);
+                if (!newState) {
+                    VisionGogglesItem.cleanUpEffect(player);
+                }
             }
             player.containerMenu.broadcastChanges();
         });

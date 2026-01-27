@@ -23,6 +23,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.effect.MobEffects;
 
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -174,6 +175,10 @@ public class VisionRenderer {
         } else {
             visorActive = false;
             sonarPulseTimer = 0;
+            if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
+                mc.player.removeEffect(MobEffects.NIGHT_VISION);
+            }
+
             if (grayscaleEnabled) {
                 grayscaleEnabled = false;
                 shutdownEffect(mc);

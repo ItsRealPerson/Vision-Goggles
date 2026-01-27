@@ -33,3 +33,10 @@ mandatory = true
 versionRange = "[9.2.14,)"
 ordering = "AFTER"
 side = "BOTH"
+
+[[dependencies.vision_goggles]]
+modId = "cloth_config"
+mandatory = true
+versionRange = "[11.1.118,)"
+ordering = "NONE"
+side = "BOTH"

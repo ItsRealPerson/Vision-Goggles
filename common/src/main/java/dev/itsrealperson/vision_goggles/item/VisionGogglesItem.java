@@ -77,7 +77,10 @@ public class VisionGogglesItem extends Item {
                     cleanUpEffect(player);
                 }
                 
-                if (currentBattery <= 0) nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                if (currentBattery <= 0) {
+                    nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                    cleanUpEffect(player);
+                }
             } else {
                 nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
                 cleanUpEffect(player);

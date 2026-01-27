@@ -6,6 +6,10 @@ uniform float time;
 uniform float battery;
 uniform float focus;
 
+float noise(vec2 co) {
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
 void main() {
     vec2 uv = texCoord;
     
@@ -50,12 +54,13 @@ void main() {
     // Battery failure effect
     float globalAlpha = 1.0;
     if (battery < 0.15) {
-        // ... (rest of the code)
-        if (battery < 0.06) {
-            float death = (0.06 - battery) / 0.06;
-            float pulse = sin(time * (20.0 + death * 40.0));
-            if (pulse > (1.2 - death)) globalAlpha = 0.0;
-            if (fract(time * 100.0) < (death * 0.2)) globalAlpha = 0.0;
+        if (battery < 0.07) {
+            float death = (0.07 - battery) / 0.07;
+            float pulse = sin(time * (10.0 + death * 30.0));
+            if (pulse > (0.8 + (1.0 - death) * 0.5)) {
+                globalAlpha = 0.1;
+            }
+            if (fract(time * 43.0) < (death * 0.1)) globalAlpha = 1.5;
         }
     }
 
