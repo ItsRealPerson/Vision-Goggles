@@ -47,6 +47,10 @@ processResources {
     filesMatching('fabric.mod.json') {
         expand version: project.version
     }
+    
+    from(project(":common").tasks.named("compileJava").map { it.destinationDirectory }) {
+        include "vision_goggles.refmap.json"
+    }
 }
 
 shadowJar {

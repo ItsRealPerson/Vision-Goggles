@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GameRenderer.class)
 public class MixinGameRenderer {
-    @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
+    @Inject(method = {"getFov", "method_3196"}, at = @At("RETURN"), cancellable = true)
     private void vision_goggles$applyZoom(CallbackInfoReturnable<Double> cir) {
         cir.setReturnValue(cir.getReturnValue() * VisionRenderer.getZoomMultiplier());
     }
 
-    @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"getNightVisionScale", "method_3194"}, at = @At("HEAD"), cancellable = true)
     private static void vision_goggles$instantCutoff(LivingEntity livingEntity, float partialTick, CallbackInfoReturnable<Float> cir) {
         if (livingEntity instanceof Player player) {
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
