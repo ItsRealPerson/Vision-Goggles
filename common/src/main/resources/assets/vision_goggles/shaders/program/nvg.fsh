@@ -37,16 +37,19 @@ void main() {
         wear = (0.15 - battery) / 0.15;
         uv.x += sin(uv.y * 20.0 + time * 10.0) * 0.005 * pow(wear, 2.0);
         
-        // IMPROVED CHAOTIC FLICKER AT < 6%
-        if (battery < 0.06) {
-            float death = (0.06 - battery) / 0.06;
-            // Pulse speed increases as battery dies
-            float pulse = sin(time * (20.0 + death * 40.0));
-            if (pulse > (1.2 - death)) {
-                globalAlpha = 0.0;
+        // IMPROVED CHAOTIC FLICKER AT < 7%
+        if (battery < 0.07) {
+            float death = (0.07 - battery) / 0.07;
+            // Pulse speed increases slightly as battery dies
+            float pulse = sin(time * (10.0 + death * 30.0));
+            
+            // Only flicker off when pulse is high. Threshold lowers as death increases.
+            // 1.0 -> 0.0
+            if (pulse > (0.8 + (1.0 - death) * 0.5)) {
+                globalAlpha = 0.1; // Dim heavily but keep faint outline
             }
-            // Add extra random micro-glitches
-            if (fract(time * 100.0) < (death * 0.2)) globalAlpha = 0.0;
+            // Add extra random micro-glitches (white noise flash)
+            if (fract(time * 43.0) < (death * 0.1)) globalAlpha = 1.5; // Flash bright!
         }
     }
 
@@ -62,7 +65,9 @@ void main() {
     float lum = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
     
     float brightness = 1.6 + focus * 0.4; // Slightly brighter when zoomed
-    if (battery < 0.05) brightness *= (battery / 0.05);
+    // Remove linear darkening, rely on flicker
+    // if (battery < 0.05) brightness *= (battery / 0.05); 
+    
     vec3 visionColor = vec3(lum * colorFilter.r, lum * colorFilter.g, lum * colorFilter.b) * brightness;
     
     // Increased noise when focused

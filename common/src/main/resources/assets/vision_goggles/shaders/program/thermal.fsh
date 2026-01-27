@@ -28,16 +28,14 @@ void main() {
         wear = (0.15 - battery) / 0.15;
         uv.x += sin(uv.y * 20.0 + time * 10.0) * 0.005 * pow(wear, 2.0);
         
-        // IMPROVED CHAOTIC FLICKER AT < 6%
-        if (battery < 0.06) {
-            float death = (0.06 - battery) / 0.06;
-            // Pulse speed increases as battery dies
-            float pulse = sin(time * (20.0 + death * 40.0));
-            if (pulse > (1.2 - death)) {
-                globalAlpha = 0.0;
+        // IMPROVED CHAOTIC FLICKER AT < 7%
+        if (battery < 0.07) {
+            float death = (0.07 - battery) / 0.07;
+            float pulse = sin(time * (10.0 + death * 30.0));
+            if (pulse > (0.8 + (1.0 - death) * 0.5)) {
+                globalAlpha = 0.1;
             }
-            // Add extra random micro-glitches
-            if (fract(time * 100.0) < (death * 0.2)) globalAlpha = 0.0;
+            if (fract(time * 43.0) < (death * 0.1)) globalAlpha = 1.5;
         }
     }
 
@@ -75,7 +73,8 @@ void main() {
     vec3 visionColor = mix(coldBackground, heatColor, clamp(heatSignal, 0.0, 1.0)) * 1.6;
     visionColor = max(visionColor, vec3(0.0, 0.05, 0.15));
 
-    if (battery < 0.05) visionColor *= (battery / 0.05);
+    // Remove linear darkening
+    // if (battery < 0.05) visionColor *= (battery / 0.05);
     
     // Noise and Scanlines increase with focus
     float noiseIntensity = 0.08 + pow(wear, 1.5) * 1.5 + focus * 0.04;
