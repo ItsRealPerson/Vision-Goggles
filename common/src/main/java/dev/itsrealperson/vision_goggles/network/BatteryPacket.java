@@ -1,21 +1,18 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
-import dev.itsrealperson.vision_goggles.event.ModEvents;
-import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Supplier;
 
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
-import java.util.function.Supplier;
 
 public class BatteryPacket {
     public BatteryPacket() {}
@@ -37,7 +34,7 @@ public class BatteryPacket {
             }
 
             CompoundTag nbt = helmet.getOrCreateTag();
-            float current = nbt.getFloat(ModEvents.NBT_BATTERY);
+            float current = nbt.getFloat(ModConstants.TAG_BATTERY);
             
             if (current < max) {
                 boolean batteryFound = false;
@@ -65,12 +62,10 @@ public class BatteryPacket {
                     
                     // Recharge 50% of the CURRENT max capacity
                     float news = Math.min(max, current + (max * chargeAmount));
-                    nbt.putFloat(ModEvents.NBT_BATTERY, news);
+                    nbt.putFloat(ModConstants.TAG_BATTERY, news);
                     player.containerMenu.broadcastChanges();
                 }
             }
         });
     }
 }
-
-

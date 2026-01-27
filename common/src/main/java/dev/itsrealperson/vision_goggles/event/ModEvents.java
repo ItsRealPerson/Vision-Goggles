@@ -16,11 +16,9 @@ import dev.architectury.event.events.common.PlayerEvent;
 import dev.itsrealperson.vision_goggles.network.BatteryPacket;
 import dev.itsrealperson.vision_goggles.network.ConfigSyncPacket;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 
 public class ModEvents {
-    public static final String NBT_BATTERY = "nvg_battery";
-    public static final String NBT_ACTIVE = "nvg_active";
-    public static final String NBT_MODE = "vision_mode";
 
     public static void init() {
         TickEvent.PLAYER_POST.register(player -> {
@@ -72,76 +70,10 @@ public class ModEvents {
     private static void tickGoggles(ServerPlayer player) {
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
         
-        if (helmet.isEmpty()) {
-            cleanUpEffect(player);
-            return;
-        }
-
-        CompoundTag nbt = helmet.getOrCreateTag();
-        float maxBattery = (float)ModConfig.getNvgDuration();
-        boolean hasSolar = false;
-        int modeId = nbt.getInt(NBT_MODE);
-        dev.itsrealperson.vision_goggles.util.VisionMode mode = dev.itsrealperson.vision_goggles.util.VisionMode.byId(modeId);
-
-        if (helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem gogglesItem) {
-            if (gogglesItem instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modularGoggles) {
-                maxBattery = (float) modularGoggles.getBatteryCapacity(helmet);
-                hasSolar = modularGoggles.getUtilityModules(helmet).contains("SOLAR");
-            } else {
-                maxBattery = (float) gogglesItem.getBatteryCapacity();
-            }
-        }
-
-        if (!nbt.contains(NBT_BATTERY)) nbt.putFloat(NBT_BATTERY, maxBattery);
-        float currentBattery = nbt.getFloat(NBT_BATTERY);
-
-        // SOLAR RECHARGE: Works even when goggles are OFF
-        if (hasSolar && player.level().isDay() && player.level().canSeeSky(player.blockPosition().above())) {
-            if (player.level().getMaxLocalRawBrightness(player.blockPosition().above()) > 10) {
-                currentBattery = Math.min(maxBattery, currentBattery + 1.5f);
-                nbt.putFloat(NBT_BATTERY, currentBattery);
-            }
-        }
-
-        if (nbt.getBoolean(NBT_ACTIVE)) {
-            if (currentBattery > 0) {
-                float drain = (mode == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) ? 2.0f : 1.0f;
-                currentBattery = Math.max(0, currentBattery - drain);
-                nbt.putFloat(NBT_BATTERY, currentBattery);
-                
-                // Effect Logic:
-                boolean shouldApplyNV = true;
-                // DO NOT apply Night Vision in Biometric, Normal Mode (-1), or Hydro (if dry)
-                if (modeId == -1 || mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
-                    shouldApplyNV = false;
-                } else if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.HYDRO && !player.isUnderWater()) {
-                    shouldApplyNV = false;
-                }
-
-                if (shouldApplyNV) {
-                    player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 215, 0, false, false, false));
-                } else {
-                    cleanUpEffect(player);
-                }
-                
-                if (currentBattery <= 0) nbt.putBoolean(NBT_ACTIVE, false);
-            } else {
-                nbt.putBoolean(NBT_ACTIVE, false);
-                cleanUpEffect(player);
-            }
+        if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem gogglesItem) {
+            gogglesItem.serverTick(helmet, player);
         } else {
-            cleanUpEffect(player);
-        }
-    }
-
-    private static void cleanUpEffect(ServerPlayer player) {
-        if (player.hasEffect(MobEffects.NIGHT_VISION)) {
-            MobEffectInstance effect = player.getEffect(MobEffects.NIGHT_VISION);
-            if (effect != null && effect.getDuration() <= 215) {
-                player.removeEffect(MobEffects.NIGHT_VISION);
-            }
+            VisionGogglesItem.cleanUpEffect(player);
         }
     }
 }
-
-

@@ -1,8 +1,8 @@
 package dev.itsrealperson.vision_goggles.mixin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.itsrealperson.vision_goggles.event.ModEvents;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Camera;
@@ -25,8 +25,8 @@ public class MixinFogRenderer {
             if (entity instanceof Player player) {
                 ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
                 if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-                    if (helmet.getOrCreateTag().getBoolean(ModEvents.NBT_ACTIVE)) {
-                        int modeId = helmet.getOrCreateTag().getInt(ModEvents.NBT_MODE);
+                    if (helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+                        int modeId = helmet.getOrCreateTag().getInt(ModConstants.TAG_MODE);
                         VisionMode mode = VisionMode.byId(modeId);
                         
                         if (mode == VisionMode.HYDRO) {

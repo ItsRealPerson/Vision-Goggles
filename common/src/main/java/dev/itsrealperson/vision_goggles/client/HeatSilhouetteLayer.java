@@ -2,7 +2,8 @@ package dev.itsrealperson.vision_goggles.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.itsrealperson.vision_goggles.event.ModEvents;
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
@@ -33,9 +34,9 @@ public class HeatSilhouetteLayer<T extends LivingEntity, M extends EntityModel<T
         if (helmet.isEmpty()) return;
 
         CompoundTag nbt = helmet.getTag();
-        if (nbt == null || !nbt.getBoolean(ModEvents.NBT_ACTIVE)) return;
+        if (nbt == null || !nbt.getBoolean(ModConstants.TAG_ACTIVE)) return;
 
-        int mode = nbt.getInt(ModEvents.NBT_MODE);
+        int mode = nbt.getInt(ModConstants.TAG_MODE);
         // Only render player if in third person
         boolean isSelf = (entity == mc.player);
         if (isSelf && mc.options.getCameraType().isFirstPerson()) return;

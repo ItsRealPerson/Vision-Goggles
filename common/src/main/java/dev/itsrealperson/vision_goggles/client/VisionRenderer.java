@@ -3,14 +3,15 @@ package dev.itsrealperson.vision_goggles.client;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.event.events.client.ClientGuiEvent;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
-import dev.itsrealperson.vision_goggles.event.ModEvents;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
 import dev.itsrealperson.vision_goggles.network.ToggleNVGPacket;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
+import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import net.minecraft.client.Minecraft;
@@ -93,11 +94,11 @@ public class VisionRenderer {
         
         if (hasHelmet) {
             CompoundTag nbt = helmet.getOrCreateTag();
-            boolean isServerActive = nbt.getBoolean(ModEvents.NBT_ACTIVE);
+            boolean isServerActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
             
             VisionGogglesItem goggles = (VisionGogglesItem) helmet.getItem();
             VisionMode itemMode = goggles.getVisionMode();
-            int nbtModeId = nbt.contains(ModEvents.NBT_MODE) ? nbt.getInt(ModEvents.NBT_MODE) : itemMode.getId();
+            int nbtModeId = nbt.contains(ModConstants.TAG_MODE) ? nbt.getInt(ModConstants.TAG_MODE) : itemMode.getId();
             
             if (nbtModeId != -1) {
                 currentVisionMode = VisionMode.byId(nbtModeId);
@@ -112,12 +113,12 @@ public class VisionRenderer {
 
             if (goggles instanceof ModularGogglesItem modular) {
                 maxBattery = (float) modular.getBatteryCapacity(helmet);
-                List<String> utils = modular.getUtilityModules(helmet);
-                hasZoom = utils.contains("ZOOM");
-                hasSonar = utils.contains("SONAR");
+                List<ModuleType> utils = modular.getUtilityModules(helmet);
+                hasZoom = utils.contains(ModuleType.ZOOM);
+                hasSonar = utils.contains(ModuleType.SONAR);
             }
 
-            float currentBattery = nbt.contains(ModEvents.NBT_BATTERY) ? nbt.getFloat(ModEvents.NBT_BATTERY) : maxBattery;
+            float currentBattery = nbt.contains(ModConstants.TAG_BATTERY) ? nbt.getFloat(ModConstants.TAG_BATTERY) : maxBattery;
             currentBatteryPct = currentBattery / maxBattery;
             visorActive = isServerActive;
 
@@ -170,14 +171,18 @@ public class VisionRenderer {
 
             if (damageFlickerTimer > 0) damageFlickerTimer--;
 
-        } else if (grayscaleEnabled) {
-            grayscaleEnabled = false;
-            shutdownEffect(mc);
-            lastServerActive = false;
-            lastModeId = -1;
-            zoomActive = false;
-            zoomActiveAmount = 0.0f;
-            currentZoom = 1.0f;
+        } else {
+            visorActive = false;
+            sonarPulseTimer = 0;
+            if (grayscaleEnabled) {
+                grayscaleEnabled = false;
+                shutdownEffect(mc);
+                lastServerActive = false;
+                lastModeId = -1;
+                zoomActive = false;
+                zoomActiveAmount = 0.0f;
+                currentZoom = 1.0f;
+            }
         }
 
         if (grayscaleEnabled) {
@@ -392,6 +397,22 @@ public class VisionRenderer {
         }
         
         com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        // Render Percentage Text
+        Minecraft mc = Minecraft.getInstance();
+        String text = (int)(currentBatteryPct * 100) + "%";
+        int textWidth = mc.font.width(text);
+        int textX = x + (renderWidth / 2) - (textWidth / 2);
+        int textY = y + renderHeight + 2;
+
+        int textColor = 0xFF55FF55; // Green
+        if (currentBatteryPct < 0.20f) {
+            textColor = 0xFFFF5555; // Red
+        } else if (currentBatteryPct < 0.50f) {
+            textColor = 0xFFFFFF55; // Yellow
+        }
+
+        g.drawString(mc.font, text, textX, textY, textColor, true);
     }
 
     private static void renderSonarPulse(GuiGraphics g, int width, int height, float progress) {

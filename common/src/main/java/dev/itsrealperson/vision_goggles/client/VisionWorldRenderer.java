@@ -2,7 +2,8 @@ package dev.itsrealperson.vision_goggles.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.itsrealperson.vision_goggles.event.ModEvents;
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -34,7 +35,7 @@ public class VisionWorldRenderer {
         if (helmet.isEmpty()) return;
 
         CompoundTag nbt = helmet.getTag();
-        if (nbt == null || !nbt.getBoolean(ModEvents.NBT_ACTIVE) || nbt.getInt(ModEvents.NBT_MODE) != 1) return;
+        if (nbt == null || !nbt.getBoolean(ModConstants.TAG_ACTIVE) || nbt.getInt(ModConstants.TAG_MODE) != 1) return;
 
         if (scanTick++ % 20 == 0) updateHotBlocks(mc);
         if (HOT_BLOCKS.isEmpty()) return;

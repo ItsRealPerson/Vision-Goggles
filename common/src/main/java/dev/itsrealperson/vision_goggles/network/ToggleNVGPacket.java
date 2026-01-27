@@ -1,10 +1,10 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
-import dev.itsrealperson.vision_goggles.event.ModEvents;
-import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
+import dev.itsrealperson.vision_goggles.util.ModuleType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -43,7 +43,7 @@ public class ToggleNVGPacket {
 
             CompoundTag nbt = helmet.getOrCreateTag();
             List<VisionMode> modes;
-            List<String> utils = new java.util.ArrayList<>();
+            List<ModuleType> utils = new java.util.ArrayList<>();
             if (goggles instanceof ModularGogglesItem modular) {
                 modes = modular.getModes(helmet);
                 utils = modular.getUtilityModules(helmet);
@@ -52,9 +52,9 @@ public class ToggleNVGPacket {
             }
             
             if (this.switchMode) {
-                if (nbt.getBoolean(ModEvents.NBT_ACTIVE)) {
+                if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
                     if (modes.size() > 1) {
-                        int currentModeId = nbt.getInt(ModEvents.NBT_MODE);
+                        int currentModeId = nbt.getInt(ModConstants.TAG_MODE);
                         int index = -1;
                         for (int i = 0; i < modes.size(); i++) {
                             if (modes.get(i).getId() == currentModeId) {
@@ -63,11 +63,11 @@ public class ToggleNVGPacket {
                             }
                         }
                         int nextIndex = (index + 1) % modes.size();
-                        nbt.putInt(ModEvents.NBT_MODE, modes.get(nextIndex).getId());
+                        nbt.putInt(ModConstants.TAG_MODE, modes.get(nextIndex).getId());
                     }
                 }
             } else {
-                boolean newState = !nbt.getBoolean(ModEvents.NBT_ACTIVE);
+                boolean newState = !nbt.getBoolean(ModConstants.TAG_ACTIVE);
                 if (newState) {
                     // Can activate if has vision modes OR utility modules
                     if (modes.isEmpty() && utils.isEmpty()) {
@@ -75,10 +75,10 @@ public class ToggleNVGPacket {
                     } else {
                         // If has modes, ensure one is selected
                         if (!modes.isEmpty()) {
-                            if (!nbt.contains(ModEvents.NBT_MODE)) {
-                                 nbt.putInt(ModEvents.NBT_MODE, modes.get(0).getId());
+                            if (!nbt.contains(ModConstants.TAG_MODE)) {
+                                 nbt.putInt(ModConstants.TAG_MODE, modes.get(0).getId());
                             } else {
-                                int currentModeId = nbt.getInt(ModEvents.NBT_MODE);
+                                int currentModeId = nbt.getInt(ModConstants.TAG_MODE);
                                 boolean exists = false;
                                 for (VisionMode m : modes) {
                                     if (m.getId() == currentModeId) {
@@ -86,11 +86,11 @@ public class ToggleNVGPacket {
                                         break;
                                     }
                                 }
-                                if (!exists) nbt.putInt(ModEvents.NBT_MODE, modes.get(0).getId());
+                                if (!exists) nbt.putInt(ModConstants.TAG_MODE, modes.get(0).getId());
                             }
                         } else {
                             // If no vision modes, set mode to -1 (None)
-                            nbt.putInt(ModEvents.NBT_MODE, -1);
+                            nbt.putInt(ModConstants.TAG_MODE, -1);
                         }
 
                         float max;
@@ -100,15 +100,13 @@ public class ToggleNVGPacket {
                             max = (float) goggles.getBatteryCapacity();
                         }
 
-                        if (!nbt.contains(ModEvents.NBT_BATTERY)) nbt.putFloat(ModEvents.NBT_BATTERY, max);
-                        if (nbt.getFloat(ModEvents.NBT_BATTERY) <= 0) newState = false;
+                        if (!nbt.contains(ModConstants.TAG_BATTERY)) nbt.putFloat(ModConstants.TAG_BATTERY, max);
+                        if (nbt.getFloat(ModConstants.TAG_BATTERY) <= 0) newState = false;
                     }
                 }
-                nbt.putBoolean(ModEvents.NBT_ACTIVE, newState);
+                nbt.putBoolean(ModConstants.TAG_ACTIVE, newState);
             }
             player.containerMenu.broadcastChanges();
         });
     }
 }
-
-

@@ -3,6 +3,7 @@ package dev.itsrealperson.vision_goggles.client;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -107,7 +108,7 @@ public class VisionGoggleModel<T extends LivingEntity> extends HumanoidModel<T> 
         if (entity instanceof net.minecraft.world.entity.player.Player player) {
             net.minecraft.world.item.ItemStack helmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(player);
             if (!helmet.isEmpty() && helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
-                boolean isActive = helmet.getOrCreateTag().getBoolean(dev.itsrealperson.vision_goggles.event.ModEvents.NBT_ACTIVE);
+                boolean isActive = helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE);
                 
                 if (!isActive) {
                     // Flip UP (approx -90 degrees)
