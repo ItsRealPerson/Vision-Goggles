@@ -21,7 +21,7 @@ The legacy stable version of Vision Goggles for Minecraft 1.20.1. This branch us
   - Accessories (Fabric) / Curios (Forge)
 
 ## 📦 Compatibility
-- **Curios/Trinkets**: Fully supported for the `Eyes` and `Face` slots.
+- **Curios/Accessories**: Fully supported for the `Eyes` and `Face` slots.
 - **Resource Packs**: Textures are easily customizable via standard resource pack structure.
 
 ## 🎮 Basic Controls
