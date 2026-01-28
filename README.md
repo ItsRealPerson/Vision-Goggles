@@ -21,11 +21,11 @@ The legacy stable version of Vision Goggles for Minecraft 1.20.1. This branch us
   - Accessories (Fabric) / Curios (Forge)
 
 ## 📦 Compatibility
-- **Curios/Accessories**: Fully supported for the `Eyes` and `Face` slots.
-- **Resource Packs**: Textures are easily customizable via standard resource pack structure.
+- **Curios API**: Fully supported for the `Eyes` slot.
+- **Accessories API**: Fully supported for the `Face` slot.
 
-## 🎮 Basic Controls
-- `N`: Toggle visor power.
-- `M`: Switch between modes.
-- `V`: Zoom (when module is installed).
-- **Recharging**: Right-click while holding a battery or compatible energy item.
+## 🎮 How to use
+1. **Toggle**: Press `N` to activate/deactivate your goggles.
+2. **Switch Mode**: Press `M` to cycle through installed vision modules.
+3. **Zoom**: Hold `V` to zoom in (requires zoom module).
+4. **Recharge**: Right-click with a battery while wearing the goggles.
