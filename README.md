@@ -27,7 +27,6 @@ This version of Vision Goggles is fully functional and stable for Minecraft 1.20
 ## 📦 Compatibility
 - **Curios API**: Fully supported for the `Eyes` slot.
 - **Accessories API**: Fully supported for the `Face` slot.
-- **Sodium/Iris**: Optimized shaders for maximum performance and compatibility.
 
 ## 🎮 How to use
 1. **Toggle**: Press `N` to activate/deactivate your goggles.
