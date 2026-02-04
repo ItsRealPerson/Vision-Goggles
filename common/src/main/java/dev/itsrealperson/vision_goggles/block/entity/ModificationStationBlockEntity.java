@@ -74,6 +74,12 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                     newModuleId = "SOLAR";
                 } else if (moduleStack.getItem() == ModItems.SONAR_MODULE.get()) {
                     newModuleId = "SONAR";
+                } else if (moduleStack.getItem() == ModItems.VITAL_INFO_MODULE.get()) {
+                    newModuleId = "VITAL_INFO";
+                } else if (moduleStack.getItem() == ModItems.ENVIRONMENT_MODULE.get()) {
+                    newModuleId = "ENVIRONMENT";
+                } else if (moduleStack.getItem() == ModItems.FLASHLIGHT_MODULE.get()) {
+                    newModuleId = "FLASHLIGHT";
                 }
 
                 if (newModuleId != null) {
@@ -86,7 +92,7 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                         String mod = modules.getString(i);
                         if (mod.equals(newModuleId)) alreadyInstalled = true;
                         if (mod.equals("BATTERY_EXPANSION")) hasBatteryExpansion = true;
-                        else if (mod.equals("ZOOM") || mod.equals("SOLAR") || mod.equals("SONAR")) utilityModuleCount++;
+                        else if (mod.equals("ZOOM") || mod.equals("SOLAR") || mod.equals("SONAR") || mod.equals("VITAL_INFO") || mod.equals("ENVIRONMENT") || mod.equals("FLASHLIGHT")) utilityModuleCount++;
                         else visionModuleCount++; 
                     }
 

@@ -7,7 +7,10 @@ public enum ModuleType {
     SOLAR(ModConstants.MODULE_SOLAR),
     ZOOM(ModConstants.MODULE_ZOOM),
     SONAR(ModConstants.MODULE_SONAR),
-    BATTERY_EXPANSION(ModConstants.MODULE_BATTERY_EXPANSION);
+    BATTERY_EXPANSION(ModConstants.MODULE_BATTERY_EXPANSION),
+    VITAL_INFO(ModConstants.MODULE_VITAL_INFO),
+    ENVIRONMENT(ModConstants.MODULE_ENVIRONMENT),
+    FLASHLIGHT(ModConstants.MODULE_FLASHLIGHT);
 
     private final String id;
     private static final Map<String, ModuleType> BY_ID = new HashMap<>();

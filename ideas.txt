@@ -1,0 +1,99 @@
+# Checklist de Desarrollo: Vision Goggles
+*Organizado por dificultad técnica e implementación.*
+
+## 🟢 Fase 1: HUD y Visualización Básica (Cliente 2D)
+*Implementación rápida. Requiere leer datos del jugador y pintarlos en la pantalla.*
+
+- [ ] **[CRÍTICO] Refactorización del Renderizador (VisionRenderer)**
+    - [ ] **Desacoplar Lógica:** Separar shaders, lógica de negocio y dibujado de GUI en clases distintas (`VisionShaderManager`, `VisionHUDOverlay`).
+    - [ ] **Sistema de Widgets:** Crear una interfaz `IHudModule` para que cada nuevo módulo (Coordenadas, Oxígeno) tenga su propia clase de renderizado.
+    - [ ] **Eliminar Reflection:** Sustituir accesos ilegales por Mixins o Accessors seguros.
+    - *Nota: Sin esto, añadir nuevos elementos al HUD convertirá el código en un caos inmanejable.*
+
+- [ ] **Renovación de Texturas (Ítems y Bloques)**
+    - [ ] **Gafas Hidro y Bio:** Rediseñar texturas para que sean más detalladas/acorde al nuevo estilo.
+    - [ ] **Módulos Existentes:** Unificar el estilo visual de todos los módulos actuales.
+    - [ ] **Modification Station:** Nueva textura para el bloque (y posiblemente el modelo 3D).
+- [ ] **Módulo de Información Vital (Vital Info)**
+    - [ ] **Coordenadas Duales:** Mostrar XYZ actual y conversión Nether/Overworld (x8).
+    - [ ] **Visor de Saturación:** Renderizar barra/número de saturación sobre el hambre.
+    - [ ] **Alerta de Durabilidad:** Icono rojo cuando la armadura/herramienta baja del 15%.
+- [ ] **Módulo de Navegación (Environment)**
+    - [ ] **Visor de Vuelo (Elytra):** Mostrar Altitud, Velocidad y Pitch al volar.
+    - [ ] **Medidor de Oxígeno:** Contador numérico de segundos restantes bajo el agua.
+- [ ] **Feedback Visual (Inmersión)**
+    - [ ] **Daño en Lente:** Overlay de grietas en pantalla si la durabilidad de las gafas es baja.
+
+## 🟡 Fase 2: Lógica Interna y Balance (Backend/Items)
+*Requiere modificar la lógica del bloque `ModificationStation`, manejo de inventarios y eventos de tick.*
+
+- [ ] **[CRÍTICO] Refactorización de Ítems (ModularGogglesItem)**
+    - [ ] **Migración de NBT:** Cambiar el almacenamiento de módulos de `List<String>` a `List<ResourceLocation>` o IDs estables para evitar pérdida de datos si se renombran enums.
+    - [ ] **Interfaz de Energía:** Crear interfaz `IPowerSourceModule` para sacar la lógica "Hardcoded" del panel solar del `serverTick` y permitir futuros generadores.
+    - [ ] **Validación de Capacidad:** Hacer que `getMaxModules()` sea dinámico/configurable y añadir validación que "escupa" módulos si se supera el límite (anti-cheat/bugfix).
+
+- [ ] **[CRÍTICO] Refactorización de ModificationStation (BlockEntity)**
+    - [ ] **Optimización de Tick:** Mover la lógica de crafteo fuera del `tick()` constante a un listener de eventos de inventario (`setChanged()`) para reducir lag.
+    - [ ] **Prevención de Dupeo:** Asegurar que la automatización con tolvas (hoppers) consuma correctamente los ingredientes al extraer el resultado.
+    - [ ] **Centralización de Lógica:** Mover la validación de "¿Cabe este módulo?" desde el bloque hacia el ítem (`goggles.canInstall(module)`), evitando lógica duplicada.
+    - [ ] **Sistema de Recetas:** (Opcional) Migrar a `RecipeType` de Minecraft para permitir personalización mediante Datapacks.
+
+- [ ] **Reestructuración de Configuración (Seguridad/Orden)**
+    - [ ] **Separación Cliente/Common:** Dividir `ModConfig` en dos archivos/clases distintas. Los colores y posiciones HUD no deben viajar al servidor.
+    - [ ] **Seguridad de Sincronización:** Eliminar el envío de configuración crítica (duraciones) desde el Cliente al Servidor, salvo que sea un Admin/OP. Actualmente es inseguro.
+    - [ ] **Categorías en Cloth Config:** Organizar la GUI en pestañas "Gameplay" (Common) y "Visuals" (Client).
+
+- [ ] **Dependencias Obligatorias (Accesorios)**
+    - [ ] **Fabric:** Establecer `accessories` como dependencia obligatoria en `fabric.mod.json`.
+    - [ ] **Forge/NeoForge:** Establecer `curios` como dependencia obligatoria en `mods.toml`.
+    - *Razón: Garantizar que las gafas funcionen siempre como accesorio sin interferir con el slot de armadura (Casco).*
+
+- [ ] **Sistema de Slots y Capacidad**
+    - [ ] Limitar slots por Tier: Especializadas (1), Modulares (2), Pro (4).
+    - [ ] Implementar validación en el contenedor para rechazar módulos sobrantes.
+- [ ] **Restricciones de Energía y Hardware**
+    - [ ] **Exclusividad de Energía:** Impedir instalar Solar y Batería a la vez (Slot de Power único).
+    - [ ] **Fuga en Standby:** Consumo pasivo mínimo si las gafas están encendidas sin uso.
+    - [ ] **Penalización Solar:** Reducir carga solar si las gafas están dañadas.
+- [ ] **Incompatibilidades de Inventario (Lógica ItemHandler)**
+    - [ ] **Conflictos Gafa-Módulo:**
+        - [ ] **Gafas Hidro + Módulo Solar:** Bloquear inserción (incompatible con uso subacuático).
+        - [ ] **Gafas Bio + Módulo Solar/Batería:** Bloquear inserción (Tejido orgánico incompatible con conectores de energía estándar).
+        - [ ] **Gafas Modulares (Básicas) + Elytra HUD:** Bloquear inserción (Requiere procesador de Gafas Pro).
+    - [ ] **Conflictos Módulo-Módulo (Exclusión Mutua):**
+        - [ ] **NVG + Térmico:** Bloquear instalación simultánea (Sensores incompatibles en el mismo slot óptico).
+        - [ ] **Overlays Múltiples:** Bloquear instalación de más de un módulo de renderizado de mundo (Spawn + Chunks + Tolvas) para evitar crashes o bugs visuales.
+- [ ] **Diseño Sonoro (Audio)**
+    - [ ] Loop de zumbido eléctrico suave para Visión Nocturna.
+    - [ ] Alerta sonora para oxígeno crítico.
+
+## 🟠 Fase 3: Renderizado en Mundo y Shaders (Cliente 3D)
+*Complejo. Requiere dibujar en el espacio 3D (WorldRender), Raycasting y Shaders.*
+
+- [ ] **Módulo de Seguridad (Spawn Safety)**
+    - [ ] **Light Overlay:** Calcular niveles de luz en el suelo y dibujar indicadores (números/colores).
+    - [ ] **Keybinding:** Tecla para activar/desactivar este overlay específico.
+- [ ] **Módulo de Automatización (Tech)**
+    - [ ] **Visor de Tolvas:** Detectar TileEntities, leer dirección y dibujar flecha flotante.
+    - [ ] **Vínculo de Aldeanos:** Trazar líneas visuales entre Aldeano <-> Cama <-> Mesa de Trabajo.
+    - [ ] **Visor de Chunks:** Dibujar bordes de chunks activos/force-loaded.
+- [ ] **Efectos de Post-Procesado (Shaders/Restricciones)**
+    - [ ] **Compatibilidad de Niebla:** Reemplazar `MixinFogRenderer` por `ClientFogEvent` (Architectury API) si es posible, para evitar conflictos agresivos con Sodium/Iris/BiomesOPlenty.
+    - [ ] **Interferencia Térmica:** Saturar pantalla de ruido rojo si se usa Térmica en el Nether.
+    - [ ] **Flashbang/Deslumbramiento:** Detectar si se mira al sol/luz con NVG y aplicar ceguera.
+    - [ ] **Gestión de Overlays:** Sistema para impedir que dos módulos visuales 3D se activen a la vez (prioridad).
+
+## 🔴 Fase 4: Integración, World Gen y APIs (Experto)
+*Requiere tocar generación de mundo, registros de aldeanos y compatibilidad con otros mods.*
+
+- [ ] **Integración con el Mundo (World Gen)**
+    - [ ] **Aldeano Óptico:** Nueva profesión, POI y tabla de comercios.
+    - [ ] **Loot Tables:** Inyectar gafas/módulos en cofres de Bastiones y Ancient Cities.
+- [ ] **Cosmética Avanzada**
+    - [ ] **Lentes Teñibles:** Receta de crafteo con tintes y renderizado dinámico de textura.
+    - [ ] **Temas del HUD:** Selector en config para cambiar estilo (Retro/Cyber/Rusty).
+- [ ] **Compatibilidad Externa**
+    - [ ] **Energía FE/E:** Capability para cargar gafas en máquinas de mods técnicos (Mekanism/Create).
+    - [ ] **JEI/REI:** Plugin para mostrar recetas de la `Modification Station`.
+- [ ] **Progresión**
+    - [ ] Implementar Advancements (Logros) personalizados.

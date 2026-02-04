@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": { "model": "vision_goggles:block/modification_station" }
+    "facing=north": { "model": "vision_goggles:block/modification_station" },
+    "facing=east": { "model": "vision_goggles:block/modification_station", "y": 90 },
+    "facing=south": { "model": "vision_goggles:block/modification_station", "y": 180 },
+    "facing=west": { "model": "vision_goggles:block/modification_station", "y": 270 }
   }
 }

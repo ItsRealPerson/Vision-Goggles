@@ -13,6 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import dev.architectury.event.CompoundEventResult;
 import dev.architectury.event.events.common.InteractionEvent;
 import dev.architectury.event.events.common.PlayerEvent;
+import dev.architectury.event.events.common.EntityEvent;
+import dev.architectury.event.EventResult;
 import dev.itsrealperson.vision_goggles.network.BatteryPacket;
 import dev.itsrealperson.vision_goggles.network.ConfigSyncPacket;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
@@ -25,6 +27,18 @@ public class ModEvents {
             if (player instanceof ServerPlayer) {
                 tickGoggles((ServerPlayer) player);
             }
+        });
+
+        EntityEvent.LIVING_HURT.register((entity, source, amount) -> {
+            if (entity instanceof ServerPlayer player) {
+                ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
+                if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
+                    // Damage calculation: 1 point per 4 damage taken, minimum 1
+                    int damage = Math.max(1, (int) (amount / 4.0F));
+                    helmet.hurtAndBreak(damage, player, (p) -> p.broadcastBreakEvent(net.minecraft.world.entity.EquipmentSlot.HEAD));
+                }
+            }
+            return EventResult.pass();
         });
 
         // Detect when player right-clicks with an item that could be a battery

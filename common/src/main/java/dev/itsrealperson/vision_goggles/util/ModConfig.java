@@ -31,6 +31,12 @@ public class ModConfig {
         public int modularDurationTicks = 6000;
         public int nvgColorTheme = 0; // 0: Green, 1: White, 2: Cyan
         public List<String> extraBatteryItems = new ArrayList<>(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"));
+
+        // Opciones del HUD (v1.0.0)
+        public boolean showCoordinates = true;
+        public boolean showSaturation = true;
+        public boolean showOxygenCounter = true;
+        public boolean showLowDurabilityWarning = true;
     }
 
     public static void load() {
@@ -94,6 +100,11 @@ public class ModConfig {
     public static int getModularDuration() { return data.modularDurationTicks; }
     public static int getNvgColorTheme() { return data.nvgColorTheme; }
     public static List<String> getExtraBatteryItems() { return data.extraBatteryItems; }
+
+    public static boolean shouldShowCoordinates() { return data.showCoordinates; }
+    public static boolean shouldShowSaturation() { return data.showSaturation; }
+    public static boolean shouldShowOxygen() { return data.showOxygenCounter; }
+    public static boolean shouldShowDurabilityWarning() { return data.showLowDurabilityWarning; }
 
     public static float getBatteryCharge(ItemStack stack) {
         if (stack.isEmpty()) return 0.0f;

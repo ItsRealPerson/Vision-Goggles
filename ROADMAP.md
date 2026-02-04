@@ -8,24 +8,24 @@ This document combines the public vision of the project with the technical requi
 **Goal:** Refactor core architecture and deliver a stable, functional HUD.
 
 ### 🛠️ Technical Tasks
-- [ ] **Refactor the renderer (`VisionRenderer`):**
-    - [ ] Decouple shader logic and GUI rendering into `VisionShaderManager` and `VisionHUDOverlay`.
-    - [ ] Implement a simple widget system with `IHudModule`.
-    - [ ] Remove reflection; use safe Mixins or Accessors.
+- [x] **Refactor the renderer (`VisionRenderer`):**
+    - [x] Decouple shader logic and GUI rendering into `VisionShaderManager` and `VisionHUDOverlay`.
+    - [x] Implement a simple widget system with `IHudModule`.
+    - [x] Remove reflection; use safe Mixins or Accessors.
 - [ ] **Asset updates:**
     - [ ] Redesign Hydro and Bio Goggles textures.
     - [ ] Unify visual style of modules.
     - [ ] Update Modification Station texture and model.
 
 ### ✨ Included Features
-- [ ] **Vital Information Module:** XYZ coordinates (Overworld/Nether), Saturation, Low Durability alert.
-- [ ] **Basic Environment Module:** Underwater oxygen counter, lens damage overlay.
-- [ ] **Configuration:** Client-side visuals only via Cloth Config.
+- [x] **Vital Information Module:** XYZ coordinates (Overworld/Nether), Saturation, Low Durability alert.
+- [x] **Basic Environment Module:** Underwater oxygen counter, lens damage overlay.
+- [x] **Configuration:** Client-side visuals only via Cloth Config.
 
 ---
 
 ## v1.1.0 – Backend, Security, and Stability (Phase 2a)
-**Goal:** Remove server technical debt and secure multiplayer.
+**Goal:** Remove server technical debt, secure multiplayer, and implement reliable lighting.
 
 ### 🛠️ Technical Tasks
 - [ ] **ModularGogglesItem refactor:**
@@ -33,6 +33,9 @@ This document combines the public vision of the project with the technical requi
     - [ ] Implement simple `IPowerSourceModule` for solar/battery.
 - [ ] **Modification Station refactor:**
     - [ ] Move crafting out of `tick()`, prevent dupe with hoppers, centralize module installation logic.
+- [ ] **Flashlight & Lighting:**
+    - [ ] Develop internal lighting solution (VisionLight) or use screen shader for now.
+    - [ ] Migrate current flashlight shader.
 - [ ] **Configuration:** Separate Client/Common configuration; only Admin/OP can sync balance changes.
 
 ---

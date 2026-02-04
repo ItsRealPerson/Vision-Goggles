@@ -8,7 +8,10 @@
   "client": [
     "client.MixinFogRenderer",
     "client.MixinLevelRenderer",
-    "client.MixinGameRenderer"
+    "client.MixinGameRenderer",
+    "client.MixinMinecraft",
+    "client.GameRendererAccessor",
+    "client.PostChainAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

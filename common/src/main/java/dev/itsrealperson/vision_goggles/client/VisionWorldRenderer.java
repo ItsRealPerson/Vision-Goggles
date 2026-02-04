@@ -19,6 +19,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
+import dev.itsrealperson.vision_goggles.client.flashlight.FlashlightManager;
+import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModuleType;
+import net.minecraft.world.entity.player.Player;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,10 +32,10 @@ public class VisionWorldRenderer {
     private static final List<BlockPos> HOT_BLOCKS = new ArrayList<>();
     private static int scanTick = 0;
 
-    public static void render(PoseStack poseStack, Camera camera) {
+    public static void render(PoseStack poseStack, Camera camera, float partialTicks) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-
+        
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
         if (helmet.isEmpty()) return;
 

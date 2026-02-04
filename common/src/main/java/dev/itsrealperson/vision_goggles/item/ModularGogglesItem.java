@@ -28,8 +28,12 @@ public class ModularGogglesItem extends VisionGogglesItem {
     @Override
     public void serverTick(ItemStack stack, ServerPlayer player) {
         CompoundTag nbt = stack.getOrCreateTag();
-        boolean hasSolar = getUtilityModules(stack).contains(ModuleType.SOLAR);
+        List<ModuleType> utils = getUtilityModules(stack);
+        boolean hasSolar = utils.contains(ModuleType.SOLAR);
+        boolean hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
+        boolean isActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
         
+        // Solar charging logic
         if (hasSolar && player.level().isDay() && player.level().canSeeSky(player.blockPosition().above())) {
             if (player.level().getMaxLocalRawBrightness(player.blockPosition().above()) > 10) {
                 float maxBattery = (float) getBatteryCapacity(stack);
@@ -38,6 +42,13 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
             }
         }
+
+        // Extra battery drain for Flashlight
+        if (isActive && hasFlashlight) {
+            float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
+            // Flashlight adds an extra 0.5f drain per tick (on top of the base drain in super.serverTick)
+            nbt.putFloat(ModConstants.TAG_BATTERY, Math.max(0, currentBattery - 0.5f));
+        }
         
         super.serverTick(stack, player);
     }
@@ -45,6 +56,18 @@ public class ModularGogglesItem extends VisionGogglesItem {
     @Override
     public List<VisionMode> getSupportedModes() {
         return new ArrayList<>();
+    }
+
+    @Override
+    public boolean hasModule(ItemStack stack, String moduleName) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            for (int i = 0; i < modules.size(); i++) {
+                if (modules.getString(i).equals(moduleName)) return true;
+            }
+        }
+        return false;
     }
 
     public List<VisionMode> getModes(ItemStack stack) {

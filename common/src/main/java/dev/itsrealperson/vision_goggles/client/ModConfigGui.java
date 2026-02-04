@@ -54,9 +54,9 @@ public class ModConfigGui {
                 .setTooltip(Component.translatable("config.vision_goggles.nvg_color_theme.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.nvgColorTheme = newValue)
                 .setTextGetter(value -> {
-                    if (value == 0) return Component.literal("Green (Classic)");
-                    if (value == 1) return Component.literal("White Phosphor");
-                    return Component.literal("Digital Cyan");
+                    if (value == 0) return Component.translatable("config.vision_goggles.nvg_color_theme.green");
+                    if (value == 1) return Component.translatable("config.vision_goggles.nvg_color_theme.white");
+                    return Component.translatable("config.vision_goggles.nvg_color_theme.cyan");
                 })
                 .build());
 
@@ -64,6 +64,29 @@ public class ModConfigGui {
                 .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
                 .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
                 .setSaveConsumer(newValue -> ModConfig.data.extraBatteryItems = newValue)
+                .build());
+
+        // Categoría HUD (v1.0.0)
+        ConfigCategory hud = builder.getOrCreateCategory(Component.translatable("config.vision_goggles.hud"));
+
+        hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_coords"), ModConfig.shouldShowCoordinates())
+                .setDefaultValue(true)
+                .setSaveConsumer(newValue -> ModConfig.data.showCoordinates = newValue)
+                .build());
+
+        hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_saturation"), ModConfig.shouldShowSaturation())
+                .setDefaultValue(true)
+                .setSaveConsumer(newValue -> ModConfig.data.showSaturation = newValue)
+                .build());
+
+        hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_oxygen"), ModConfig.shouldShowOxygen())
+                .setDefaultValue(true)
+                .setSaveConsumer(newValue -> ModConfig.data.showOxygenCounter = newValue)
+                .build());
+
+        hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_durability"), ModConfig.shouldShowDurabilityWarning())
+                .setDefaultValue(true)
+                .setSaveConsumer(newValue -> ModConfig.data.showLowDurabilityWarning = newValue)
                 .build());
 
         builder.setSavingRunnable(() -> {

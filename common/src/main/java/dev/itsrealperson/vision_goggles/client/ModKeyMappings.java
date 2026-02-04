@@ -27,8 +27,12 @@ public class ModKeyMappings {
     );
 
     public static void init() {
-        KeyMappingRegistry.register(toggleGrayscaleKey);
-        KeyMappingRegistry.register(switchModeKey);
-        KeyMappingRegistry.register(zoomKey);
+        try {
+            KeyMappingRegistry.register(toggleGrayscaleKey);
+            KeyMappingRegistry.register(switchModeKey);
+            KeyMappingRegistry.register(zoomKey);
+        } catch (Exception e) {
+            // Log or ignore if already registered
+        }
     }
 }

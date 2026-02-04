@@ -9,9 +9,7 @@
     "E": { "item": "vision_goggles:electrical_parts" },
     "C": { "item": "minecraft:copper_ingot" },
     "P": {
-      "type": "architectury:fluid_stack",
-      "item": "minecraft:potion",
-      "nbt": "{Potion:\"minecraft:water_breathing\"}"
+      "item": "minecraft:pufferfish"
     }
   },
   "result": { "item": "vision_goggles:hydro_module" }

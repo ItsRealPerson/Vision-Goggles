@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "vision_goggles:item/batteries"
+    "layer0": "vision_goggles:item/bio_module"
   }
 }

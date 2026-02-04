@@ -13,6 +13,6 @@ public class MixinLevelRenderer {
 
     @Inject(method = "renderLevel", at = @At("RETURN"))
     private void vision_goggles$renderWorldEffects(PoseStack poseStack, float p_109601_, long p_109602_, boolean p_109603_, net.minecraft.client.Camera camera, net.minecraft.client.renderer.GameRenderer p_109605_, net.minecraft.client.renderer.LightTexture p_109606_, org.joml.Matrix4f p_109607_, CallbackInfo ci) {
-        VisionWorldRenderer.render(poseStack, camera);
+        VisionWorldRenderer.render(poseStack, camera, p_109601_);
     }
 }

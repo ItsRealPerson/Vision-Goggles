@@ -8,24 +8,24 @@ Este documento combina la visión pública del proyecto con los requisitos técn
 **Objetivo:** Refactorizar la arquitectura principal y entregar un HUD estable y funcional.
 
 ### 🛠️ Tareas Técnicas
-- [ ] **Refactorizar el renderizador (`VisionRenderer`):**
-    - [ ] Desacoplar la lógica de shaders y GUI en `VisionShaderManager` y `VisionHUDOverlay`.
-    - [ ] Implementar un sistema simple de widgets con `IHudModule`.
-    - [ ] Eliminar Reflection; usar Mixins o Accessors seguros.
+- [x] **Refactorizar el renderizador (`VisionRenderer`):**
+    - [x] Desacoplar la lógica de shaders y GUI en `VisionShaderManager` y `VisionHUDOverlay`.
+    - [x] Implementar un sistema simple de widgets con `IHudModule`.
+    - [x] Eliminar Reflection; usar Mixins o Accessors seguros.
 - [ ] **Actualización de Assets:**
     - [ ] Rediseñar texturas de Gafas Hidro y Bio.
     - [ ] Unificar el estilo visual de los módulos.
     - [ ] Actualizar la textura y modelo de la *Modification Station*.
 
 ### ✨ Funcionalidades Incluidas
-- [ ] **Módulo de Información Vital:** Coordenadas XYZ (Overworld/Nether), Saturación, Alerta de durabilidad baja.
-- [ ] **Módulo de Entorno Básico:** Contador de oxígeno bajo el agua, overlay de daño en la lente.
-- [ ] **Configuración:** Visuales del lado del cliente a través de Cloth Config.
+- [x] **Módulo de Información Vital:** Coordenadas XYZ (Overworld/Nether), Saturación, Alerta de durabilidad baja.
+- [x] **Módulo de Entorno Básico:** Contador de oxígeno bajo el agua, overlay de daño en la lente.
+- [x] **Configuración:** Visuales del lado del cliente a través de Cloth Config.
 
 ---
 
 ## v1.1.0 – Backend, Seguridad y Estabilidad (Fase 2a)
-**Objetivo:** Eliminar deuda técnica del servidor y asegurar el multijugador.
+**Objetivo:** Eliminar deuda técnica del servidor, asegurar el multijugador e implementar iluminación confiable.
 
 ### 🛠️ Tareas Técnicas
 - [ ] **Refactorización de `ModularGogglesItem`:**
@@ -33,6 +33,9 @@ Este documento combina la visión pública del proyecto con los requisitos técn
     - [ ] Implementar un `IPowerSourceModule` simple para solar/batería.
 - [ ] **Refactorización de la *Modification Station*:**
     - [ ] Mover crafteo fuera de `tick()`, prevenir dupeo con tolvas, centralizar lógica de instalación.
+- [ ] **Linterna e Iluminación:**
+    - [ ] Desarrollar solución de iluminación interna (VisionLight) o usar shader de pantalla por ahora.
+    - [ ] Migrar el shader de linterna actual.
 - [ ] **Configuración:** Separar configuración Cliente/Común; solo Admin/OP puede sincronizar cambios de balance.
 
 ---
@@ -102,7 +105,7 @@ Este documento combina la visión pública del proyecto con los requisitos técn
 **Objetivo:** Asegurar compatibilidad y finalizar funciones.
 
 - [ ] **Compatibilidad:** Soporte FE/Energy (Mekanism, Create).
-- [ ] **Integración:** Plugins para JEI / REI.
+- [ ] **Integración:** JEI / REI plugins.
 - [ ] **Progresión:** Logros y balance final.
 
 ---

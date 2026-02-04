@@ -25,7 +25,7 @@ public class VisionGogglesItem extends Item {
     private final IntSupplier batteryCapacity;
 
     public VisionGogglesItem(IntSupplier batteryCapacity, VisionMode... modes) {
-        super(new Item.Properties().stacksTo(1));
+        super(new Item.Properties().stacksTo(1).durability(300));
         this.batteryCapacity = batteryCapacity;
         this.supportedModes = Arrays.asList(modes);
         if (this.supportedModes.isEmpty()) throw new IllegalArgumentException("Must have at least one vision mode");
@@ -45,6 +45,12 @@ public class VisionGogglesItem extends Item {
 
     public List<VisionMode> getSupportedModes() {
         return supportedModes;
+    }
+
+    public boolean hasModule(ItemStack stack, String moduleName) {
+        // Por defecto, las gafas especializadas pueden tener ciertos módulos integrados
+        // o simplemente no tener soporte para módulos adicionales.
+        return false;
     }
 
     public void serverTick(ItemStack stack, ServerPlayer player) {

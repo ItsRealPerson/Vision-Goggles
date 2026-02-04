@@ -13,4 +13,7 @@ public class ModConstants {
     public static final String MODULE_ZOOM = "ZOOM";
     public static final String MODULE_SONAR = "SONAR";
     public static final String MODULE_BATTERY_EXPANSION = "BATTERY_EXPANSION";
+    public static final String MODULE_VITAL_INFO = "VITAL_INFO";
+    public static final String MODULE_ENVIRONMENT = "ENVIRONMENT";
+    public static final String MODULE_FLASHLIGHT = "FLASHLIGHT";
 }

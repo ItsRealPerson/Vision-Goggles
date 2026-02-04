@@ -27,6 +27,12 @@ public class VisionAccessoryRendererFabric implements AccessoryRenderer {
     private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
     private static final ResourceLocation THERMAL_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_glow.png");
 
+    private static final ResourceLocation HYDRO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_vision.png");
+    private static final ResourceLocation HYDRO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_glow.png");
+
+    private static final ResourceLocation BIO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_vision.png");
+    private static final ResourceLocation BIO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_glow.png");
+
     @Override
     public <M extends net.minecraft.world.entity.LivingEntity> void render(net.minecraft.world.item.ItemStack stack, io.wispforest.accessories.api.slot.SlotReference reference, com.mojang.blaze3d.vertex.PoseStack matrixStack, net.minecraft.client.model.EntityModel<M> model, net.minecraft.client.renderer.MultiBufferSource renderTypeBuffer, int light, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
         if (this.model == null) {
@@ -52,12 +58,11 @@ public class VisionAccessoryRendererFabric implements AccessoryRenderer {
             if (goggles instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular) {
                 java.util.List<dev.itsrealperson.vision_goggles.util.VisionMode> modes = modular.getModes(stack);
                 if (!modes.isEmpty()) {
-                    // Use thermal texture if any module is thermal or biometric
+                    // Priority: Thermal > Bio > Hydro > NVG
                     for (dev.itsrealperson.vision_goggles.util.VisionMode m : modes) {
-                        if (m == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL || m == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
-                            mode = m;
-                            break;
-                        }
+                        if (m == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) { mode = m; break; }
+                        if (m == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) { mode = m; break; }
+                        if (m == dev.itsrealperson.vision_goggles.util.VisionMode.HYDRO) { mode = m; }
                     }
                     if (mode == null) mode = modes.get(0);
                 }
@@ -65,9 +70,15 @@ public class VisionAccessoryRendererFabric implements AccessoryRenderer {
                 mode = goggles.getVisionMode();
             }
 
-            if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL || mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
+            if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) {
                 baseTex = THERMAL_TEXTURE;
                 glowTex = THERMAL_GLOW;
+            } else if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.HYDRO) {
+                baseTex = HYDRO_TEXTURE;
+                glowTex = HYDRO_GLOW;
+            } else if (mode == dev.itsrealperson.vision_goggles.util.VisionMode.BIOMETRIC) {
+                baseTex = BIO_TEXTURE;
+                glowTex = BIO_GLOW;
             }
         }
 
