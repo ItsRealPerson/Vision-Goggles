@@ -52,6 +52,7 @@ public final class Vision_gogglesForge {
                 net.minecraft.client.renderer.entity.EntityRenderer<? super net.minecraft.world.entity.LivingEntity> renderer = event.getRenderer((net.minecraft.world.entity.EntityType)entityType);
                 if (renderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer livingRenderer) {
                     livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.HeatSilhouetteLayer(livingRenderer));
+                    livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
                 }
             }
 
@@ -59,6 +60,7 @@ public final class Vision_gogglesForge {
                 net.minecraft.client.renderer.entity.EntityRenderer<?> rawRenderer = event.getSkin(skin);
                 if (rawRenderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer livingRenderer) {
                     livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.HeatSilhouetteLayer(livingRenderer));
+                    livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
                 }
             }
         }
@@ -101,12 +103,6 @@ public final class Vision_gogglesForge {
     public void clientSetup(final FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             ModClient.init();
-            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.NIGHT_VISION_GOGGLES.get(), () -> new dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge());
-            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.THERMAL_GOGGLES.get(), () -> new dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge());
-            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.HYDRO_GOGGLES.get(), () -> new dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge());
-            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.BIOMETRIC_GOGGLES.get(), () -> new dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge());
-            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.MODULAR_GOGGLES.get(), () -> new dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge());
-            top.theillusivec4.curios.api.client.CuriosRendererRegistry.register(dev.itsrealperson.vision_goggles.registry.ModItems.PRO_MODULAR_GOGGLES.get(), () -> new dev.itsrealperson.vision_goggles.forge.client.VisionCurioRendererForge());
         });
     }
 }

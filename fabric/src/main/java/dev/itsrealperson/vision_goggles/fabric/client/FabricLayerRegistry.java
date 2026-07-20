@@ -10,6 +10,7 @@ public class FabricLayerRegistry {
             if (entityRenderer instanceof LivingEntityRenderer) {
                 LivingEntityRenderer livingRenderer = (LivingEntityRenderer) entityRenderer;
                 registrationHelper.register(new HeatSilhouetteLayer(livingRenderer));
+                registrationHelper.register(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
             }
         });
     }
