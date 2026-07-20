@@ -81,7 +81,11 @@ public class VisionShaderManager {
                 } else if (mc.player != null) {
                     net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome = mc.level.getBiome(mc.player.blockPosition());
                     if (biome.value().getBaseTemperature() > 1.0f) {
-                        interference = 0.4f;
+                        // Suave transición térmica basada en el sol (falla de 5 AM a 6 PM)
+                        float timeOfDay = mc.level.getTimeOfDay(1.0f);
+                        float sun = (float) Math.cos(timeOfDay * Math.PI * 2.0);
+                        sun = Math.max(0.0f, sun);
+                        interference = 0.4f * sun;
                     }
                 }
             }
@@ -175,13 +179,14 @@ public class VisionShaderManager {
     private static boolean isHoldingLight(net.minecraft.world.item.ItemStack stack) {
         if (stack.isEmpty()) return false;
         String id = stack.getDescriptionId().toLowerCase();
-        boolean isLight = id.contains("flashlight") || id.contains("linterna") || id.contains("torch") || id.contains("lantern") || id.contains("glow");
+        boolean isLight = id.contains("flashlight") || id.contains("linterna") || id.contains("torch") || id.contains("lantern") || id.contains("glow") || id.contains("lamp");
         
         if (isLight && (id.contains("off") || id.contains("unlit"))) isLight = false;
         
         if (isLight && stack.hasTag()) {
             String nbtStr = stack.getTag().toString().toLowerCase();
-            if (nbtStr.contains("active:0") || nbtStr.contains("on:0") || nbtStr.contains("enabled:0") || nbtStr.contains("is_on:0")) {
+            // Verifica etiquetas comunes de mods de linternas, incluyendo OmegaFlashlight ("flashlight_on:0")
+            if (nbtStr.contains("active:0") || nbtStr.contains("on:0") || nbtStr.contains("enabled:0") || nbtStr.contains("is_on:0") || nbtStr.contains("flashlight_on:0") || nbtStr.contains("flashlight_on:false")) {
                 isLight = false;
             }
         }

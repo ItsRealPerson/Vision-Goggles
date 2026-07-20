@@ -481,18 +481,7 @@ public class ThermalEntityPainter {
         
         @Override
         public com.mojang.blaze3d.vertex.VertexConsumer color(int r, int g, int b, int a) { 
-            int finalAlpha = this.baseAlpha;
-            if (isBody && entityHeight > 0) {
-                // localY is the height of this vertex relative to the entity's feet (0.0 to entityHeight)
-                double localY = this.lastY - this.dy;
-                float normalizedY = (float) (localY / this.entityHeight);
-                normalizedY = Math.max(0.0f, Math.min(1.0f, normalizedY));
-                
-                // Gradient: 40% heat at feet, 100% heat at head
-                float gradient = 0.4f + (0.6f * normalizedY);
-                finalAlpha = (int) (this.baseAlpha * gradient);
-            }
-            delegate.color(r, g, b, finalAlpha); 
+            delegate.color(r, g, b, this.baseAlpha); 
             return this; 
         }
         @Override

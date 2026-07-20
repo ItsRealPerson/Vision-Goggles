@@ -25,8 +25,8 @@ void main() {
     
     // Thermal Interference (e.g., in Nether) - Wobbly distortion MUST happen before sampling!
     if (Interference > 0.0) {
-        uv.x += sin(uv.y * 50.0 + time * 10.0) * 0.008 * Interference;
-        uv.y += cos(uv.x * 50.0 + time * 12.0) * 0.008 * Interference;
+        uv.x += sin(uv.y * 80.0 + time * 15.0) * 0.015 * Interference;
+        uv.y += cos(uv.x * 80.0 + time * 18.0) * 0.015 * Interference;
     }
 
     float wear = 0.0;
@@ -86,11 +86,12 @@ void main() {
     
     // Thermal Interference (Noise and Color shift)
     if (Interference > 0.0) {
-        float interferenceNoise = noise(uv * 200.0 + time * 15.0) * Interference;
-        visionColor += vec3(interferenceNoise * 1.5, interferenceNoise * 0.5, 0.0);
+        float interferenceNoise = noise(uv * 200.0 + time * 25.0) * Interference;
+        visionColor += vec3(interferenceNoise * 2.0, interferenceNoise * 0.4, 0.0);
+        
         // Make the screen pulse with a reddish tint
-        float pulse = (sin(time * 8.0) * 0.5 + 0.5) * Interference;
-        visionColor = mix(visionColor, vec3(1.0, 0.2, 0.0), pulse * 0.3);
+        float pulse = (sin(time * 15.0) * 0.5 + 0.5) * Interference;
+        visionColor = mix(visionColor, vec3(1.0, 0.1, 0.0), pulse * 0.4);
     }
 
     visionColor -= sin(uv.y * 600.0) * 0.03;
