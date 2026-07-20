@@ -22,7 +22,7 @@ public class OxygenModule implements IHudModule {
         if (!ModConfig.shouldShowOxygen()) return false;
         
         if (!(goggles.getItem() instanceof VisionGogglesItem vgi)) return false;
-        if (!vgi.hasModule(goggles, ModConstants.MODULE_ENVIRONMENT)) return false;
+        if (!vgi.hasModule(goggles, ModConstants.ID_ENVIRONMENT)) return false;
 
         return player.isUnderWater() || player.getAirSupply() < player.getMaxAirSupply();
     }

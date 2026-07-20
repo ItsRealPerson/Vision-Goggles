@@ -6,6 +6,7 @@ import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -21,33 +22,33 @@ import net.minecraft.server.level.ServerPlayer;
 
 public class ModularGogglesItem extends VisionGogglesItem {
 
+    private final int maxModules;
+
     public ModularGogglesItem() {
+        this(2);
+    }
+
+    public ModularGogglesItem(int maxModules) {
         super(ModConfig::getModularDuration, VisionMode.NIGHT_VISION);
+        this.maxModules = maxModules;
     }
     
     @Override
     public void serverTick(ItemStack stack, ServerPlayer player) {
-        CompoundTag nbt = stack.getOrCreateTag();
         List<ModuleType> utils = getUtilityModules(stack);
-        boolean hasSolar = utils.contains(ModuleType.SOLAR);
-        boolean hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
-        boolean isActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
-        
-        // Solar charging logic
-        if (hasSolar && player.level().isDay() && player.level().canSeeSky(player.blockPosition().above())) {
-            if (player.level().getMaxLocalRawBrightness(player.blockPosition().above()) > 10) {
-                float maxBattery = (float) getBatteryCapacity(stack);
-                float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
-                currentBattery = Math.min(maxBattery, currentBattery + 1.5f);
-                nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
-            }
+        // Apply power-related effects from modules
+        for (ModuleType util : utils) {
+            util.tickPower(stack, player);
         }
 
-        // Extra battery drain for Flashlight
-        if (isActive && hasFlashlight) {
-            float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
-            // Flashlight adds an extra 0.5f drain per tick (on top of the base drain in super.serverTick)
-            nbt.putFloat(ModConstants.TAG_BATTERY, Math.max(0, currentBattery - 0.5f));
+        // Standby drain if any module is installed and active mode is OFF
+        if (!stack.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+            if (!getModes(stack).isEmpty() || !utils.isEmpty()) {
+                float currentBattery = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+                if (currentBattery > 0) {
+                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, Math.max(0, currentBattery - 0.001f));
+                }
+            }
         }
         
         super.serverTick(stack, player);
@@ -55,7 +56,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
 
     @Override
     public List<VisionMode> getSupportedModes() {
-        return new ArrayList<>();
+        return List.of();
     }
 
     @Override
@@ -64,7 +65,20 @@ public class ModularGogglesItem extends VisionGogglesItem {
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             for (int i = 0; i < modules.size(); i++) {
-                if (modules.getString(i).equals(moduleName)) return true;
+                String mod = modules.getString(i);
+                if (mod.equals(moduleName)) return true;
+
+                // Check for ModuleType matches (handles both new ID and legacy name)
+                ModuleType type = ModuleType.byId(mod);
+                if (type != null) {
+                    if (type.getId().equals(moduleName) || type.name().equals(moduleName)) return true;
+                }
+
+                // Check for VisionMode matches (handles both new ID and legacy name)
+                VisionMode mode = VisionMode.byLocation(mod);
+                if (mode != null) {
+                    if (mode.getModuleLocation().toString().equals(moduleName) || mode.name().equals(moduleName)) return true;
+                }
             }
         }
         return false;
@@ -76,11 +90,10 @@ public class ModularGogglesItem extends VisionGogglesItem {
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             for (int i = 0; i < modules.size(); i++) {
-                String moduleName = modules.getString(i);
-                try {
-                    VisionMode mode = VisionMode.valueOf(moduleName);
+                String moduleLocation = modules.getString(i);
+                VisionMode mode = VisionMode.byLocation(moduleLocation);
+                if (mode != null) {
                     modes.add(mode);
-                } catch (IllegalArgumentException ignored) {
                 }
             }
         }
@@ -105,7 +118,51 @@ public class ModularGogglesItem extends VisionGogglesItem {
     }
 
     public int getMaxModules() {
-        return 2;
+        return maxModules;
+    }
+
+    public boolean canInstallModule(ItemStack stack, String moduleId) {
+        if (hasModule(stack, moduleId)) return false;
+
+        List<VisionMode> modes = getModes(stack);
+        List<ModuleType> utils = getUtilityModules(stack);
+        int maxTotal = getMaxModules();
+
+        // Incompatibilities: Block Solar on Hydro, Solar/Battery on Bio, prevent incompatible sensors (NVG + Thermal)
+        VisionMode newMode = VisionMode.byLocation(moduleId);
+        ModuleType newUtil = ModuleType.byId(moduleId);
+
+        if (newMode == VisionMode.THERMAL && modes.contains(VisionMode.NIGHT_VISION)) return false;
+        if (newMode == VisionMode.NIGHT_VISION && modes.contains(VisionMode.THERMAL)) return false;
+
+        if (newUtil == ModuleType.SOLAR && (modes.contains(VisionMode.HYDRO) || modes.contains(VisionMode.BIOMETRIC))) return false;
+        if (newMode == VisionMode.HYDRO && utils.contains(ModuleType.SOLAR)) return false;
+        if (newMode == VisionMode.BIOMETRIC && utils.contains(ModuleType.SOLAR)) return false;
+
+        if (newUtil == ModuleType.BATTERY_EXPANSION && modes.contains(VisionMode.BIOMETRIC)) return false;
+        if (newMode == VisionMode.BIOMETRIC && utils.contains(ModuleType.BATTERY_EXPANSION)) return false;
+
+        // Specific check for Battery Expansion
+        if (newUtil == ModuleType.BATTERY_EXPANSION) {
+            if (utils.contains(ModuleType.BATTERY_EXPANSION)) return false;
+            return true;
+        }
+
+        // Functional modules count
+        int functionalCount = modes.size() + utils.size();
+        // Don't count Battery Expansion towards the limit if we are checking a functional module
+        functionalCount -= utils.contains(ModuleType.BATTERY_EXPANSION) ? 1 : 0;
+
+        return functionalCount < maxTotal;
+    }
+
+    public void installModule(ItemStack stack, String moduleId) {
+        if (!canInstallModule(stack, moduleId)) return;
+
+        CompoundTag nbt = stack.getOrCreateTag();
+        ListTag modules = nbt.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+        modules.add(StringTag.valueOf(moduleId));
+        nbt.put(ModConstants.TAG_MODULES, modules);
     }
 
     @Override
@@ -128,10 +185,15 @@ public class ModularGogglesItem extends VisionGogglesItem {
         if (!modes.isEmpty() || !utils.isEmpty()) {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.installed_modules").withStyle(ChatFormatting.GRAY));
             for (VisionMode mode : modes) {
-                tooltipComponents.add(Component.literal("- ").append(mode.getDisplayName()).withStyle(ChatFormatting.AQUA));
+                String modeName = "nvg";
+                if (mode == VisionMode.THERMAL) modeName = "thermal";
+                else if (mode == VisionMode.HYDRO) modeName = "hydro";
+                else if (mode == VisionMode.BIOMETRIC) modeName = "bio";
+                tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + modeName + "_module")).withStyle(ChatFormatting.AQUA));
             }
             for (ModuleType util : utils) {
-                tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + util.getId().toLowerCase() + "_module")).withStyle(ChatFormatting.YELLOW));
+                String utilName = util.getId().contains(":") ? util.getId().split(":")[1] : util.getId().toLowerCase();
+                tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + utilName + "_module")).withStyle(ChatFormatting.YELLOW));
             }
         } else {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.no_modules").withStyle(ChatFormatting.RED));

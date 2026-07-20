@@ -6,6 +6,7 @@ uniform float time;
 uniform float battery;
 uniform vec3 colorFilter;
 uniform float focus;
+uniform float Glare;
 
 float noise(vec2 co) {
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -77,6 +78,15 @@ void main() {
     // Scanlines
     visionColor -= sin(uv.y * 800.0) * (0.04 + focus * 0.02);
     
+    // Glare / Blindness effect
+    if (Glare > 0.0) {
+        float glareAmount = Glare * 2.0;
+        visionColor += vec3(glareAmount);
+        // Desaturate and wash out when glared
+        float maxCol = max(visionColor.r, max(visionColor.g, visionColor.b));
+        visionColor = mix(visionColor, vec3(maxCol), Glare);
+    }
+
     // Tightening Vignette
     visionColor *= (1.0 - smoothstep(0.4 - focus * 0.1, 0.7 - focus * 0.15, dist));
 

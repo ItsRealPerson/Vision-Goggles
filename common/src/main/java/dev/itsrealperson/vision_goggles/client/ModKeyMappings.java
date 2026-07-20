@@ -26,11 +26,19 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
+    public static final KeyMapping toggleSpawnSecurityKey = new KeyMapping(
+            "key.vision_goggles.toggle_spawn_security",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_O,
+            "key.categories.vision_goggles"
+    );
+
     public static void init() {
         try {
             KeyMappingRegistry.register(toggleGrayscaleKey);
             KeyMappingRegistry.register(switchModeKey);
             KeyMappingRegistry.register(zoomKey);
+            KeyMappingRegistry.register(toggleSpawnSecurityKey);
         } catch (Exception e) {
             // Log or ignore if already registered
         }

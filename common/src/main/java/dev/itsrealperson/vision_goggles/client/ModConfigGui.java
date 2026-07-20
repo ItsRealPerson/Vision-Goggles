@@ -22,37 +22,37 @@ public class ModConfigGui {
         general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.nvg_duration"), ModConfig.getNvgDuration())
                 .setDefaultValue(6000)
                 .setTooltip(Component.translatable("config.vision_goggles.nvg_duration.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.nvgDurationTicks = newValue)
+                .setSaveConsumer(newValue -> ModConfig.common.nvgDurationTicks = newValue)
                 .build());
 
         general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.thermal_duration"), ModConfig.getThermalDuration())
                 .setDefaultValue(9000)
                 .setTooltip(Component.translatable("config.vision_goggles.thermal_duration.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.thermalDurationTicks = newValue)
+                .setSaveConsumer(newValue -> ModConfig.common.thermalDurationTicks = newValue)
                 .build());
 
         general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.hydro_duration"), ModConfig.getHydroDuration())
                 .setDefaultValue(6000)
                 .setTooltip(Component.translatable("config.vision_goggles.hydro_duration.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.hydroDurationTicks = newValue)
+                .setSaveConsumer(newValue -> ModConfig.common.hydroDurationTicks = newValue)
                 .build());
 
         general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.bio_duration"), ModConfig.getBiometricDuration())
                 .setDefaultValue(4500)
                 .setTooltip(Component.translatable("config.vision_goggles.bio_duration.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.biometricDurationTicks = newValue)
+                .setSaveConsumer(newValue -> ModConfig.common.biometricDurationTicks = newValue)
                 .build());
 
         general.addEntry(entryBuilder.startIntField(Component.translatable("config.vision_goggles.modular_duration"), ModConfig.getModularDuration())
                 .setDefaultValue(6000)
                 .setTooltip(Component.translatable("config.vision_goggles.modular_duration.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.modularDurationTicks = newValue)
+                .setSaveConsumer(newValue -> ModConfig.common.modularDurationTicks = newValue)
                 .build());
 
         general.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.nvg_color_theme"), ModConfig.getNvgColorTheme(), 0, 2)
                 .setDefaultValue(0)
                 .setTooltip(Component.translatable("config.vision_goggles.nvg_color_theme.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.nvgColorTheme = newValue)
+                .setSaveConsumer(newValue -> ModConfig.client.nvgColorTheme = newValue)
                 .setTextGetter(value -> {
                     if (value == 0) return Component.translatable("config.vision_goggles.nvg_color_theme.green");
                     if (value == 1) return Component.translatable("config.vision_goggles.nvg_color_theme.white");
@@ -63,7 +63,7 @@ public class ModConfigGui {
         general.addEntry(entryBuilder.startStrList(Component.translatable("config.vision_goggles.extra_batteries"), ModConfig.getExtraBatteryItems())
                 .setDefaultValue(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"))
                 .setTooltip(Component.translatable("config.vision_goggles.extra_batteries.tooltip"))
-                .setSaveConsumer(newValue -> ModConfig.data.extraBatteryItems = newValue)
+                .setSaveConsumer(newValue -> ModConfig.common.extraBatteryItems = newValue)
                 .build());
 
         // Categoría HUD (v1.0.0)
@@ -71,22 +71,22 @@ public class ModConfigGui {
 
         hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_coords"), ModConfig.shouldShowCoordinates())
                 .setDefaultValue(true)
-                .setSaveConsumer(newValue -> ModConfig.data.showCoordinates = newValue)
+                .setSaveConsumer(newValue -> ModConfig.client.showCoordinates = newValue)
                 .build());
 
         hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_saturation"), ModConfig.shouldShowSaturation())
                 .setDefaultValue(true)
-                .setSaveConsumer(newValue -> ModConfig.data.showSaturation = newValue)
+                .setSaveConsumer(newValue -> ModConfig.client.showSaturation = newValue)
                 .build());
 
         hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_oxygen"), ModConfig.shouldShowOxygen())
                 .setDefaultValue(true)
-                .setSaveConsumer(newValue -> ModConfig.data.showOxygenCounter = newValue)
+                .setSaveConsumer(newValue -> ModConfig.client.showOxygenCounter = newValue)
                 .build());
 
         hud.addEntry(entryBuilder.startBooleanToggle(Component.translatable("config.vision_goggles.show_durability"), ModConfig.shouldShowDurabilityWarning())
                 .setDefaultValue(true)
-                .setSaveConsumer(newValue -> ModConfig.data.showLowDurabilityWarning = newValue)
+                .setSaveConsumer(newValue -> ModConfig.client.showLowDurabilityWarning = newValue)
                 .build());
 
         builder.setSavingRunnable(() -> {
@@ -101,7 +101,6 @@ public class ModConfigGui {
                         ModConfig.getHydroDuration(),
                         ModConfig.getBiometricDuration(),
                         ModConfig.getModularDuration(),
-                        ModConfig.getNvgColorTheme(),
                         ModConfig.getExtraBatteryItems()
                     )
                 );

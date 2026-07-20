@@ -25,9 +25,15 @@ public class GogglesStatusModule implements IHudModule {
         if (nbt == null) return;
 
         // 1. Renderizar Modo de Visión Actual (Arriba a la Derecha)
-        int modeId = nbt.getInt(ModConstants.TAG_MODE);
+        int modeId = nbt.contains(ModConstants.TAG_MODE) ? nbt.getInt(ModConstants.TAG_MODE) : -1;
         VisionMode mode = VisionMode.byId(modeId);
-        if (mode != null) {
+        
+        boolean showMode = mode != null;
+        if (showMode && goggles.getItem() instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular) {
+            showMode = modular.getModes(goggles).contains(mode);
+        }
+
+        if (showMode) {
             Component modeName = mode.getDisplayName();
             int xMode = width - mc.font.width(modeName) - 5;
             gui.drawString(mc.font, modeName.getVisualOrderText(), xMode, 5, 0xFFAAAAAA, true);

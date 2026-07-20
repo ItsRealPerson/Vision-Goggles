@@ -1,4 +1,4 @@
-package dev.itsrealperson.vision_goggles.mixin.client;
+package dev.itsrealperson.vision_goggles.fabric.mixin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
@@ -31,7 +31,7 @@ public class MixinFogRenderer {
                         
                         if (mode == VisionMode.HYDRO) {
                             RenderSystem.setShaderFogStart(viewDistance * 0.5F);
-                            RenderSystem.setShaderFogEnd(viewDistance * 5.0F); // Push fog way back
+                            RenderSystem.setShaderFogEnd(viewDistance * 5.0F);
                         }
                     }
                 }

@@ -78,7 +78,7 @@ public class VisionGogglesItem extends Item {
                 }
 
                 if (shouldApplyNV) {
-                    player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 215, 0, false, false, false));
+                    player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0, false, false, false));
                 } else {
                     cleanUpEffect(player);
                 }
@@ -106,7 +106,7 @@ public class VisionGogglesItem extends Item {
     public static void cleanUpEffect(ServerPlayer player) {
         if (player.hasEffect(MobEffects.NIGHT_VISION)) {
             MobEffectInstance effect = player.getEffect(MobEffects.NIGHT_VISION);
-            if (effect != null && effect.getDuration() <= 215) {
+            if (effect != null && !effect.isVisible() && !effect.showIcon()) {
                 player.removeEffect(MobEffects.NIGHT_VISION);
             }
         }

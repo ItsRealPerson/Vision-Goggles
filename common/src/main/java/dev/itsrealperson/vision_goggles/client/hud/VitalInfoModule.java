@@ -25,7 +25,7 @@ public class VitalInfoModule implements IHudModule {
         }
 
         if (!(goggles.getItem() instanceof VisionGogglesItem vgi)) return false;
-        if (!vgi.hasModule(goggles, ModConstants.MODULE_VITAL_INFO)) return false;
+        if (!vgi.hasModule(goggles, ModConstants.ID_VITAL_INFO)) return false;
 
         return ModConfig.shouldShowCoordinates() || ModConfig.shouldShowSaturation();
     }
@@ -36,7 +36,7 @@ public class VitalInfoModule implements IHudModule {
         Player player = mc.player;
         if (player == null || !(goggles.getItem() instanceof VisionGogglesItem vgi)) return;
 
-        boolean hasVitalModule = vgi.hasModule(goggles, ModConstants.MODULE_VITAL_INFO);
+        boolean hasVitalModule = vgi.hasModule(goggles, ModConstants.ID_VITAL_INFO);
 
         // 1. Renderizar Coordenadas
         if (hasVitalModule && ModConfig.shouldShowCoordinates()) {

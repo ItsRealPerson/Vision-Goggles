@@ -74,9 +74,14 @@ public class ModEvents {
                         ModConfig.getHydroDuration(),
                         ModConfig.getBiometricDuration(),
                         ModConfig.getModularDuration(),
-                        ModConfig.getNvgColorTheme(),
                         ModConfig.getExtraBatteryItems()
                 ));
+            }
+        });
+
+        PlayerEvent.PLAYER_QUIT.register(player -> {
+            if (player instanceof ServerPlayer) {
+                // Cleanup removed
             }
         });
     }

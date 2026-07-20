@@ -20,19 +20,21 @@ import java.util.Map;
 
 public class ModConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    public static ConfigData data = new ConfigData();
+    public static CommonConfig common = new CommonConfig();
+    public static ClientConfig client = new ClientConfig();
     private static final Map<ResourceLocation, Float> BATTERY_MAP = new HashMap<>();
 
-    public static class ConfigData {
+    public static class CommonConfig {
         public int nvgDurationTicks = 6000;
         public int thermalDurationTicks = 9000;
         public int hydroDurationTicks = 6000;
         public int biometricDurationTicks = 4500;
         public int modularDurationTicks = 6000;
-        public int nvgColorTheme = 0; // 0: Green, 1: White, 2: Cyan
         public List<String> extraBatteryItems = new ArrayList<>(List.of("minecraft:iron_ingot|0.1", "minecraft:copper_ingot|0.25"));
+    }
 
-        // Opciones del HUD (v1.0.0)
+    public static class ClientConfig {
+        public int nvgColorTheme = 0; // 0: Green, 1: White, 2: Cyan
         public boolean showCoordinates = true;
         public boolean showSaturation = true;
         public boolean showOxygenCounter = true;
@@ -40,43 +42,68 @@ public class ModConfig {
     }
 
     public static void load() {
-        Path configPath = Platform.getConfigFolder().resolve("vision_goggles.json");
-        File configFile = configPath.toFile();
+        loadCommon();
+        loadClient();
+        updateBatteryMap();
+    }
+
+    private static <T> T loadConfig(String filename, Class<T> clazz, T fallback) {
+        File configFile = Platform.getConfigFolder().resolve(filename).toFile();
         if (configFile.exists()) {
             try (FileReader reader = new FileReader(configFile)) {
-                data = GSON.fromJson(reader, ConfigData.class);
+                return GSON.fromJson(reader, clazz);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
-            save();
+            saveConfig(filename, fallback);
         }
-        updateBatteryMap();
+        return fallback;
     }
 
-    public static void save() {
-        Path configPath = Platform.getConfigFolder().resolve("vision_goggles.json");
-        try (FileWriter writer = new FileWriter(configPath.toFile())) {
-            GSON.toJson(data, writer);
+    private static void saveConfig(String filename, Object configObj) {
+        File configFile = Platform.getConfigFolder().resolve(filename).toFile();
+        try (FileWriter writer = new FileWriter(configFile)) {
+            GSON.toJson(configObj, writer);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void updateFromSync(int nvg, int thermal, int hydro, int bio, int modular, int nvgColor, List<String> extra) {
-        data.nvgDurationTicks = nvg;
-        data.thermalDurationTicks = thermal;
-        data.hydroDurationTicks = hydro;
-        data.biometricDurationTicks = bio;
-        data.modularDurationTicks = modular;
-        data.nvgColorTheme = nvgColor;
-        data.extraBatteryItems = extra;
+    private static void loadCommon() {
+        common = loadConfig("vision_goggles-common.json", CommonConfig.class, common);
+    }
+
+    private static void loadClient() {
+        client = loadConfig("vision_goggles-client.json", ClientConfig.class, client);
+    }
+
+    public static void saveCommon() {
+        saveConfig("vision_goggles-common.json", common);
+    }
+
+    public static void saveClient() {
+        saveConfig("vision_goggles-client.json", client);
+    }
+
+    public static void save() {
+        saveCommon();
+        saveClient();
+    }
+
+    public static void updateFromSync(int nvg, int thermal, int hydro, int bio, int modular, List<String> extra) {
+        common.nvgDurationTicks = nvg;
+        common.thermalDurationTicks = thermal;
+        common.hydroDurationTicks = hydro;
+        common.biometricDurationTicks = bio;
+        common.modularDurationTicks = modular;
+        common.extraBatteryItems = extra;
         updateBatteryMap();
     }
 
     public static void updateBatteryMap() {
         BATTERY_MAP.clear();
-        for (String entry : data.extraBatteryItems) {
+        for (String entry : common.extraBatteryItems) {
             try {
                 String[] parts = entry.split("\\|");
                 String idStr = parts[0].trim();
@@ -93,18 +120,18 @@ public class ModConfig {
         }
     }
 
-    public static int getNvgDuration() { return data.nvgDurationTicks; }
-    public static int getThermalDuration() { return data.thermalDurationTicks; }
-    public static int getHydroDuration() { return data.hydroDurationTicks; }
-    public static int getBiometricDuration() { return data.biometricDurationTicks; }
-    public static int getModularDuration() { return data.modularDurationTicks; }
-    public static int getNvgColorTheme() { return data.nvgColorTheme; }
-    public static List<String> getExtraBatteryItems() { return data.extraBatteryItems; }
+    public static int getNvgDuration() { return common.nvgDurationTicks; }
+    public static int getThermalDuration() { return common.thermalDurationTicks; }
+    public static int getHydroDuration() { return common.hydroDurationTicks; }
+    public static int getBiometricDuration() { return common.biometricDurationTicks; }
+    public static int getModularDuration() { return common.modularDurationTicks; }
+    public static int getNvgColorTheme() { return client.nvgColorTheme; }
+    public static List<String> getExtraBatteryItems() { return common.extraBatteryItems; }
 
-    public static boolean shouldShowCoordinates() { return data.showCoordinates; }
-    public static boolean shouldShowSaturation() { return data.showSaturation; }
-    public static boolean shouldShowOxygen() { return data.showOxygenCounter; }
-    public static boolean shouldShowDurabilityWarning() { return data.showLowDurabilityWarning; }
+    public static boolean shouldShowCoordinates() { return client.showCoordinates; }
+    public static boolean shouldShowSaturation() { return client.showSaturation; }
+    public static boolean shouldShowOxygen() { return client.showOxygenCounter; }
+    public static boolean shouldShowDurabilityWarning() { return client.showLowDurabilityWarning; }
 
     public static float getBatteryCharge(ItemStack stack) {
         if (stack.isEmpty()) return 0.0f;

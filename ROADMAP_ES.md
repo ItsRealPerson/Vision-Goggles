@@ -12,10 +12,10 @@ Este documento combina la visión pública del proyecto con los requisitos técn
     - [x] Desacoplar la lógica de shaders y GUI en `VisionShaderManager` y `VisionHUDOverlay`.
     - [x] Implementar un sistema simple de widgets con `IHudModule`.
     - [x] Eliminar Reflection; usar Mixins o Accessors seguros.
-- [ ] **Actualización de Assets:**
-    - [ ] Rediseñar texturas de Gafas Hidro y Bio.
-    - [ ] Unificar el estilo visual de los módulos.
-    - [ ] Actualizar la textura y modelo de la *Modification Station*.
+- [x] **Actualización de Assets:**
+    - [x] Rediseñar texturas de Gafas Hidro y Bio.
+    - [x] Unificar el estilo visual de los módulos.
+    - [x] Actualizar la textura y modelo de la *Modification Station*.
 
 ### ✨ Funcionalidades Incluidas
 - [x] **Módulo de Información Vital:** Coordenadas XYZ (Overworld/Nether), Saturación, Alerta de durabilidad baja.
@@ -28,15 +28,12 @@ Este documento combina la visión pública del proyecto con los requisitos técn
 **Objetivo:** Eliminar deuda técnica del servidor, asegurar el multijugador e implementar iluminación confiable.
 
 ### 🛠️ Tareas Técnicas
-- [ ] **Refactorización de `ModularGogglesItem`:**
-    - [ ] Migrar NBT de `String` a `ResourceLocation`.
-    - [ ] Implementar un `IPowerSourceModule` simple para solar/batería.
-- [ ] **Refactorización de la *Modification Station*:**
-    - [ ] Mover crafteo fuera de `tick()`, prevenir dupeo con tolvas, centralizar lógica de instalación.
-- [ ] **Linterna e Iluminación:**
-    - [ ] Desarrollar solución de iluminación interna (VisionLight) o usar shader de pantalla por ahora.
-    - [ ] Migrar el shader de linterna actual.
-- [ ] **Configuración:** Separar configuración Cliente/Común; solo Admin/OP puede sincronizar cambios de balance.
+- [x] **Refactorización de `ModularGogglesItem`:**
+    - [x] Migrar NBT de `String` a `ResourceLocation`.
+    - [x] Implementar un `IPowerSourceModule` simple para solar/batería.
+- [x] **Refactorización de la *Modification Station*:**
+    - [x] Mover crafteo fuera de `tick()`, prevenir dupeo con tolvas, centralizar lógica de instalación.
+- [x] **Configuración:** Separar configuración Cliente/Común; solo Admin/OP puede sincronizar cambios de balance.
 
 ---
 
@@ -60,28 +57,15 @@ Este documento combina la visión pública del proyecto con los requisitos técn
 
 ---
 
-## v2.0.0 – Transición al 3D: Sistemas de Seguridad (Fase 3a)
-**Objetivo:** Introducir renderizado 3D de forma segura.
+## v2.0.0 – Renderizado 3D y Óptica Avanzada Experimental (Fase 3)
+**Objetivo:** Introducir renderizado 3D de forma segura, añadir overlays técnicos e implementar efectos visuales complejos.
 
-- [ ] **Infraestructura 3D:** Pipeline simple del lado del cliente específico para el mod.
-- [ ] **Módulo de Seguridad de Spawn:** Overlay de niveles de luz con tecla dedicada.
-- [ ] **Compatibilidad:** Asegurar funcionamiento con Sodium/Iris sin romper nada. Evitar crear APIs abstractas o registros genéricos.
-
----
-
-## v2.1.0 – Visión Técnica y Automatización (Fase 3b)
-**Objetivo:** Herramientas para jugadores técnicos y automatización.
-
-- [ ] **Módulos de automatización:** Visor de flujo de tolvas y vínculo de aldeanos (Cama/Mesa).
-- [ ] **Visor de Chunks:** Visualizar chunks activos y cargados.
-- [ ] **Gestión de overlays:** Sistema de prioridad simple para información 3D.
-
----
-
-## v2.2.0 – Óptica Avanzada y Shaders (Fase 3c)
-**Objetivo:** Implementar efectos visuales complejos.
-
-- [ ] **Shaders:** Interferencia térmica (Nether), deslumbramiento/ceguera para NVG. Implementaciones aisladas únicamente.
+- [x] **Infraestructura 3D:** Pipeline simple del lado del cliente específico para el mod.
+- [x] **Módulo de Seguridad de Spawn:** Overlay de niveles de luz con tecla dedicada (Radio: 32 bloques).
+- [x] **Módulo Visor de Chunks:** Renderiza los bordes de los chunks dinámicamente (similar a F3+G).
+- [x] **Gestión de overlays:** Sistema de prioridad simple para información 3D.
+- [x] **Shaders:** Interferencia térmica (Nether), deslumbramiento/ceguera para NVG.
+- [x] **Compatibilidad:** Asegurar funcionamiento con Sodium/Iris sin romper nada. Evitar crear APIs abstractas o registros genéricos.
 
 ---
 

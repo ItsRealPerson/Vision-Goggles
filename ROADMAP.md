@@ -12,10 +12,10 @@ This document combines the public vision of the project with the technical requi
     - [x] Decouple shader logic and GUI rendering into `VisionShaderManager` and `VisionHUDOverlay`.
     - [x] Implement a simple widget system with `IHudModule`.
     - [x] Remove reflection; use safe Mixins or Accessors.
-- [ ] **Asset updates:**
-    - [ ] Redesign Hydro and Bio Goggles textures.
-    - [ ] Unify visual style of modules.
-    - [ ] Update Modification Station texture and model.
+- [x] **Asset updates:**
+    - [x] Redesign Hydro and Bio Goggles textures.
+    - [x] Unify visual style of modules.
+    - [x] Update Modification Station texture and model.
 
 ### ✨ Included Features
 - [x] **Vital Information Module:** XYZ coordinates (Overworld/Nether), Saturation, Low Durability alert.
@@ -28,15 +28,12 @@ This document combines the public vision of the project with the technical requi
 **Goal:** Remove server technical debt, secure multiplayer, and implement reliable lighting.
 
 ### 🛠️ Technical Tasks
-- [ ] **ModularGogglesItem refactor:**
-    - [ ] Migrate NBT from `String` to `ResourceLocation`.
-    - [ ] Implement simple `IPowerSourceModule` for solar/battery.
-- [ ] **Modification Station refactor:**
-    - [ ] Move crafting out of `tick()`, prevent dupe with hoppers, centralize module installation logic.
-- [ ] **Flashlight & Lighting:**
-    - [ ] Develop internal lighting solution (VisionLight) or use screen shader for now.
-    - [ ] Migrate current flashlight shader.
-- [ ] **Configuration:** Separate Client/Common configuration; only Admin/OP can sync balance changes.
+- [x] **ModularGogglesItem refactor:**
+    - [x] Migrate NBT from `String` to `ResourceLocation`.
+    - [x] Implement simple `IPowerSourceModule` for solar/battery.
+- [x] **Modification Station refactor:**
+    - [x] Move crafting out of `tick()`, prevent dupe with hoppers, centralize module installation logic.
+- [x] **Configuration:** Separate Client/Common configuration; only Admin/OP can sync balance changes.
 
 ---
 
@@ -60,28 +57,15 @@ This document combines the public vision of the project with the technical requi
 
 ---
 
-## v2.0.0 – 3D Transition: Safety Systems (Phase 3a)
-**Goal:** Introduce 3D world rendering safely.
+## v2.0.0 – Experimental 3D Rendering & Advanced Optics (Phase 3)
+**Goal:** Introduce 3D world rendering safely, add technical overlays, and implement complex visual effects.
 
-- [ ] **3D Infrastructure:** Single client-side pipeline specific to Vision Goggles.
-- [ ] **Spawn Safety module:** Light level overlay with dedicated keybinding.
-- [ ] **Compatibility:** Ensure cooperation with Sodium/Iris. Avoid creating generic registries or abstract APIs.
-
----
-
-## v2.1.0 – Technical Vision & Automation (Phase 3b)
-**Goal:** Add tools for automation and technical players.
-
-- [ ] **Automation modules:** Hopper flow viewer and Villager link visualization (Bed/Workstation).
-- [ ] **Chunk viewer:** Visualize active and loaded chunks.
-- [ ] **Overlay management:** Simple priority system for 3D information.
-
----
-
-## v2.2.0 – Advanced Optics & Shaders (Phase 3c)
-**Goal:** Implement complex visual effects.
-
-- [ ] **Shaders:** Thermal interference (Nether), glare/blindness for NVG. Isolated implementations only.
+- [x] **3D Infrastructure:** Single client-side pipeline specific to Vision Goggles.
+- [x] **Spawn Safety module:** Light level overlay with dedicated keybinding (Radius: 32 blocks).
+- [x] **Chunk Viewer Module:** Render chunk borders dynamically (similar to F3+G).
+- [x] **Overlay management:** Simple priority system for 3D information.
+- [x] **Shaders:** Thermal interference (Nether), glare/blindness for NVG.
+- [x] **Compatibility:** Ensure cooperation with Sodium/Iris. Avoid creating generic registries or abstract APIs.
 
 ---
 

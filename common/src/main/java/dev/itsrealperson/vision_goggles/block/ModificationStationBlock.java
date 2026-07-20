@@ -88,10 +88,4 @@ public class ModificationStationBlock extends BaseEntityBlock {
             super.onRemove(state, level, pos, newState, isMoving);
         }
     }
-
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return createTickerHelper(blockEntityType, ModBlockEntities.MODIFICATION_STATION_BE.get(), ModificationStationBlockEntity::tick);
-    }
 }

@@ -4,6 +4,9 @@ import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionModuleItem;
 import dev.itsrealperson.vision_goggles.registry.ModBlockEntities;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.util.ModuleType;
+import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -47,85 +50,59 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         return new dev.itsrealperson.vision_goggles.menu.ModificationStationMenu(id, playerInventory, this, ContainerLevelAccess.create(this.level, this.worldPosition));
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, ModificationStationBlockEntity entity) {
-        if (level.isClientSide) return;
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        if (this.level != null && !this.level.isClientSide) {
+            updateResult();
+        }
+    }
 
-        ItemStack gogglesStack = entity.items.get(0);
-        ItemStack moduleStack = entity.items.get(1);
-        ItemStack outputStack = entity.items.get(2);
+    private void updateResult() {
+        ItemStack gogglesStack = this.items.get(0);
+        ItemStack moduleStack = this.items.get(1);
+        ItemStack outputStack = this.items.get(2);
 
-        // Optimization: Only process if output is empty and we have inputs
-        if (outputStack.isEmpty()) {
-            if (gogglesStack.getItem() instanceof ModularGogglesItem && !moduleStack.isEmpty()) {
-                CompoundTag nbt = gogglesStack.getOrCreateTag();
-                ListTag modules = nbt.getList("Modules", Tag.TAG_STRING);
-
-                String newModuleId = null;
-                boolean isBatteryExpansion = false;
-
-                if (moduleStack.getItem() instanceof VisionModuleItem visionModule) {
-                    newModuleId = visionModule.getVisionMode().name();
-                } else if (moduleStack.getItem() == ModItems.BATTERY_EXPANSION_MODULE.get()) {
-                    newModuleId = "BATTERY_EXPANSION";
-                    isBatteryExpansion = true;
-                } else if (moduleStack.getItem() == ModItems.ZOOM_MODULE.get()) {
-                    newModuleId = "ZOOM";
-                } else if (moduleStack.getItem() == ModItems.SOLAR_MODULE.get()) {
-                    newModuleId = "SOLAR";
-                } else if (moduleStack.getItem() == ModItems.SONAR_MODULE.get()) {
-                    newModuleId = "SONAR";
-                } else if (moduleStack.getItem() == ModItems.VITAL_INFO_MODULE.get()) {
-                    newModuleId = "VITAL_INFO";
-                } else if (moduleStack.getItem() == ModItems.ENVIRONMENT_MODULE.get()) {
-                    newModuleId = "ENVIRONMENT";
-                } else if (moduleStack.getItem() == ModItems.FLASHLIGHT_MODULE.get()) {
-                    newModuleId = "FLASHLIGHT";
-                }
-
-                if (newModuleId != null) {
-                    boolean alreadyInstalled = false;
-                    int visionModuleCount = 0;
-                    int utilityModuleCount = 0;
-                    boolean hasBatteryExpansion = false;
-
-                    for (int i = 0; i < modules.size(); i++) {
-                        String mod = modules.getString(i);
-                        if (mod.equals(newModuleId)) alreadyInstalled = true;
-                        if (mod.equals("BATTERY_EXPANSION")) hasBatteryExpansion = true;
-                        else if (mod.equals("ZOOM") || mod.equals("SOLAR") || mod.equals("SONAR") || mod.equals("VITAL_INFO") || mod.equals("ENVIRONMENT") || mod.equals("FLASHLIGHT")) utilityModuleCount++;
-                        else visionModuleCount++; 
-                    }
-
-                    boolean canInstall = !alreadyInstalled;
-                    int maxTotal = ((ModularGogglesItem)gogglesStack.getItem()).getMaxModules();
-
-                    if (isBatteryExpansion) {
-                        if (hasBatteryExpansion) canInstall = false; 
-                    } else {
-                        // Total count of functional modules (Vision + Utility)
-                        if ((visionModuleCount + utilityModuleCount) >= maxTotal) canInstall = false;
-                    }
-
-                    if (canInstall) {
-                        ItemStack result = gogglesStack.copy();
-                        result.setCount(1);
-                        CompoundTag resultNbt = result.getOrCreateTag();
-                        ListTag resultModules = resultNbt.getList("Modules", Tag.TAG_STRING);
-                        resultModules.add(StringTag.valueOf(newModuleId));
-                        resultNbt.put("Modules", resultModules);
-
-                        entity.items.set(2, result);
-                        entity.setChanged();
-                    }
-                }
+        // Reset output if inputs are invalid
+        if (gogglesStack.isEmpty() || moduleStack.isEmpty()) {
+            if (!outputStack.isEmpty()) {
+                this.items.set(2, ItemStack.EMPTY);
             }
-        } else {
-            // Output is NOT empty, verify if it should still be there
-            if (gogglesStack.isEmpty() || moduleStack.isEmpty()) {
-                entity.items.set(2, ItemStack.EMPTY);
-                entity.setChanged();
+            return;
+        }
+
+        // Only process if output is empty
+        if (outputStack.isEmpty() && gogglesStack.getItem() instanceof ModularGogglesItem modularGoggles) {
+            String newModuleId = getModuleIdFromStack(moduleStack);
+
+            if (newModuleId != null && modularGoggles.canInstallModule(gogglesStack, newModuleId)) {
+                ItemStack result = gogglesStack.copy();
+                result.setCount(1);
+                modularGoggles.installModule(result, newModuleId);
+                this.items.set(2, result);
             }
         }
+    }
+
+    private static java.util.Map<net.minecraft.world.item.Item, String> MODULE_MAP = null;
+
+    private String getModuleIdFromStack(ItemStack stack) {
+        if (stack.getItem() instanceof VisionModuleItem visionModule) {
+            return visionModule.getVisionMode().getModuleLocation().toString();
+        }
+        if (MODULE_MAP == null) {
+            MODULE_MAP = java.util.Map.of(
+                ModItems.BATTERY_EXPANSION_MODULE.get(), ModConstants.ID_BATTERY_EXPANSION,
+                ModItems.ZOOM_MODULE.get(), ModConstants.ID_ZOOM,
+                ModItems.SOLAR_MODULE.get(), ModConstants.ID_SOLAR,
+                ModItems.SONAR_MODULE.get(), ModConstants.ID_SONAR,
+                ModItems.VITAL_INFO_MODULE.get(), ModConstants.ID_VITAL_INFO,
+                ModItems.ENVIRONMENT_MODULE.get(), ModConstants.ID_ENVIRONMENT,
+                ModItems.SPAWN_SECURITY_MODULE.get(), ModConstants.ID_SPAWN_SECURITY,
+                ModItems.CHUNK_VIEWER_MODULE.get(), ModConstants.ID_CHUNK_VIEWER
+            );
+        }
+        return MODULE_MAP.get(stack.getItem());
     }
 
     @Override
@@ -150,6 +127,11 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
     public ItemStack removeItem(int slot, int amount) {
         ItemStack result = ContainerHelper.removeItem(items, slot, amount);
         if (!result.isEmpty()) {
+            // If the output was taken, consume inputs
+            if (slot == 2) {
+                this.items.get(0).shrink(1);
+                this.items.get(1).shrink(1);
+            }
             this.setChanged();
         }
         return result;

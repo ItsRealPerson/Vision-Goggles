@@ -18,6 +18,8 @@
   "item.vision_goggles.sonar_module": "Módulo de Pulso Sónar",
   "item.vision_goggles.vital_info_module": "Módulo de Info Vital",
   "item.vision_goggles.environment_module": "Módulo de Entorno",
+  "item.vision_goggles.spawn_security_module": "Módulo de Seguridad de Spawn",
+  "item.vision_goggles.chunk_viewer_module": "Módulo Visor de Chunks",
   "block.vision_goggles.modification_station": "Estación de Modificación",
   "tooltip.vision_goggles.battery_info": "Energía: %s / %s",
   "tooltip.vision_goggles.pro_version": "SERIE PROFESIONAL",
@@ -61,6 +63,7 @@
   "curios.identifier.eyewear": "Gafas",
   "key.vision_goggles.toggle": "Alternar Visor",
   "key.vision_goggles.switch": "Cambiar Modo de Visión",
-  "key.vision_goggles.zoom": "Zoom del Visor",
+  "key.vision_goggles.zoom": "Zoom (Mantener)",
+  "key.vision_goggles.toggle_spawn_security": "Alternar Visor de Seguridad",
   "key.categories.vision_goggles": "Vision Goggles"
 }

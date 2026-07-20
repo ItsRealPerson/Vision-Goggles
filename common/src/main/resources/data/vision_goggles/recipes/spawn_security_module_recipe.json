@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    "RDR",
+    " E "
+  ],
+  "key": {
+    "E": {
+      "item": "vision_goggles:electrical_parts"
+    },
+    "D": {
+      "item": "minecraft:daylight_detector"
+    },
+    "R": {
+      "item": "minecraft:redstone_torch"
+    }
+  },
+  "result": {
+    "item": "vision_goggles:spawn_security_module",
+    "count": 1
+  }
+}

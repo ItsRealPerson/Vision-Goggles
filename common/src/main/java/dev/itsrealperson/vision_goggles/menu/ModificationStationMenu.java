@@ -44,8 +44,6 @@ public class ModificationStationMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack stack) {
-                ModificationStationMenu.this.container.removeItem(0, 1);
-                ModificationStationMenu.this.container.removeItem(1, 1);
                 super.onTake(player, stack);
             }
         });
@@ -70,8 +68,16 @@ public class ModificationStationMenu extends AbstractContainerMenu {
         if (slot != null && slot.hasItem()) {
             ItemStack itemstack1 = slot.getItem();
             itemstack = itemstack1.copy();
-            if (index < 3) { // From Station to Player
+            if (index == 2) { // From Station Output to Player
                 if (!this.moveItemStackTo(itemstack1, 3, 39, true)) {
+                    return ItemStack.EMPTY;
+                }
+                slot.onQuickCraft(itemstack1, itemstack);
+                // Consume inputs because moveItemStackTo bypasses removeItem
+                this.container.removeItem(0, 1);
+                this.container.removeItem(1, 1);
+            } else if (index < 3) { // From Station Inputs to Player
+                if (!this.moveItemStackTo(itemstack1, 3, 39, false)) {
                     return ItemStack.EMPTY;
                 }
             } else { // From Player to Station

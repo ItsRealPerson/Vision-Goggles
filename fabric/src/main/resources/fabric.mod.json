@@ -29,10 +29,12 @@
     "minecraft": "~1.20.1",
     "java": ">=17",
     "architectury": ">=9.2.14",
-    "fabric-api": "*"
+    "fabric-api": "*",
+    "accessories": "*"
   },
   "mixins": [
-    "vision_goggles.mixins.json"
+    "vision_goggles.mixins.json",
+    "vision_goggles-fabric.mixins.json"
   ],
   "suggests": {
     "another-mod": "*"

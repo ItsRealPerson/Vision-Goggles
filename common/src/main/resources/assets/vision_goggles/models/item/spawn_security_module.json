@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "vision_goggles:item/spawn_security_module"
+  }
+}

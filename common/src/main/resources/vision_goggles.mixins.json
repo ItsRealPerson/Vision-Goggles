@@ -6,7 +6,6 @@
   "mixins": [
   ],
   "client": [
-    "client.MixinFogRenderer",
     "client.MixinLevelRenderer",
     "client.MixinGameRenderer",
     "client.MixinMinecraft",

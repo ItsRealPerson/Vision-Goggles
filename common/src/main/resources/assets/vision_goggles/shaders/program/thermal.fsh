@@ -5,6 +5,7 @@ varying vec2 texCoord;
 uniform float time;
 uniform float battery;
 uniform float focus;
+uniform float Interference;
 
 float noise(vec2 co) {
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -20,6 +21,12 @@ void main() {
     // Zoom Tightening
     if (focus > 0.0) {
         uv = mix(uv, center + (uv - center) * 0.98, focus);
+    }
+    
+    // Thermal Interference (e.g., in Nether) - Wobbly distortion MUST happen before sampling!
+    if (Interference > 0.0) {
+        uv.x += sin(uv.y * 50.0 + time * 10.0) * 0.008 * Interference;
+        uv.y += cos(uv.x * 50.0 + time * 12.0) * 0.008 * Interference;
     }
 
     float wear = 0.0;
@@ -72,17 +79,23 @@ void main() {
     vec3 heatColor = vec3(1.0, 0.4, 0.0) * 2.0;
     vec3 visionColor = mix(coldBackground, heatColor, clamp(heatSignal, 0.0, 1.0)) * 1.6;
     visionColor = max(visionColor, vec3(0.0, 0.05, 0.15));
-
-    // Remove linear darkening
-    // if (battery < 0.05) visionColor *= (battery / 0.05);
     
     // Noise and Scanlines increase with focus
     float noiseIntensity = 0.08 + pow(wear, 1.5) * 1.5 + focus * 0.04;
-    visionColor += (noise(uv + fract(time * 0.01)) - 0.5) * noiseIntensity;
-    visionColor -= sin(uv.y * 800.0) * (0.04 + focus * 0.02);
+    visionColor *= (0.8 + 0.2 * noise(uv * 100.0 + time));
     
-    // Vignette
-    visionColor *= (1.0 - smoothstep(0.4 - focus * 0.05, 0.7 - focus * 0.1, dist));
+    // Thermal Interference (Noise and Color shift)
+    if (Interference > 0.0) {
+        float interferenceNoise = noise(uv * 200.0 + time * 15.0) * Interference;
+        visionColor += vec3(interferenceNoise * 1.5, interferenceNoise * 0.5, 0.0);
+        // Make the screen pulse with a reddish tint
+        float pulse = (sin(time * 8.0) * 0.5 + 0.5) * Interference;
+        visionColor = mix(visionColor, vec3(1.0, 0.2, 0.0), pulse * 0.3);
+    }
 
+    visionColor -= sin(uv.y * 600.0) * 0.03;
+    
+    visionColor *= (1.0 - smoothstep(0.45 - focus * 0.1, 0.7 - focus * 0.15, dist));
+    
     gl_FragColor = vec4(visionColor * globalAlpha, 1.0);
 }

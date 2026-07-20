@@ -16,11 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GameRenderer.class)
 public class MixinGameRenderer {
-    @Inject(method = "render", at = @At("HEAD"))
-    private void vision_goggles$renderFlashlight(float partialTicks, long nanoTime, boolean renderLevel, CallbackInfo ci) {
-        VisionRenderer.renderFlashlight(partialTicks);
-    }
-
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
     private void vision_goggles$applyZoom(CallbackInfoReturnable<Double> cir) {
         cir.setReturnValue(cir.getReturnValue() * VisionRenderer.getZoomMultiplier());

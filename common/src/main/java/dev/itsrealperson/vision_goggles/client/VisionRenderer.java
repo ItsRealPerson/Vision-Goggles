@@ -17,7 +17,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 
-import dev.itsrealperson.vision_goggles.client.flashlight.FlashlightManager;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
@@ -45,36 +44,7 @@ public class VisionRenderer {
     public static float getZoomMultiplier() { return currentZoom; }
     public static boolean isSonarActive() { return sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION; }
 
-    public static void renderFlashlight(float partialTicks) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null) return;
-
-        List<? extends net.minecraft.world.entity.player.Player> players = mc.level.players();
-        for (Player player : players) {
-            boolean isFlashlightActive = false;
-            ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-            
-            if (!helmet.isEmpty() && helmet.getItem() instanceof ModularGogglesItem goggles) {
-                CompoundTag nbt = helmet.getTag();
-                if (nbt != null && nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
-                    List<ModuleType> utils = goggles.getUtilityModules(helmet);
-                    if (utils.contains(ModuleType.FLASHLIGHT)) {
-                        isFlashlightActive = true;
-                    }
-                }
-            }
-            
-            // Log once per second to avoid spamming
-            if (player == mc.player && mc.level.getGameTime() % 20 == 0) {
-                dev.itsrealperson.vision_goggles.Vision_goggles.LOGGER.info("Flashlight State for " + player.getName().getString() + ": " + isFlashlightActive + " (Helmet: " + !helmet.isEmpty() + ")");
-            }
-            
-            FlashlightManager.render(player, partialTicks, isFlashlightActive);
-        }
-    }
-
     public static void init() {
-        ClientTickEvent.CLIENT_PRE.register(instance -> renderFlashlight(instance.getFrameTime()));
         ClientTickEvent.CLIENT_POST.register(VisionRenderer::onClientTick);
         ClientGuiEvent.RENDER_HUD.register((guiGraphics, partialTicks) -> {
             renderHUD(guiGraphics, partialTicks);
@@ -84,8 +54,6 @@ public class VisionRenderer {
             if (player.level().isClientSide) {
                 Minecraft mc = Minecraft.getInstance();
                 cleanup(mc);
-                // Flashlight cleanup for all players happens here
-                mc.level.players().forEach(FlashlightManager::cleanup);
             }
         });
 
@@ -145,22 +113,18 @@ public class VisionRenderer {
             // Zoom & Utility Logic
             boolean hasZoom = false;
             boolean hasSonar = false;
-            boolean hasFlashlight = false;
             if (goggles instanceof ModularGogglesItem modular) {
                 java.util.List<ModuleType> utils = modular.getUtilityModules(helmet);
                 hasZoom = utils.contains(ModuleType.ZOOM);
                 hasSonar = utils.contains(ModuleType.SONAR);
-                hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
             }
 
             // Shader Lifecycle Management
-            boolean isFlashlightActive = hasFlashlight && isServerActive;
-            boolean shaderNeeded = (currentVisionMode != null) || isFlashlightActive;
+            boolean shaderNeeded = (currentVisionMode != null);
 
             if (isServerActive != lastServerActive || (isServerActive && nbtModeId != lastModeId)) {
                 if (isServerActive && shaderNeeded) {
                     grayscaleEnabled = true;
-                    // Llamamos a enableShader incluso si currentVisionMode es null (él manejará la linterna)
                     VisionShaderManager.enableShader(mc, currentVisionMode);
                     
                     lastModeId = nbtModeId;
@@ -180,8 +144,30 @@ public class VisionRenderer {
             if (isServerActive && hasSonar) {
                 if (sonarPulseTimer > 0) sonarPulseTimer--;
                 else sonarPulseTimer = SONAR_PULSE_INTERVAL;
+
+                if (sonarPulseTimer == SONAR_PULSE_DURATION) {
+                    mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.SONAR.get(), 1.0f, 1.0f);
+                }
             } else {
                 sonarPulseTimer = 0;
+            }
+
+            // Battery Alert
+            if (isServerActive && currentBatteryPct <= 0.10f && mc.level.getGameTime() % 40 == 0) {
+                mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 1.0f);
+            }
+
+            // Oxygen Alert
+            if (isServerActive && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
+                if (mc.player.isUnderWater() || mc.player.getAirSupply() < mc.player.getMaxAirSupply()) {
+                    int airTicks = mc.player.getAirSupply();
+                    float baseSeconds = Math.max(0, airTicks / 20.0f);
+                    int resp = net.minecraft.world.item.enchantment.EnchantmentHelper.getRespiration(mc.player);
+                    float realSeconds = baseSeconds * (resp + 1);
+                    if (realSeconds < 5.0f && mc.level.getGameTime() % 20 == 0) {
+                        mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 1.0f);
+                    }
+                }
             }
 
             if (isServerActive && hasZoom && ModKeyMappings.zoomKey.isDown()) {
@@ -211,9 +197,10 @@ public class VisionRenderer {
                 }
                 lastWasUnderwater = isUnderwater;
                 
-                VisionShaderManager.setFlashlightActive(isFlashlightActive);
                 VisionShaderManager.update(currentVisionMode, currentBatteryPct, damageFlickerTimer > 0);
             }
+            
+            dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
 
         } else if (grayscaleEnabled || lastServerActive) {
             cleanup(mc);
@@ -233,6 +220,7 @@ public class VisionRenderer {
         if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
             mc.player.removeEffect(MobEffects.NIGHT_VISION);
         }
+        dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
     }
 
     public static void renderHUD(GuiGraphics g, float partialTicks) {

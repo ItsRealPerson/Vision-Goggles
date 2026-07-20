@@ -15,6 +15,7 @@ public class PlatformMethodsImpl {
         AccessoriesCapability capability = AccessoriesCapability.get(player);
         if (capability != null) {
             String[] possibleSlots = {"face", "eyes", "eyewear"};
+            // First pass: look for empty slot
             for (String slotId : possibleSlots) {
                 var container = capability.getContainers().get(slotId);
                 if (container != null) {
@@ -22,6 +23,24 @@ public class PlatformMethodsImpl {
                         if (container.getAccessories().getItem(i).isEmpty()) {
                             container.getAccessories().setItem(i, stack.copy());
                             stack.setCount(0);
+                            return true;
+                        }
+                    }
+                }
+            }
+            // Second pass: try to swap with existing goggles
+            for (String slotId : possibleSlots) {
+                var container = capability.getContainers().get(slotId);
+                if (container != null) {
+                    for (int i = 0; i < container.getSize(); i++) {
+                        ItemStack existing = container.getAccessories().getItem(i);
+                        if (existing.getItem() instanceof VisionGogglesItem) {
+                            ItemStack copy = stack.copy();
+                            stack.setCount(0);
+                            if (!player.addItem(existing)) {
+                                player.drop(existing, false);
+                            }
+                            container.getAccessories().setItem(i, copy);
                             return true;
                         }
                     }

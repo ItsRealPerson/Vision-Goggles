@@ -14,12 +14,7 @@ import java.util.List;
 public class ProModularGogglesItem extends ModularGogglesItem {
 
     public ProModularGogglesItem() {
-        super();
-    }
-
-    @Override
-    public int getMaxModules() {
-        return 4; // Pro version has 4 slots
+        super(4); // Pro version has 4 slots
     }
 
     @Override

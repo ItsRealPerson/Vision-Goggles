@@ -40,3 +40,10 @@ mandatory = true
 versionRange = "[11.1.118,)"
 ordering = "NONE"
 side = "BOTH"
+
+[[dependencies.vision_goggles]]
+modId = "curios"
+mandatory = true
+versionRange = "*"
+ordering = "AFTER"
+side = "BOTH"

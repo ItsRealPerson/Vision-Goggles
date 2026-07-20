@@ -15,6 +15,7 @@ public class PlatformMethodsImpl {
         AtomicBoolean success = new AtomicBoolean(false);
         CuriosApi.getCuriosHelper().getCuriosHandler(player).ifPresent(handler -> {
             String[] possibleSlots = {"eyes", "eyewear"};
+            // First pass: look for empty slot
             for (String slotId : possibleSlots) {
                 handler.getStacksHandler(slotId).ifPresent(stacksHandler -> {
                     IDynamicStackHandler dynamicHandler = stacksHandler.getStacks();
@@ -28,6 +29,29 @@ public class PlatformMethodsImpl {
                     }
                 });
                 if (success.get()) break;
+            }
+            
+            // Second pass: try to swap
+            if (!success.get()) {
+                for (String slotId : possibleSlots) {
+                    handler.getStacksHandler(slotId).ifPresent(stacksHandler -> {
+                        IDynamicStackHandler dynamicHandler = stacksHandler.getStacks();
+                        for (int i = 0; i < dynamicHandler.getSlots(); i++) {
+                            ItemStack existing = dynamicHandler.getStackInSlot(i);
+                            if (existing.getItem() instanceof VisionGogglesItem) {
+                                ItemStack copy = stack.copy();
+                                stack.setCount(0);
+                                if (!player.addItem(existing)) {
+                                    player.drop(existing, false);
+                                }
+                                dynamicHandler.setStackInSlot(i, copy);
+                                success.set(true);
+                                return;
+                            }
+                        }
+                    });
+                    if (success.get()) break;
+                }
             }
         });
         return success.get();

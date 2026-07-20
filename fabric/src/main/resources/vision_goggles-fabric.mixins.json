@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "dev.itsrealperson.vision_goggles.fabric.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "vision_goggles-fabric.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "client.MixinFogRenderer"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

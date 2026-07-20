@@ -16,6 +16,7 @@
         { "name": "time", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "battery", "type": "float", "count": 1, "values": [ 1.0 ] },
         { "name": "colorFilter", "type": "float", "count": 3, "values": [ 0.05, 1.0, 0.05 ] },
-        { "name": "focus", "type": "float", "count": 1, "values": [ 0.0 ] }
+        { "name": "focus", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Glare", "type": "float", "count": 1, "values": [ 0.0 ] }
     ]
 }

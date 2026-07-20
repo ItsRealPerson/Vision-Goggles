@@ -16,6 +16,12 @@ public class ModSounds {
     public static final RegistrySupplier<SoundEvent> VISOR_OFF = SOUNDS.register("visor_off",
             () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(Vision_goggles.MOD_ID, "visor_off")));
 
+    public static final RegistrySupplier<SoundEvent> BLIP = SOUNDS.register("blip",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(Vision_goggles.MOD_ID, "blip")));
+
+    public static final RegistrySupplier<SoundEvent> SONAR = SOUNDS.register("sonar",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(Vision_goggles.MOD_ID, "sonar")));
+
     public static void register() {
         SOUNDS.register();
     }
