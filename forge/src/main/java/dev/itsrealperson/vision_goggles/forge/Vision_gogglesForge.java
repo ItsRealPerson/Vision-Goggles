@@ -89,6 +89,13 @@ public final class Vision_gogglesForge {
                 }
             }
         }
+
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public static void onRenderLevel(net.minecraftforge.client.event.RenderLevelStageEvent event) {
+            if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
+                dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.captureAndComposite(event.getPoseStack());
+            }
+        }
     }
 
     private void enqueueIMC(final InterModEnqueueEvent event) {
@@ -103,6 +110,7 @@ public final class Vision_gogglesForge {
     public void clientSetup(final FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             ModClient.init();
+            dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.init();
         });
     }
 }

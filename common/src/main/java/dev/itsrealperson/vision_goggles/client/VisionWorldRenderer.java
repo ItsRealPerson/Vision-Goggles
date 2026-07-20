@@ -22,8 +22,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 
@@ -34,9 +37,79 @@ public class VisionWorldRenderer {
     private static int scanTick = 0;
     private static boolean spawnSecurityEnabled = true;
 
+    private static final List<DebugBox> debugBoxes = new ArrayList<>();
+
+    private static class DebugBox {
+        Vector3f center; Vector3f halfExtents; Quaternionf orientation;
+        int entityId; String partName; int ticksLeft;
+        
+        DebugBox(Vector3f c, Vector3f h, Quaternionf q, int e, String p) {
+            this.center = c; this.halfExtents = h; this.orientation = q;
+            this.entityId = e; this.partName = p; this.ticksLeft = 40; // 2 seconds
+        }
+    }
+
+    public static void addDebugBox(float cx, float cy, float cz, float hx, float hy, float hz, float qx, float qy, float qz, float qw, int entityId, String partName) {
+        debugBoxes.add(new DebugBox(new Vector3f(cx, cy, cz), new Vector3f(hx, hy, hz), new Quaternionf(qx, qy, qz, qw), entityId, partName));
+    }
+
     public static void render(PoseStack poseStack, Camera camera, float partialTicks) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
+        if (mc.level == null) return;
+
+        // Render Debug Boxes
+        if (!debugBoxes.isEmpty()) {
+            poseStack.pushPose();
+            Vec3 camPos = camera.getPosition();
+            poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
+
+            VertexConsumer builder = mc.renderBuffers().bufferSource().getBuffer(RenderType.lines());
+            
+            Iterator<DebugBox> it = debugBoxes.iterator();
+            while (it.hasNext()) {
+                DebugBox box = it.next();
+                
+                poseStack.pushPose();
+                poseStack.translate(box.center.x(), box.center.y(), box.center.z());
+                poseStack.mulPose(box.orientation);
+                
+                // Draw wireframe AABB locally
+                float hx = box.halfExtents.x();
+                float hy = box.halfExtents.y();
+                float hz = box.halfExtents.z();
+                
+                Matrix4f pose = poseStack.last().pose();
+                org.joml.Matrix3f normal = poseStack.last().normal();
+                
+                // 12 lines for a box. Red=0, Green=255, Blue=0 (Neon Green)
+                int r=0, g=255, b=0, a=255;
+                
+                // Bottom
+                drawLine(builder, pose, normal, -hx, -hy, -hz, hx, -hy, -hz, r,g,b,a);
+                drawLine(builder, pose, normal, hx, -hy, -hz, hx, -hy, hz, r,g,b,a);
+                drawLine(builder, pose, normal, hx, -hy, hz, -hx, -hy, hz, r,g,b,a);
+                drawLine(builder, pose, normal, -hx, -hy, hz, -hx, -hy, -hz, r,g,b,a);
+                // Top
+                drawLine(builder, pose, normal, -hx, hy, -hz, hx, hy, -hz, r,g,b,a);
+                drawLine(builder, pose, normal, hx, hy, -hz, hx, hy, hz, r,g,b,a);
+                drawLine(builder, pose, normal, hx, hy, hz, -hx, hy, hz, r,g,b,a);
+                drawLine(builder, pose, normal, -hx, hy, hz, -hx, hy, -hz, r,g,b,a);
+                // Pillars
+                drawLine(builder, pose, normal, -hx, -hy, -hz, -hx, hy, -hz, r,g,b,a);
+                drawLine(builder, pose, normal, hx, -hy, -hz, hx, hy, -hz, r,g,b,a);
+                drawLine(builder, pose, normal, hx, -hy, hz, hx, hy, hz, r,g,b,a);
+                drawLine(builder, pose, normal, -hx, -hy, hz, -hx, hy, hz, r,g,b,a);
+
+                poseStack.popPose();
+                
+                box.ticksLeft--;
+                if (box.ticksLeft <= 0) it.remove();
+            }
+            mc.renderBuffers().bufferSource().endBatch(RenderType.lines());
+            poseStack.popPose();
+        }
+
+        if (mc.player == null) return;
         
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
         if (helmet.isEmpty()) return;
@@ -220,5 +293,10 @@ public class VisionWorldRenderer {
 
     private static void addV(Matrix4f m, VertexConsumer b, float x, float y, float z, float r, float g, float bl, float a) {
         b.vertex(m, x, y, z).color(r, g, bl, a).endVertex();
+    }
+    
+    private static void drawLine(VertexConsumer builder, Matrix4f pose, org.joml.Matrix3f normal, float x1, float y1, float z1, float x2, float y2, float z2, int r, int g, int b, int a) {
+        builder.vertex(pose, x1, y1, z1).color(r, g, b, a).normal(normal, 0, 1, 0).endVertex();
+        builder.vertex(pose, x2, y2, z2).color(r, g, b, a).normal(normal, 0, 1, 0).endVertex();
     }
 }

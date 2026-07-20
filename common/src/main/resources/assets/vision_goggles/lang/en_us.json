@@ -65,7 +65,9 @@
   "key.vision_goggles.toggle": "Toggle Goggles",
   "key.vision_goggles.switch": "Switch Vision Mode",
   "key.vision_goggles.zoom": "Zoom (Hold)",
+  "key.vision_goggles.switch_sonar": "Switch Sonar Mode",
   "key.vision_goggles.toggle_spawn_security": "Toggle Spawn Security Overlay",
   "itemGroup.vision_goggles_group": "Vision Goggles",
-  "key.categories.vision_goggles": "Vision Goggles"
+  "key.categories.vision_goggles": "Vision Goggles",
+  "message.vision_goggles.sonar_mode": "§bSonar Mode: §f%s"
 }

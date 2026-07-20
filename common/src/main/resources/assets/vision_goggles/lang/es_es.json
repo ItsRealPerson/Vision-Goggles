@@ -63,7 +63,9 @@
   "curios.identifier.eyewear": "Gafas",
   "key.vision_goggles.toggle": "Alternar Visor",
   "key.vision_goggles.switch": "Cambiar Modo de Visión",
+  "key.vision_goggles.switch_sonar": "Cambiar Modo Sonar",
   "key.vision_goggles.zoom": "Zoom (Mantener)",
   "key.vision_goggles.toggle_spawn_security": "Alternar Visor de Seguridad",
-  "key.categories.vision_goggles": "Vision Goggles"
+  "key.categories.vision_goggles": "Vision Goggles",
+  "message.vision_goggles.sonar_mode": "§bModo Sonar: §f%s"
 }

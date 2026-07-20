@@ -11,18 +11,32 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 
 import dev.architectury.event.CompoundEventResult;
+import dev.architectury.event.EventResult;
+import dev.architectury.event.events.common.EntityEvent;
 import dev.architectury.event.events.common.InteractionEvent;
 import dev.architectury.event.events.common.PlayerEvent;
-import dev.architectury.event.events.common.EntityEvent;
-import dev.architectury.event.EventResult;
+import dev.architectury.event.events.common.TickEvent;
+
+import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.network.BatteryPacket;
 import dev.itsrealperson.vision_goggles.network.ConfigSyncPacket;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
-import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 
 public class ModEvents {
 
+    public static boolean HITBOX_DEBUG_MODE = true;
+
     public static void init() {
+        dev.architectury.event.events.common.CommandRegistrationEvent.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(net.minecraft.commands.Commands.literal("vgdebug")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    HITBOX_DEBUG_MODE = !HITBOX_DEBUG_MODE;
+                    context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("Hitbox Debug Mode: " + HITBOX_DEBUG_MODE), true);
+                    return 1;
+                })
+            );
+        });
         TickEvent.PLAYER_POST.register(player -> {
             if (player instanceof ServerPlayer) {
                 tickGoggles((ServerPlayer) player);
@@ -30,10 +44,13 @@ public class ModEvents {
         });
 
         EntityEvent.LIVING_HURT.register((entity, source, amount) -> {
+            
+
+
+            // Lógica Real (Solo se ejecuta si el objetivo es un jugador usando las gafas)
             if (entity instanceof ServerPlayer player) {
                 ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
                 if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-                    // Damage calculation: 1 point per 4 damage taken, minimum 1
                     int damage = Math.max(1, (int) (amount / 4.0F));
                     helmet.hurtAndBreak(damage, player, (p) -> p.broadcastBreakEvent(net.minecraft.world.entity.EquipmentSlot.HEAD));
                 }
@@ -85,6 +102,7 @@ public class ModEvents {
             }
         });
     }
+
 
     private static void tickGoggles(ServerPlayer player) {
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);

@@ -5,6 +5,7 @@ public class ModConstants {
     public static final String TAG_BATTERY = "nvg_battery";
     public static final String TAG_ACTIVE = "nvg_active";
     public static final String TAG_MODE = "vision_mode";
+    public static final String TAG_SONAR_MODE = "sonar_mode";
     public static final String TAG_MODULES = "Modules";
     public static final String TAG_LAST_SYNC = "nvg_last_sync"; // For network optimization
 

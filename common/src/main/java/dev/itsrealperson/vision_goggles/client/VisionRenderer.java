@@ -36,8 +36,8 @@ public class VisionRenderer {
     private static float currentZoom = 1.0f; // 1.0 = no zoom
 
     private static int sonarPulseTimer = 0;
-    private static final int SONAR_PULSE_INTERVAL = 60; 
-    private static final int SONAR_PULSE_DURATION = 20; 
+    private static final int SONAR_PULSE_INTERVAL = 200; // 10 seconds
+    private static final int SONAR_PULSE_DURATION = 40; 
 
     public static boolean isVisorActive() { return visorActive; }
     public static boolean isZoomActive() { return zoomActive; }
@@ -74,6 +74,10 @@ public class VisionRenderer {
 
         while (ModKeyMappings.switchModeKey.consumeClick()) {
             NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(true));
+        }
+
+        while (ModKeyMappings.switchSonarModeKey.consumeClick()) {
+            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
         }
 
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
@@ -144,10 +148,6 @@ public class VisionRenderer {
             if (isServerActive && hasSonar) {
                 if (sonarPulseTimer > 0) sonarPulseTimer--;
                 else sonarPulseTimer = SONAR_PULSE_INTERVAL;
-
-                if (sonarPulseTimer == SONAR_PULSE_DURATION) {
-                    mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.SONAR.get(), 1.0f, 1.0f);
-                }
             } else {
                 sonarPulseTimer = 0;
             }
@@ -239,15 +239,6 @@ public class VisionRenderer {
     }
 
     private static void renderSonarPulse(GuiGraphics g, int width, int height, float progress) {
-        int cx = width / 2;
-        int cy = height / 2;
-        int maxRadius = Math.max(width, height) / 2;
-        int currentRadius = (int) (progress * maxRadius);
-        int alpha = (int) ((1.0f - progress) * 128);
-        int color = (alpha << 24) | 0x00AAFF;
-        g.fill(cx - currentRadius, cy - currentRadius, cx + currentRadius, cy - currentRadius + 1, color);
-        g.fill(cx - currentRadius, cy + currentRadius - 1, cx + currentRadius, cy + currentRadius, color);
-        g.fill(cx - currentRadius, cy - currentRadius, cx - currentRadius + 1, cy + currentRadius, color);
-        g.fill(cx + currentRadius - 1, cy - currentRadius, cx + currentRadius, cy + currentRadius, color);
+        // Disabled visually as requested by user
     }
 }

@@ -105,6 +105,42 @@ public class VisionShaderManager {
                 if (effectiveLight > 11.0f) {
                     targetGlare = (effectiveLight - 11.0f) / 4.0f; // Solo ciega con luz 12+
                 }
+                
+                // --- CUSTOM FLASHLIGHT/LIGHT ITEM DETECTION ---
+                // Verifica si otro jugador nos está apuntando con una linterna o fuente de luz
+                for (net.minecraft.world.entity.player.Player other : mc.level.players()) {
+                    if (other == mc.player) continue;
+                    
+                    double distSq = other.distanceToSqr(mc.player);
+                    if (distSq > 625.0) continue; // max 25 blocks
+                    
+                    net.minecraft.world.item.ItemStack main = other.getMainHandItem();
+                    net.minecraft.world.item.ItemStack off = other.getOffhandItem();
+                    
+                    boolean holdingLight = isHoldingLight(main) || isHoldingLight(off);
+                                           
+                    if (holdingLight) {
+                        net.minecraft.world.phys.Vec3 lookVec = other.getLookAngle();
+                        net.minecraft.world.phys.Vec3 toUs = mc.player.position().add(0, mc.player.getEyeHeight(), 0)
+                                                             .subtract(other.position().add(0, other.getEyeHeight(), 0)).normalize();
+                        
+                        double dot = lookVec.dot(toUs);
+                        if (dot > 0.92) { // Apuntando directo
+                            float distanceFactor = 1.0f - (float)(Math.sqrt(distSq) / 25.0);
+                            float aimFactor = (float)((dot - 0.92) / (1.0 - 0.92));
+                            float glareFromPlayer = distanceFactor * aimFactor * 1.5f; 
+                            
+                            if (glareFromPlayer > targetGlare) {
+                                targetGlare = glareFromPlayer;
+                            }
+                        }
+                    }
+                }
+                
+                // Si el jugador local tiene una linterna en la mano, también le afectará un poco
+                if (isHoldingLight(mc.player.getMainHandItem()) || isHoldingLight(mc.player.getOffhandItem())) {
+                    if (targetGlare < 0.6f) targetGlare = 0.6f; 
+                }
             }
             
             // Interpolación suave para que el cegado sea progresivo
@@ -134,5 +170,21 @@ public class VisionShaderManager {
 
     public static boolean isShaderActive() {
         return ((GameRendererAccessor) Minecraft.getInstance().gameRenderer).vision_goggles$getPostEffect() != null;
+    }
+    
+    private static boolean isHoldingLight(net.minecraft.world.item.ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        String id = stack.getDescriptionId().toLowerCase();
+        boolean isLight = id.contains("flashlight") || id.contains("linterna") || id.contains("torch") || id.contains("lantern") || id.contains("glow");
+        
+        if (isLight && (id.contains("off") || id.contains("unlit"))) isLight = false;
+        
+        if (isLight && stack.hasTag()) {
+            String nbtStr = stack.getTag().toString().toLowerCase();
+            if (nbtStr.contains("active:0") || nbtStr.contains("on:0") || nbtStr.contains("enabled:0") || nbtStr.contains("is_on:0")) {
+                isLight = false;
+            }
+        }
+        return isLight;
     }
 }

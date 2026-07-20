@@ -20,6 +20,7 @@ public class ModClient {
         // Registrar módulos del HUD (El orden importa: los primeros se dibujan debajo)
         VisionHUDOverlay.registerModule(new DurabilityModule()); // Primero las grietas (fondo)
         VisionHUDOverlay.registerModule(new GogglesStatusModule()); // Batería y Modo (Encima)
+        VisionHUDOverlay.registerModule(new dev.itsrealperson.vision_goggles.client.hud.SonarRadarModule());
         VisionHUDOverlay.registerModule(new VitalInfoModule());
         VisionHUDOverlay.registerModule(new OxygenModule());
         VisionHUDOverlay.registerModule(new dev.itsrealperson.vision_goggles.client.hud.ElytraModule());

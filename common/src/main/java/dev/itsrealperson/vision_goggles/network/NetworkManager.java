@@ -14,5 +14,6 @@ public class NetworkManager {
         INSTANCE.register(BatterySyncPacket.class, BatterySyncPacket::encode, BatterySyncPacket::new, BatterySyncPacket::handle);
         INSTANCE.register(ConfigSyncPacket.class, ConfigSyncPacket::encode, ConfigSyncPacket::new, ConfigSyncPacket::handle);
         INSTANCE.register(ConfigSavePacket.class, ConfigSavePacket::encode, ConfigSavePacket::new, ConfigSavePacket::handle);
+        INSTANCE.register(ToggleSonarPacket.class, ToggleSonarPacket::encode, ToggleSonarPacket::new, ToggleSonarPacket::handle);
     }
 }

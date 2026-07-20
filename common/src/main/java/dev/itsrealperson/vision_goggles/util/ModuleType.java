@@ -32,7 +32,23 @@ public enum ModuleType {
         }
     },
     ZOOM(ModConstants.ID_ZOOM, ModConstants.MODULE_ZOOM),
-    SONAR(ModConstants.ID_SONAR, ModConstants.MODULE_SONAR),
+    SONAR(ModConstants.ID_SONAR, ModConstants.MODULE_SONAR) {
+        @Override
+        public void tickPower(ItemStack stack, ServerPlayer player) {
+            if (stack.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+                int mode = stack.getOrCreateTag().getInt(ModConstants.TAG_SONAR_MODE); // 0=Todos, 1=Jugadores, 2=No-Muertos
+                float drain = 0.0f;
+                if (mode == 0) drain = 1.0f; // Todos
+                else if (mode == 1) drain = 1.5f; // Jugadores (frecuencia específica más potente)
+                else if (mode == 2) drain = 0.5f; // No-Muertos
+
+                float current = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+                if (current > 0) {
+                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, Math.max(0, current - drain));
+                }
+            }
+        }
+    },
     BATTERY_EXPANSION(ModConstants.ID_BATTERY_EXPANSION, ModConstants.MODULE_BATTERY_EXPANSION),
     VITAL_INFO(ModConstants.ID_VITAL_INFO, ModConstants.MODULE_VITAL_INFO),
     ENVIRONMENT(ModConstants.ID_ENVIRONMENT, ModConstants.MODULE_ENVIRONMENT),

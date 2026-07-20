@@ -33,12 +33,20 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
+    public static final KeyMapping switchSonarModeKey = new KeyMapping(
+            "key.vision_goggles.switch_sonar",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_P,
+            "key.categories.vision_goggles"
+    );
+
     public static void init() {
         try {
             KeyMappingRegistry.register(toggleGrayscaleKey);
             KeyMappingRegistry.register(switchModeKey);
             KeyMappingRegistry.register(zoomKey);
             KeyMappingRegistry.register(toggleSpawnSecurityKey);
+            KeyMappingRegistry.register(switchSonarModeKey);
         } catch (Exception e) {
             // Log or ignore if already registered
         }
