@@ -3,6 +3,7 @@ package dev.itsrealperson.vision_goggles.event;
 import dev.architectury.event.events.common.TickEvent;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,8 +52,11 @@ public class ModEvents {
             if (entity instanceof ServerPlayer player) {
                 ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
                 if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-                    int damage = Math.max(1, (int) (amount / 4.0F));
-                    helmet.hurtAndBreak(damage, player, (p) -> p.broadcastBreakEvent(net.minecraft.world.entity.EquipmentSlot.HEAD));
+                    float ratio = ModConfig.getDamageTransferRatio();
+                    if (ratio > 0) {
+                        int damage = Math.max(1, Math.round(amount * ratio));
+                        helmet.hurtAndBreak(damage, player, (p) -> p.broadcastBreakEvent(net.minecraft.world.entity.EquipmentSlot.HEAD));
+                    }
                 }
             }
             return EventResult.pass();
@@ -63,20 +67,26 @@ public class ModEvents {
             ItemStack stack = player.getItemInHand(hand);
             if (stack.isEmpty()) return CompoundEventResult.pass();
 
-            // If it's a battery according to config but NOT our own BatteryItem 
-            // (Our own item already handles this in its class)
-            if (!(stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.BatteryItem) && ModConfig.getBatteryCharge(stack) > 0) {
-                if (player.level().isClientSide) {
-                    if (!PlatformMethods.getEquippedHelmet(player).isEmpty()) {
-                        NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
-                        float charge = ModConfig.getBatteryCharge(stack);
-                        int pct = (int)(charge * 100);
-                        player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.recharged", pct), true);
-                        return CompoundEventResult.interruptTrue(stack);
-                    } else {
-                        player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.equip_warning"), true);
-                    }
+            ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
+            if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) {
+                return CompoundEventResult.pass();
+            }
+
+            float currentBatt = helmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+            float maxBatt = goggles.getBatteryCapacity(helmet);
+            if (currentBatt >= maxBatt) return CompoundEventResult.pass();
+
+            float chargeFraction = ModConfig.getBatteryCharge(stack);
+            if (chargeFraction > 0) {
+                float chargeToAdd = maxBatt * chargeFraction;
+                float newBatt = Math.min(maxBatt, currentBatt + chargeToAdd);
+                helmet.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, newBatt);
+
+                if (!player.isCreative()) {
+                    stack.shrink(1);
                 }
+
+                player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
                 return CompoundEventResult.interruptTrue(stack);
             }
             return CompoundEventResult.pass();
@@ -85,14 +95,7 @@ public class ModEvents {
         PlayerEvent.PLAYER_JOIN.register(player -> {
             if (player instanceof ServerPlayer) {
                 ServerPlayer serverPlayer = (ServerPlayer) player;
-                NetworkManager.INSTANCE.sendToPlayer(serverPlayer, new ConfigSyncPacket(
-                        ModConfig.getNvgDuration(),
-                        ModConfig.getThermalDuration(),
-                        ModConfig.getHydroDuration(),
-                        ModConfig.getBiometricDuration(),
-                        ModConfig.getModularDuration(),
-                        ModConfig.getExtraBatteryItems()
-                ));
+                NetworkManager.INSTANCE.sendToPlayer(serverPlayer, new ConfigSyncPacket(ModConfig.toCommonJson()));
             }
         });
 

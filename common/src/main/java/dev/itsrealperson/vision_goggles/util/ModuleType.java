@@ -19,7 +19,7 @@ public enum ModuleType {
                     float current = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
                     float capacity = ((dev.itsrealperson.vision_goggles.item.VisionGogglesItem)stack.getItem()).getBatteryCapacity(stack);
                     if (current < capacity) {
-                        float chargeRate = 1.5f;
+                        float chargeRate = ModConfig.getSolarChargeRate();
                         int maxDamage = stack.getMaxDamage();
                         if (maxDamage > 0) {
                             float durabilityFactor = (float)(maxDamage - stack.getDamageValue()) / maxDamage;
@@ -53,7 +53,20 @@ public enum ModuleType {
     VITAL_INFO(ModConstants.ID_VITAL_INFO, ModConstants.MODULE_VITAL_INFO),
     ENVIRONMENT(ModConstants.ID_ENVIRONMENT, ModConstants.MODULE_ENVIRONMENT),
     SPAWN_SECURITY(ModConstants.ID_SPAWN_SECURITY, ModConstants.MODULE_SPAWN_SECURITY),
-    CHUNK_VIEWER(ModConstants.ID_CHUNK_VIEWER, ModConstants.MODULE_CHUNK_VIEWER);
+    CHUNK_VIEWER(ModConstants.ID_CHUNK_VIEWER, ModConstants.MODULE_CHUNK_VIEWER),
+    FLASHLIGHT(ModConstants.ID_FLASHLIGHT, ModConstants.MODULE_FLASHLIGHT) {
+        @Override
+        public void tickPower(ItemStack stack, ServerPlayer player) {
+            if (stack.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE)) {
+                float baseDrain = 0.5f;
+                float drain = baseDrain * ModConfig.getBatteryDrainMultiplier();
+                float current = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+                if (current > 0) {
+                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, Math.max(0, current - drain));
+                }
+            }
+        }
+    };
 
     private final ResourceLocation location;
     private final String legacyId;

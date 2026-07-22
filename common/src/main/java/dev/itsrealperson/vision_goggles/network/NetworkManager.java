@@ -15,5 +15,8 @@ public class NetworkManager {
         INSTANCE.register(ConfigSyncPacket.class, ConfigSyncPacket::encode, ConfigSyncPacket::new, ConfigSyncPacket::handle);
         INSTANCE.register(ConfigSavePacket.class, ConfigSavePacket::encode, ConfigSavePacket::new, ConfigSavePacket::handle);
         INSTANCE.register(ToggleSonarPacket.class, ToggleSonarPacket::encode, ToggleSonarPacket::new, ToggleSonarPacket::handle);
+        INSTANCE.register(ToggleFlashlightPacket.class, ToggleFlashlightPacket::toBytes, ToggleFlashlightPacket::new, ToggleFlashlightPacket::handle);
+        INSTANCE.register(SyncFlashlightPacket.class, SyncFlashlightPacket::encode, SyncFlashlightPacket::new, SyncFlashlightPacket::handle);
+        INSTANCE.register(CycleFlashlightModePacket.class, CycleFlashlightModePacket::encode, CycleFlashlightModePacket::new, CycleFlashlightModePacket::handle);
     }
 }

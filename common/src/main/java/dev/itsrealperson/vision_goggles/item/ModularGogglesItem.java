@@ -46,7 +46,16 @@ public class ModularGogglesItem extends VisionGogglesItem {
             if (!getModes(stack).isEmpty() || !utils.isEmpty()) {
                 float currentBattery = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
                 if (currentBattery > 0) {
-                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, Math.max(0, currentBattery - 0.001f));
+                    float newBattery = Math.max(0, currentBattery - ModConfig.getBatteryStandbyDrain());
+                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, newBattery);
+                    
+                    // If battery just died, force sync to tracking clients so flashlights turn off
+                    if (currentBattery > 0 && newBattery == 0) {
+                        dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
+                            player.serverLevel().players(),
+                            new dev.itsrealperson.vision_goggles.network.SyncFlashlightPacket(player.getId(), false)
+                        );
+                    }
                 }
             }
         }
@@ -112,7 +121,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
     public int getBatteryCapacity(ItemStack stack) {
         int base = super.getBatteryCapacity();
         if (hasBatteryExpansion(stack)) {
-            return (int) (base * 1.5f);
+            return (int) (base * ModConfig.getBatteryExpansionMultiplier());
         }
         return base;
     }

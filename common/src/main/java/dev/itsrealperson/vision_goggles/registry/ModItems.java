@@ -60,6 +60,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> SONAR_MODULE = ITEMS.register("sonar_module",
             () -> new Item(new Item.Properties().stacksTo(1)));
             
+    public static final RegistrySupplier<Item> FLASHLIGHT_MODULE = ITEMS.register("flashlight_module",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+            
     public static final RegistrySupplier<Item> SPAWN_SECURITY_MODULE = ITEMS.register("spawn_security_module",
             () -> new Item(new Item.Properties().stacksTo(1)));
 

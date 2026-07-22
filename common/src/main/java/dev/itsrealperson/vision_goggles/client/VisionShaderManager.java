@@ -110,40 +110,71 @@ public class VisionShaderManager {
                     targetGlare = (effectiveLight - 11.0f) / 4.0f; // Solo ciega con luz 12+
                 }
                 
-                // --- CUSTOM FLASHLIGHT/LIGHT ITEM DETECTION ---
-                // Verifica si otro jugador nos está apuntando con una linterna o fuente de luz
+                // --- FLASHLIGHT GLARE DETECTION (mod + hand-held lights) ---
+                // Verifica si otro jugador nos apunta con la linterna del mod o con una fuente de luz en la mano
+                int maxRange = dev.itsrealperson.vision_goggles.util.ModConfig.getNvgGlareMaxRange();
+                double maxDistSq = (double) maxRange * maxRange;
+
                 for (net.minecraft.world.entity.player.Player other : mc.level.players()) {
                     if (other == mc.player) continue;
                     
                     double distSq = other.distanceToSqr(mc.player);
-                    if (distSq > 625.0) continue; // max 25 blocks
+                    if (distSq > maxDistSq) continue;
                     
+                    // --- Linterna del mod (módulo instalado en el casco) ---
+                    net.minecraft.world.item.ItemStack otherHelmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(other);
+                    boolean hasModFlashlight = false;
+                    dev.itsrealperson.vision_goggles.util.FlashlightMode flashMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.FOCUSED;
+                    if (!otherHelmet.isEmpty() && otherHelmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem otherModular) {
+                        java.util.List<dev.itsrealperson.vision_goggles.util.ModuleType> otherUtils = otherModular.getUtilityModules(otherHelmet);
+                        boolean flashlightInstalled = otherUtils.contains(dev.itsrealperson.vision_goggles.util.ModuleType.FLASHLIGHT);
+                        boolean flashlightOn = otherHelmet.getOrCreateTag().getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE);
+                        hasModFlashlight = flashlightInstalled && flashlightOn;
+                        if (hasModFlashlight) {
+                            int modeId = otherHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
+                            flashMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
+                        }
+                    }
+                    
+                    // --- Ítems de luz en la mano (compatibilidad genérica) ---
                     net.minecraft.world.item.ItemStack main = other.getMainHandItem();
                     net.minecraft.world.item.ItemStack off = other.getOffhandItem();
-                    
                     boolean holdingLight = isHoldingLight(main) || isHoldingLight(off);
-                                           
-                    if (holdingLight) {
-                        net.minecraft.world.phys.Vec3 lookVec = other.getLookAngle();
-                        net.minecraft.world.phys.Vec3 toUs = mc.player.position().add(0, mc.player.getEyeHeight(), 0)
-                                                             .subtract(other.position().add(0, other.getEyeHeight(), 0)).normalize();
+                    
+                    if (!hasModFlashlight && !holdingLight) continue;
+                    
+                    net.minecraft.world.phys.Vec3 lookVec = other.getLookAngle();
+                    // toUs: dirección desde el portador de linterna HACIA el jugador local (con NVG)
+                    net.minecraft.world.phys.Vec3 toUs = mc.player.position().add(0, mc.player.getEyeHeight(), 0)
+                                                         .subtract(other.position().add(0, other.getEyeHeight(), 0)).normalize();
+                    
+                    // ¿El portador de la linterna apunta hacia nosotros?
+                    double dot = lookVec.dot(toUs);
+                    // Umbral y potencia del cegado vienen del modo activo de la linterna (o 0.92 para ítems genéricos)
+                    double threshold = hasModFlashlight ? flashMode.glareThreshold : 0.92;
+                    if (dot > threshold) {
+                        // facingFactor: ¿estamos MIRANDO hacia la linterna?
+                        net.minecraft.world.phys.Vec3 myLook = mc.player.getLookAngle();
+                        net.minecraft.world.phys.Vec3 toOther = toUs.scale(-1.0);
+                        double facingDot = myLook.dot(toOther); // 1.0 = mirando directo, -1.0 = de espaldas
+                        float backFactor = dev.itsrealperson.vision_goggles.util.ModConfig.getNvgGlareBackFactor();
+                        float facingFactor = (float) Math.max(backFactor, (facingDot + 1.0) / 2.0);
                         
-                        double dot = lookVec.dot(toUs);
-                        if (dot > 0.92) { // Apuntando directo
-                            float distanceFactor = 1.0f - (float)(Math.sqrt(distSq) / 25.0);
-                            float aimFactor = (float)((dot - 0.92) / (1.0 - 0.92));
-                            float glareFromPlayer = distanceFactor * aimFactor * 1.5f; 
-                            
-                            if (glareFromPlayer > targetGlare) {
-                                targetGlare = glareFromPlayer;
-                            }
+                        float distanceFactor = 1.0f - (float)(Math.sqrt(distSq) / (float) maxRange);
+                        float aimFactor = (float)((dot - threshold) / (1.0 - threshold));
+                        float intensity = hasModFlashlight ? flashMode.glareIntensity : dev.itsrealperson.vision_goggles.util.ModConfig.getNvgGenericLightIntensity();
+                        float glareFromPlayer = distanceFactor * aimFactor * intensity * facingFactor;
+                        
+                        if (glareFromPlayer > targetGlare) {
+                            targetGlare = glareFromPlayer;
                         }
                     }
                 }
                 
-                // Si el jugador local tiene una linterna en la mano, también le afectará un poco
+                // Si el jugador local tiene una fuente de luz en la mano, también le afectará
                 if (isHoldingLight(mc.player.getMainHandItem()) || isHoldingLight(mc.player.getOffhandItem())) {
-                    if (targetGlare < 0.6f) targetGlare = 0.6f; 
+                    float selfGlare = 0.4f * dev.itsrealperson.vision_goggles.util.ModConfig.getNvgGenericLightIntensity();
+                    if (targetGlare < selfGlare) targetGlare = selfGlare; 
                 }
             }
             

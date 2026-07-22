@@ -40,6 +40,20 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
+    public static final KeyMapping toggleFlashlightKey = new KeyMapping(
+            "key.vision_goggles.toggle_flashlight",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_L,
+            "key.categories.vision_goggles"
+    );
+
+    public static final KeyMapping cycleFlashlightModeKey = new KeyMapping(
+            "key.vision_goggles.cycle_flashlight_mode",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_K,
+            "key.categories.vision_goggles"
+    );
+
     public static void init() {
         try {
             KeyMappingRegistry.register(toggleGrayscaleKey);
@@ -47,6 +61,8 @@ public class ModKeyMappings {
             KeyMappingRegistry.register(zoomKey);
             KeyMappingRegistry.register(toggleSpawnSecurityKey);
             KeyMappingRegistry.register(switchSonarModeKey);
+            KeyMappingRegistry.register(toggleFlashlightKey);
+            KeyMappingRegistry.register(cycleFlashlightModeKey);
         } catch (Exception e) {
             // Log or ignore if already registered
         }

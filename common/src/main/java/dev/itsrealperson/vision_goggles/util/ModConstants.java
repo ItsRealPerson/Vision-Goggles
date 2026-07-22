@@ -19,6 +19,10 @@ public class ModConstants {
     public static final String MODULE_THERMAL = "THERMAL";
     public static final String MODULE_SPAWN_SECURITY = "SPAWN_SECURITY";
     public static final String MODULE_CHUNK_VIEWER = "CHUNK_VIEWER";
+    public static final String MODULE_FLASHLIGHT = "FLASHLIGHT";
+    public static final String TAG_FLASHLIGHT_ACTIVE = "flashlight_active";
+    public static final String TAG_FLASHLIGHT_MODE = "flashlight_mode"; // int: FlashlightMode.id
+
 
     // Module ResourceLocations (New format for v1.1.0)
     public static final String ID_SOLAR = "vision_goggles:solar";
@@ -29,6 +33,7 @@ public class ModConstants {
     public static final String ID_ENVIRONMENT = "vision_goggles:environment";
     public static final String ID_SPAWN_SECURITY = "vision_goggles:spawn_security";
     public static final String ID_CHUNK_VIEWER = "vision_goggles:chunk_viewer";
+    public static final String ID_FLASHLIGHT = "vision_goggles:flashlight";
     
     // Vision Mode ResourceLocations
     public static final String ID_NIGHT_VISION = "vision_goggles:night_vision";

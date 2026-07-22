@@ -79,6 +79,14 @@ public class VisionRenderer {
         while (ModKeyMappings.switchSonarModeKey.consumeClick()) {
             NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
         }
+        
+        while (ModKeyMappings.toggleFlashlightKey.consumeClick()) {
+            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleFlashlightPacket());
+        }
+        
+        while (ModKeyMappings.cycleFlashlightModeKey.consumeClick()) {
+            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.CycleFlashlightModePacket());
+        }
 
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
         boolean hasHelmet = !helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem;
@@ -112,7 +120,8 @@ public class VisionRenderer {
             float maxBattery = (float) goggles.getBatteryCapacity(helmet);
             float currentBattery = nbt.contains(ModConstants.TAG_BATTERY) ? nbt.getFloat(ModConstants.TAG_BATTERY) : maxBattery;
             currentBatteryPct = currentBattery / maxBattery;
-            visorActive = isServerActive;
+            boolean isFlashlightActive = nbt.getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
+            visorActive = isServerActive || isFlashlightActive;
 
             // Zoom & Utility Logic
             boolean hasZoom = false;
@@ -201,9 +210,41 @@ public class VisionRenderer {
             }
             
             dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
-
+            
         } else if (grayscaleEnabled || lastServerActive) {
             cleanup(mc);
+        }
+
+        // Flashlight Logic runs unconditionally so we can see other players' flashlights even without a helmet
+        dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(mc.gameRenderer.getMainCamera().rotation());
+        net.minecraft.world.phys.Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+
+        for (Player player : mc.level.players()) {
+            ItemStack playerHelmet = PlatformMethods.getEquippedHelmet(player);
+            if (playerHelmet.getItem() instanceof ModularGogglesItem modular) {
+                List<ModuleType> utils = modular.getUtilityModules(playerHelmet);
+                
+                boolean hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
+                float batteryLvl = playerHelmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+                boolean flashlightOn = hasFlashlight && playerHelmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0;
+
+                if (flashlightOn) {
+                    org.joml.Vector3f pos = new org.joml.Vector3f(
+                        (float)(player.getX() - camPos.x),
+                        (float)(player.getEyeY() - camPos.y),
+                        (float)(player.getZ() - camPos.z)
+                    );
+                    
+                    net.minecraft.world.phys.Vec3 look = player.getViewVector(1.0f);
+                    org.joml.Vector3f dir = new org.joml.Vector3f((float)look.x, (float)look.y, (float)look.z);
+                    org.joml.Vector3f color = new org.joml.Vector3f(1.0f, 0.95f, 0.85f);
+                    
+                    int modeId = playerHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
+                    dev.itsrealperson.vision_goggles.util.FlashlightMode fMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
+                    
+                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, color, fMode);
+                }
+            }
         }
     }
 
@@ -217,6 +258,7 @@ public class VisionRenderer {
         zoomActiveAmount = 0.0f;
         currentZoom = 1.0f;
         VisionShaderManager.disableShader(mc);
+        dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(null);
         if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
             mc.player.removeEffect(MobEffects.NIGHT_VISION);
         }

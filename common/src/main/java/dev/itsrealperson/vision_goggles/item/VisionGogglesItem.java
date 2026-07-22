@@ -25,7 +25,7 @@ public class VisionGogglesItem extends Item {
     private final IntSupplier batteryCapacity;
 
     public VisionGogglesItem(IntSupplier batteryCapacity, VisionMode... modes) {
-        super(new Item.Properties().stacksTo(1).durability(300));
+        super(new Item.Properties().stacksTo(1).durability(dev.itsrealperson.vision_goggles.util.ModConfig.getGogglesDurability()));
         this.batteryCapacity = batteryCapacity;
         this.supportedModes = Arrays.asList(modes);
         if (this.supportedModes.isEmpty()) throw new IllegalArgumentException("Must have at least one vision mode");
@@ -65,7 +65,8 @@ public class VisionGogglesItem extends Item {
 
         if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
             if (currentBattery > 0) {
-                float drain = (mode == VisionMode.THERMAL) ? 2.0f : 1.0f;
+                float baseDrain = (mode == VisionMode.THERMAL) ? 2.0f : 1.0f;
+                float drain = baseDrain * dev.itsrealperson.vision_goggles.util.ModConfig.getBatteryDrainMultiplier();
                 currentBattery = Math.max(0, currentBattery - drain);
                 nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
                 

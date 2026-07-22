@@ -10,7 +10,10 @@
     "client.MixinGameRenderer",
     "client.MixinMinecraft",
     "client.GameRendererAccessor",
-    "client.PostChainAccessor"
+    "client.PostChainAccessor",
+    "lighting.ShaderInstanceMixin",
+    "sodium.SodiumChunkUniformMixin",
+    "sodium.SodiumShaderParserMixin"
   ],
   "injectors": {
     "defaultRequire": 1
