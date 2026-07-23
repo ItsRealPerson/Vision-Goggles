@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    " H ",
+    " E "
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "H": { "item": "minecraft:glistering_melon_slice" }
+  },
+  "result": { "item": "vision_goggles:vital_info_module" }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    " L ",
+    " E "
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "L": { "item": "minecraft:lantern" }
+  },
+  "result": { "item": "vision_goggles:flashlight_module" }
+}

@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class ShaderRewriter {
 
     private static final String FLASHLIGHT_GLSL =
-            "#define MAX_VISION_FLASHLIGHTS 128\n" +
+            "#define MAX_VISION_FLASHLIGHTS 16\n" +
             "uniform int   VisionFlashlightCount;\n" +
             "uniform vec3  VisionFlashlightsPos[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform vec3  VisionFlashlightsDir[MAX_VISION_FLASHLIGHTS];\n" +

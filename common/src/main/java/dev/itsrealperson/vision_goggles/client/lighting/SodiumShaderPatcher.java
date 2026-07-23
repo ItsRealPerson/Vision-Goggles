@@ -30,7 +30,7 @@ public class SodiumShaderPatcher {
     private static String patchFragment(String src) {
         String preamble =
                 "// VISION_FLASHLIGHT\n" +
-                "#define MAX_VISION_FLASHLIGHTS 128\n" +
+                "#define MAX_VISION_FLASHLIGHTS 16\n" +
                 "in vec3 v_VisionWorldPosRelCam;\n" +
                 "in vec4 v_VisionBiomeTint;\n" +
                 "uniform int   VisionFlashlightCount;\n" +
@@ -58,7 +58,7 @@ public class SodiumShaderPatcher {
                 "        if (spotEffect > inner) {\n" +
                 "            float attenuation = clamp(1.0 - (dist / maxRange), 0.0, 1.0);\n" +
                 "            float falloff = smoothstep(inner, outer, spotEffect);\n" +
-                "            addedLight += col * attenuation * falloff * VisionFlashlightsIntensity[i];\n" +
+                "            addedLight += col * attenuation * falloff * VisionFlashlightsIntensity[i] * 2.0;\n" +
                 "        }\n" +
                 "    }\n" +
                 "    return min(color + addedLight, vec3(1.0));\n" +
@@ -68,12 +68,12 @@ public class SodiumShaderPatcher {
 
         String target = "diffuseColor.rgb *= v_Color.rgb;";
         if (src.contains(target)) {
-            String patched = "diffuseColor.rgb *= min(v_Color.rgb + v_VisionBiomeTint.rgb * applyVisionFlashlight(vec3(0.0)), v_VisionBiomeTint.rgb); // VISION_FLASHLIGHT";
+            String patched = "diffuseColor.rgb *= min(v_Color.rgb + v_VisionBiomeTint.rgb * applyVisionFlashlight(vec3(0.0)), vec3(1.2)); // VISION_FLASHLIGHT";
             src = src.replace(target, patched);
         }
         String targetVanilla = "diffuseColor *= v_Color;";
         if (src.contains(targetVanilla)) {
-            String patchedVanilla = "diffuseColor *= min(v_Color + v_VisionBiomeTint * vec4(applyVisionFlashlight(vec3(0.0)), 0.0), v_VisionBiomeTint); // VISION_FLASHLIGHT";
+            String patchedVanilla = "diffuseColor.rgb *= min(v_Color.rgb + v_VisionBiomeTint.rgb * applyVisionFlashlight(vec3(0.0)), vec3(1.2)); // VISION_FLASHLIGHT";
             src = src.replace(targetVanilla, patchedVanilla);
         }
 

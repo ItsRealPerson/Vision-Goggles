@@ -5,7 +5,12 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 
-@Mixin(targets = "me.jellysquid.mods.sodium.client.gl.shader.ShaderParser", remap = false)
+@Mixin(targets = {
+    "me.jellysquid.mods.sodium.client.gl.shader.ShaderParser",
+    "org.embeddedt.embeddium.client.gl.shader.ShaderParser",
+    "embeddedt.embeddium.client.gl.shader.ShaderParser",
+    "com.rubidium.client.gl.shader.ShaderParser"
+}, remap = false)
 public class SodiumShaderParserMixin {
     @Inject(method = "parseShader", at = @At("RETURN"), cancellable = true, require = 0, remap = false)
     private static void vision$injectFlashlight(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<String> cir) {

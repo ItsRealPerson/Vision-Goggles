@@ -7,7 +7,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(targets = "me.jellysquid.mods.sodium.client.gl.shader.GlProgram", remap = false)
+@Mixin(targets = {
+    "me.jellysquid.mods.sodium.client.gl.shader.GlProgram",
+    "org.embeddedt.embeddium.client.gl.shader.GlProgram",
+    "embeddedt.embeddium.client.gl.shader.GlProgram",
+    "com.rubidium.client.gl.shader.GlProgram"
+}, remap = false)
 public abstract class SodiumChunkUniformMixin {
 
     @Inject(method = "bind", at = @At("TAIL"), require = 0, remap = false)

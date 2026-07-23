@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    " C ",
+    " E "
+  ],
+  "key": {
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "C": { "item": "minecraft:compass" }
+  },
+  "result": { "item": "vision_goggles:environment_module" }
+}

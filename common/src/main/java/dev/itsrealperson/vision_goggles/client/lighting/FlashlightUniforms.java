@@ -6,7 +6,7 @@ import org.joml.Vector3f;
 
 public class FlashlightUniforms {
     /** Hard GLSL limit — must match #define MAX_VISION_FLASHLIGHTS in the shaders. Never change without updating GLSL. */
-    public static final int GLSL_MAX = 128;
+    public static final int GLSL_MAX = 16;
     public static int currentCount = 0;
     public static final float[] posArray       = new float[GLSL_MAX * 3];
     public static final float[] dirArray       = new float[GLSL_MAX * 3];
