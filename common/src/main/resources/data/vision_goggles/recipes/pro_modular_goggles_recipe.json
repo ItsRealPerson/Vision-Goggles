@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "vision_goggles:goggles_upgrade",
   "pattern": [
     "N N",
     "AMA",

@@ -32,7 +32,7 @@ public final class Vision_gogglesForge {
             net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory factory = new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> {
                 return dev.itsrealperson.vision_goggles.client.ModConfigGui.createConfigScreen(parent);
             });
-            FMLJavaModLoadingContext.get().registerExtensionPoint(net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class, () -> factory);
+            net.minecraftforge.fml.ModLoadingContext.get().registerExtensionPoint(net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class, () -> factory);
         }
 
         // Run our common setup.

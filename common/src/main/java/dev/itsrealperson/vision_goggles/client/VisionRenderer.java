@@ -40,6 +40,7 @@ public class VisionRenderer {
     private static final int SONAR_PULSE_DURATION = 40; 
 
     public static boolean isVisorActive() { return visorActive; }
+    public static VisionMode getCurrentVisionMode() { return currentVisionMode; }
     public static boolean isZoomActive() { return zoomActive; }
     public static float getZoomMultiplier() { return currentZoom; }
     public static boolean isSonarActive() { return sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION; }
@@ -148,6 +149,16 @@ public class VisionRenderer {
                     VisionShaderManager.disableShader(mc);
                     mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
                 }
+                // Al cambiar de modo, limpiar el efecto de visión nocturna SOLO si el nuevo modo
+                // no lo requiere. THERMAL e HYDRO reciben NV del servidor, no se deben limpiar aquí.
+                if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
+                    boolean newModeUsesNV = currentVisionMode == VisionMode.NIGHT_VISION
+                                        || currentVisionMode == VisionMode.THERMAL
+                                        || currentVisionMode == VisionMode.HYDRO;
+                    if (!newModeUsesNV) {
+                        mc.player.removeEffect(MobEffects.NIGHT_VISION);
+                    }
+                }
                 lastServerActive = isServerActive;
             }
 
@@ -242,7 +253,23 @@ public class VisionRenderer {
                     int modeId = playerHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
                     dev.itsrealperson.vision_goggles.util.FlashlightMode fMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
                     
-                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, color, fMode);
+                    net.minecraft.world.phys.Vec3 startVec = new net.minecraft.world.phys.Vec3(player.getX(), player.getEyeY(), player.getZ());
+                    net.minecraft.world.phys.Vec3 endVec = startVec.add(look.x * fMode.range, look.y * fMode.range, look.z * fMode.range);
+                    net.minecraft.world.level.ClipContext context = new net.minecraft.world.level.ClipContext(
+                        startVec,
+                        endVec,
+                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                        net.minecraft.world.level.ClipContext.Fluid.NONE,
+                        player
+                    );
+                    net.minecraft.world.phys.HitResult hitResult = player.level().clip(context);
+                    float finalRange = fMode.range;
+                    if (hitResult.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+                        double hitDist = hitResult.getLocation().distanceTo(startVec);
+                        finalRange = (float) Math.min(fMode.range, hitDist + 1.2);
+                    }
+                    
+                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, color, fMode, finalRange);
                 }
             }
         }

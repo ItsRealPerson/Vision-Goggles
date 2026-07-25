@@ -114,10 +114,7 @@ public class VisionWorldRenderer {
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
         if (helmet.isEmpty()) return;
 
-        CompoundTag nbt = helmet.getTag();
-        if (nbt == null || !nbt.getBoolean(ModConstants.TAG_ACTIVE)) return;
-
-        boolean isThermal = nbt.getInt(ModConstants.TAG_MODE) == 1;
+        boolean isThermal = VisionRenderer.isVisorActive() && VisionRenderer.getCurrentVisionMode() == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL;
         boolean hasSpawnSecurity = false;
         boolean hasChunkViewer = false;
 

@@ -42,6 +42,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL11C;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -126,7 +127,7 @@ public class ThermalEntityPainter {
         initialized = false;
     }
 
-    /** Call from RenderLevelStageEvent.AFTER_BLOCK_ENTITIES */
+    /** Call from RenderLevelStageEvent.AFTER_ENTITIES */
     public static void captureAndComposite(PoseStack poseStack) {
         if (!initialized) return;
 
@@ -134,15 +135,16 @@ public class ThermalEntityPainter {
         if (mc.player == null || mc.level == null) return;
 
         // Check if thermal vision is active on the local player
-        ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
-        if (helmet.isEmpty()) return;
-        CompoundTag nbt = helmet.getTag();
-        if (nbt == null || !nbt.getBoolean(ModConstants.TAG_ACTIVE) || nbt.getInt(ModConstants.TAG_MODE) != 1) return;
+        if (!VisionRenderer.isVisorActive() || VisionRenderer.getCurrentVisionMode() != dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) return;
 
         // Resize FBO if window changed
         int w = mc.getMainRenderTarget().width;
         int h = mc.getMainRenderTarget().height;
         if (w != fboWidth || h != fboHeight) resizeFBO(w, h);
+
+        // Save currently-bound FBO (Xenon/Sodium manages its own FBOs)
+        int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
 
         // Flush any previous batches to ensure clean state
         mc.renderBuffers().bufferSource().endBatch();
@@ -158,7 +160,6 @@ public class ThermalEntityPainter {
         float partialTick = mc.getFrameTime();
         Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
 
-        // Asegurar que la máscara de profundidad esté activa ANTES de limpiar el FBO
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL30.GL_LEQUAL);
         RenderSystem.depthMask(true);
@@ -276,6 +277,10 @@ public class ThermalEntityPainter {
         mc.getMainRenderTarget().bindWrite(false);
         GlStateManager._viewport(0, 0, mc.getMainRenderTarget().width, mc.getMainRenderTarget().height);
         doComposite();
+
+        // Restore the previously-bound FBO so Xenon/Sodium can continue with its own pipeline
+        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
+        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
     }
 
     private static void doComposite() {

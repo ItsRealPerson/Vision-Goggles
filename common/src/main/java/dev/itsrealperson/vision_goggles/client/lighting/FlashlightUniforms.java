@@ -37,6 +37,10 @@ public class FlashlightUniforms {
     }
 
     public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f color, FlashlightMode mode) {
+        addFlashlight(pos, dir, color, mode, mode.range);
+    }
+
+    public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f color, FlashlightMode mode, float range) {
         // Java-side cap: respects server config (1–32). GLSL arrays are always sized to GLSL_MAX.
         int serverLimit = dev.itsrealperson.vision_goggles.util.ModConfig.getMaxFlashlights();
         if (currentCount >= serverLimit) return;
@@ -56,7 +60,7 @@ public class FlashlightUniforms {
 
         coneInnerArray[currentCount] = mode.coneInner;
         coneOuterArray[currentCount] = mode.coneOuter;
-        rangeArray[currentCount]     = mode.range;
+        rangeArray[currentCount]     = range;
         intensityArray[currentCount] = mode.intensity;
 
         currentCount++;

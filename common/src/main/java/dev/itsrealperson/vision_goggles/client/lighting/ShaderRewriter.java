@@ -55,7 +55,7 @@ public class ShaderRewriter {
             String path = location.getPath();
             boolean isFsh = path.endsWith(".fsh");
             boolean isVsh = path.endsWith(".vsh");
-            if ((isFsh || isVsh) && (path.contains("rendertype_solid") || path.contains("rendertype_cutout") || path.contains("rendertype_translucent") || path.contains("rendertype_entity") || path.contains("rendertype_water"))) {
+            if ((isFsh || isVsh) && (path.contains("rendertype_solid") || path.contains("rendertype_cutout") || path.contains("rendertype_translucent") || path.contains("rendertype_entity") || path.contains("rendertype_water") || path.contains("particle"))) {
                 try {
                     Resource res = resourceOpt.get();
                     InputStream is = res.open();

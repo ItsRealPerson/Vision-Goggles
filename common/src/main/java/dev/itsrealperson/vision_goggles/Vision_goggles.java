@@ -10,6 +10,8 @@ import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.registry.ModTabs;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
 
+import dev.itsrealperson.vision_goggles.registry.ModRecipes;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +24,7 @@ public final class Vision_goggles {
         ModBlocks.register();
         ModBlockEntities.register();
         ModItems.register();
+        ModRecipes.register();
         ModMenus.register();
         ModTabs.register();
         ModSounds.register();
