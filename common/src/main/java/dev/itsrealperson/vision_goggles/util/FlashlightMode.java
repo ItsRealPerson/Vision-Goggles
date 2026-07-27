@@ -10,21 +10,21 @@ public enum FlashlightMode {
     FOCUSED(0, "focused",
             0.93f, 0.97f, // coneInner, coneOuter (very tight)
             32.0f,        // range (blocks)
-            1.0f,         // shader intensity
+            2.2f,         // shader intensity
             0.90, 2.0f),  // glare threshold, glare intensity
 
     // Wide flood beam — medium range, covers a large area
     WIDE(1, "wide",
             0.65f, 0.82f, // coneInner, coneOuter (wide)
             16.0f,        // range
-            0.85f,        // slightly dimmer per-unit
+            1.8f,         // slightly dimmer per-unit
             0.65, 1.0f),  // wider glare cone, less blinding
 
     // Short range close-range burst — very wide, short, bright
     CLOSE(2, "close",
             0.42f, 0.68f, // coneInner, coneOuter (very wide)
             8.0f,         // short range
-            1.3f,         // brighter but short
+            2.8f,         // brighter but short
             0.45, 0.6f);  // very wide glare, low intensity at distance
 
     public final int id;

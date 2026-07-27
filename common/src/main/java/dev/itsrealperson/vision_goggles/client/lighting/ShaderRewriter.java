@@ -19,33 +19,63 @@ public class ShaderRewriter {
             "uniform int   VisionFlashlightCount;\n" +
             "uniform vec3  VisionFlashlightsPos[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform vec3  VisionFlashlightsDir[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform vec3  VisionFlashlightsUp[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform vec3  VisionFlashlightsRight[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform vec3  VisionFlashlightsColor[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform float VisionFlashlightsConeInner[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform float VisionFlashlightsConeOuter[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform float VisionFlashlightsRange[MAX_VISION_FLASHLIGHTS];\n" +
             "uniform float VisionFlashlightsIntensity[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform float VisionFlashlightsRange0[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform float VisionFlashlightsRange1[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform float VisionFlashlightsRange2[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform float VisionFlashlightsRange3[MAX_VISION_FLASHLIGHTS];\n" +
+            "uniform float VisionFlashlightsRange4[MAX_VISION_FLASHLIGHTS];\n" +
             "\n" +
             "vec3 getVisionFlashlight(vec3 vertexPos) {\n" +
             "    vec3 totalLight = vec3(0.0);\n" +
             "    for (int i = 0; i < VisionFlashlightCount; i++) {\n" +
             "        vec3 col = VisionFlashlightsColor[i];\n" +
             "        if (col.r <= 0.01 && col.g <= 0.01 && col.b <= 0.01) continue;\n" +
-            "        float maxRange = VisionFlashlightsRange[i];\n" +
-            "        vec3 lightDir = vertexPos - VisionFlashlightsPos[i];\n" +
-            "        float dist = length(lightDir);\n" +
-            "        if (dist > maxRange) continue;\n" +
-            "        lightDir = normalize(lightDir);\n" +
+            "        vec3 toFragment = vertexPos - VisionFlashlightsPos[i];\n" +
+            "        float depthAlongAxis = dot(toFragment, VisionFlashlightsDir[i]);\n" +
+            "        if (depthAlongAxis <= 0.0) continue;\n" +
+            "        float dist = length(toFragment);\n" +
+            "        vec3 lightDir = normalize(toFragment);\n" +
             "        float spotEffect = dot(lightDir, VisionFlashlightsDir[i]);\n" +
             "        float inner = VisionFlashlightsConeInner[i];\n" +
             "        float outer = VisionFlashlightsConeOuter[i];\n" +
             "        if (spotEffect > inner) {\n" +
-            "            float attenuation = clamp(1.0 - (dist / maxRange), 0.0, 1.0);\n" +
+            "            vec3 offsetVec = toFragment - depthAlongAxis * VisionFlashlightsDir[i];\n" +
+            "            float xOffset = dot(offsetVec, VisionFlashlightsRight[i]);\n" +
+            "            float yOffset = dot(offsetVec, VisionFlashlightsUp[i]);\n" +
+            "            float sinTheta = sqrt(1.0 - outer * outer);\n" +
+            "            float maxRadius = depthAlongAxis * (sinTheta / outer) + 0.001;\n" +
+            "            float u = xOffset / maxRadius;\n" +
+            "            float v = yOffset / maxRadius;\n" +
+            "            float rCenter = VisionFlashlightsRange0[i];\n" +
+            "            float rUp     = VisionFlashlightsRange1[i];\n" +
+            "            float rDown   = VisionFlashlightsRange2[i];\n" +
+            "            float rLeft   = VisionFlashlightsRange3[i];\n" +
+            "            float rRight  = VisionFlashlightsRange4[i];\n" +
+            "            float d = sqrt(u*u + v*v);\n" +
+            "            float k = clamp(d / 0.8, 0.0, 1.0);\n" +
+            "            float rHoriz = (u >= 0.0) ? rRight : rLeft;\n" +
+            "            float rVert  = (v >= 0.0) ? rUp    : rDown;\n" +
+            "            float sumUV = abs(u) + abs(v);\n" +
+            "            float rOuter = (abs(u) * rHoriz + abs(v) * rVert) / (sumUV + 0.0001);\n" +
+            "            float localMaxRange = mix(rCenter, rOuter, smoothstep(0.0, 1.0, k));\n" +
+            "            if (depthAlongAxis > localMaxRange + 0.05) continue;\n" +
+            "            float physRange = (inner > 0.90) ? 32.0 : ((inner > 0.50) ? 16.0 : 8.0);\n" +
+            "            float attenuation = 1.0 / (1.0 + 0.05 * dist + 0.02 * dist * dist);\n" +
+            "            attenuation *= 1.0 - smoothstep(physRange * 0.8, physRange, dist);\n" +
+            "            attenuation *= 1.0 - smoothstep(localMaxRange - 0.3, localMaxRange + 0.05, depthAlongAxis);\n" +
             "            float falloff = smoothstep(inner, outer, spotEffect);\n" +
             "            totalLight += col * attenuation * falloff * VisionFlashlightsIntensity[i];\n" +
             "        }\n" +
             "    }\n" +
             "    return totalLight;\n" +
-            "}\n";
+            "}";
 
     public static ResourceProvider wrap(ResourceProvider provider) {
         return location -> {

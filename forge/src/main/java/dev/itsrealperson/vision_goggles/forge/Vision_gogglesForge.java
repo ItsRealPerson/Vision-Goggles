@@ -49,10 +49,14 @@ public final class Vision_gogglesForge {
         @net.minecraftforge.eventbus.api.SubscribeEvent
         public static void onAddLayers(net.minecraftforge.client.event.EntityRenderersEvent.AddLayers event) {
             for (net.minecraft.world.entity.EntityType<?> entityType : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValues()) {
-                net.minecraft.client.renderer.entity.EntityRenderer<? super net.minecraft.world.entity.LivingEntity> renderer = event.getRenderer((net.minecraft.world.entity.EntityType)entityType);
-                if (renderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer livingRenderer) {
-                    livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.HeatSilhouetteLayer(livingRenderer));
-                    livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
+                try {
+                    net.minecraft.client.renderer.entity.EntityRenderer<?> renderer = event.getRenderer((net.minecraft.world.entity.EntityType)entityType);
+                    if (renderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer livingRenderer) {
+                        livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.HeatSilhouetteLayer(livingRenderer));
+                        livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
+                    }
+                } catch (ClassCastException e) {
+                    // Ignorar entidades no vivas (ej. NoopRenderer) en ciertas versiones de Forge/NeoForge
                 }
             }
 

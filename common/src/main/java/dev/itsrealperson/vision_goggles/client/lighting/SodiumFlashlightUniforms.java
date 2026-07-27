@@ -16,7 +16,14 @@ public class SodiumFlashlightUniforms {
     private static final int LOC_CONE_OUT  = 5;
     private static final int LOC_RANGE     = 6;
     private static final int LOC_INTENSITY = 7;
-    private static final int LOC_COUNT_TOTAL = 8;
+    private static final int LOC_UP        = 8;
+    private static final int LOC_RIGHT     = 9;
+    private static final int LOC_RANGE0    = 10;
+    private static final int LOC_RANGE1    = 11;
+    private static final int LOC_RANGE2    = 12;
+    private static final int LOC_RANGE3    = 13;
+    private static final int LOC_RANGE4    = 14;
+    private static final int LOC_COUNT_TOTAL = 15;
 
     public static void upload(int program) {
         int[] locs = locCache.computeIfAbsent(program, p -> {
@@ -29,6 +36,13 @@ public class SodiumFlashlightUniforms {
             l[LOC_CONE_OUT]  = GL20.glGetUniformLocation(p, "VisionFlashlightsConeOuter");
             l[LOC_RANGE]     = GL20.glGetUniformLocation(p, "VisionFlashlightsRange");
             l[LOC_INTENSITY] = GL20.glGetUniformLocation(p, "VisionFlashlightsIntensity");
+            l[LOC_UP]        = GL20.glGetUniformLocation(p, "VisionFlashlightsUp");
+            l[LOC_RIGHT]     = GL20.glGetUniformLocation(p, "VisionFlashlightsRight");
+            l[LOC_RANGE0]    = GL20.glGetUniformLocation(p, "VisionFlashlightsRange0");
+            l[LOC_RANGE1]    = GL20.glGetUniformLocation(p, "VisionFlashlightsRange1");
+            l[LOC_RANGE2]    = GL20.glGetUniformLocation(p, "VisionFlashlightsRange2");
+            l[LOC_RANGE3]    = GL20.glGetUniformLocation(p, "VisionFlashlightsRange3");
+            l[LOC_RANGE4]    = GL20.glGetUniformLocation(p, "VisionFlashlightsRange4");
             return l;
         });
 
@@ -40,5 +54,12 @@ public class SodiumFlashlightUniforms {
         if (locs[LOC_CONE_OUT]  != -1) GL20.glUniform1fv(locs[LOC_CONE_OUT],  FlashlightUniforms.coneOuterArray);
         if (locs[LOC_RANGE]     != -1) GL20.glUniform1fv(locs[LOC_RANGE],     FlashlightUniforms.rangeArray);
         if (locs[LOC_INTENSITY] != -1) GL20.glUniform1fv(locs[LOC_INTENSITY], FlashlightUniforms.intensityArray);
+        if (locs[LOC_UP]        != -1) GL20.glUniform3fv(locs[LOC_UP],        FlashlightUniforms.upArray);
+        if (locs[LOC_RIGHT]     != -1) GL20.glUniform3fv(locs[LOC_RIGHT],     FlashlightUniforms.rightArray);
+        if (locs[LOC_RANGE0]    != -1) GL20.glUniform1fv(locs[LOC_RANGE0],    FlashlightUniforms.range0Array);
+        if (locs[LOC_RANGE1]    != -1) GL20.glUniform1fv(locs[LOC_RANGE1],    FlashlightUniforms.range1Array);
+        if (locs[LOC_RANGE2]    != -1) GL20.glUniform1fv(locs[LOC_RANGE2],    FlashlightUniforms.range2Array);
+        if (locs[LOC_RANGE3]    != -1) GL20.glUniform1fv(locs[LOC_RANGE3],    FlashlightUniforms.range3Array);
+        if (locs[LOC_RANGE4]    != -1) GL20.glUniform1fv(locs[LOC_RANGE4],    FlashlightUniforms.range4Array);
     }
 }

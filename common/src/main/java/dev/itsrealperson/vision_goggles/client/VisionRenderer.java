@@ -225,10 +225,14 @@ public class VisionRenderer {
         } else if (grayscaleEnabled || lastServerActive) {
             cleanup(mc);
         }
+    }
 
-        // Flashlight Logic runs unconditionally so we can see other players' flashlights even without a helmet
-        dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(mc.gameRenderer.getMainCamera().rotation());
-        net.minecraft.world.phys.Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+    public static void updateFlashlightEveryFrame(net.minecraft.client.Camera camera, float partialTick) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(camera.rotation());
+        net.minecraft.world.phys.Vec3 camPos = camera.getPosition();
 
         for (Player player : mc.level.players()) {
             ItemStack playerHelmet = PlatformMethods.getEquippedHelmet(player);
@@ -240,39 +244,67 @@ public class VisionRenderer {
                 boolean flashlightOn = hasFlashlight && playerHelmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0;
 
                 if (flashlightOn) {
+                    net.minecraft.world.phys.Vec3 playerEyePos = player.getEyePosition(partialTick);
                     org.joml.Vector3f pos = new org.joml.Vector3f(
-                        (float)(player.getX() - camPos.x),
-                        (float)(player.getEyeY() - camPos.y),
-                        (float)(player.getZ() - camPos.z)
+                        (float)(playerEyePos.x - camPos.x),
+                        (float)(playerEyePos.y - camPos.y),
+                        (float)(playerEyePos.z - camPos.z)
                     );
                     
-                    net.minecraft.world.phys.Vec3 look = player.getViewVector(1.0f);
-                    org.joml.Vector3f dir = new org.joml.Vector3f((float)look.x, (float)look.y, (float)look.z);
+                    float yaw = player.getViewYRot(partialTick);
+                    float pitch = player.getViewXRot(partialTick);
+                    org.joml.Quaternionf rot = new org.joml.Quaternionf()
+                        .rotationY((float) Math.toRadians(-yaw))
+                        .rotateX((float) Math.toRadians(pitch));
+
+                    org.joml.Vector3f dir = rot.transform(new org.joml.Vector3f(0, 0, 1));
+                    org.joml.Vector3f up = rot.transform(new org.joml.Vector3f(0, 1, 0));
+                    org.joml.Vector3f right = rot.transform(new org.joml.Vector3f(1, 0, 0));
+                    
                     org.joml.Vector3f color = new org.joml.Vector3f(1.0f, 0.95f, 0.85f);
                     
                     int modeId = playerHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
                     dev.itsrealperson.vision_goggles.util.FlashlightMode fMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
                     
-                    net.minecraft.world.phys.Vec3 startVec = new net.minecraft.world.phys.Vec3(player.getX(), player.getEyeY(), player.getZ());
-                    net.minecraft.world.phys.Vec3 endVec = startVec.add(look.x * fMode.range, look.y * fMode.range, look.z * fMode.range);
-                    net.minecraft.world.level.ClipContext context = new net.minecraft.world.level.ClipContext(
-                        startVec,
-                        endVec,
-                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
-                        net.minecraft.world.level.ClipContext.Fluid.NONE,
-                        player
-                    );
-                    net.minecraft.world.phys.HitResult hitResult = player.level().clip(context);
-                    float finalRange = fMode.range;
-                    if (hitResult.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
-                        double hitDist = hitResult.getLocation().distanceTo(startVec);
-                        finalRange = (float) Math.min(fMode.range, hitDist + 1.2);
-                    }
+                    float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.8f;
                     
-                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, color, fMode, finalRange);
+                    org.joml.Vector3f dirCenter = new org.joml.Vector3f(dir);
+                    org.joml.Vector3f dirUp = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, right.x, right.y, right.z);
+                    org.joml.Vector3f dirDown = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, right.x, right.y, right.z);
+                    org.joml.Vector3f dirLeft = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, up.x, up.y, up.z);
+                    org.joml.Vector3f dirRight = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, up.x, up.y, up.z);
+                    
+                    float[] hitRanges = new float[5];
+                    hitRanges[0] = performRaycast(player, playerEyePos, dirCenter, fMode.range);
+                    hitRanges[1] = performRaycast(player, playerEyePos, dirUp, fMode.range);
+                    hitRanges[2] = performRaycast(player, playerEyePos, dirDown, fMode.range);
+                    hitRanges[3] = performRaycast(player, playerEyePos, dirLeft, fMode.range);
+                    hitRanges[4] = performRaycast(player, playerEyePos, dirRight, fMode.range);
+                    
+                    if (mc.player.tickCount % 20 == 0) {
+                        System.out.println("FLASH_DEBUG: Center=" + hitRanges[0] + ", Up=" + hitRanges[1] + ", Down=" + hitRanges[2] + ", Left=" + hitRanges[3] + ", Right=" + hitRanges[4]);
+                    }
+                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges);
                 }
             }
         }
+    }
+
+    private static float performRaycast(Player player, net.minecraft.world.phys.Vec3 startVec, org.joml.Vector3f dir, float maxRange) {
+        net.minecraft.world.phys.Vec3 endVec = startVec.add(dir.x() * maxRange, dir.y() * maxRange, dir.z() * maxRange);
+        net.minecraft.world.level.ClipContext context = new net.minecraft.world.level.ClipContext(
+            startVec,
+            endVec,
+            net.minecraft.world.level.ClipContext.Block.COLLIDER,
+            net.minecraft.world.level.ClipContext.Fluid.NONE,
+            player
+        );
+        net.minecraft.world.phys.HitResult hitResult = player.level().clip(context);
+        if (hitResult.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+            double hitDist = hitResult.getLocation().distanceTo(startVec);
+            return (float) Math.min(maxRange, hitDist + 1.2);
+        }
+        return maxRange;
     }
 
     private static void cleanup(Minecraft mc) {
