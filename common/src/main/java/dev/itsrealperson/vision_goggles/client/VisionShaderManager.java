@@ -18,6 +18,9 @@ public class VisionShaderManager {
     private static boolean damageFlicker = false;
     private static float currentGlare = 0.0f;
 
+    // Track the active shader so we can restore it if external mods (Superb Warfare, etc.) clear postEffect
+    private static ResourceLocation activeShaderLocation = null;
+
     public static void update(VisionMode mode, float batteryPct, boolean flicker) {
         activeMode = mode;
         currentBatteryPct = batteryPct;
@@ -43,12 +46,34 @@ public class VisionShaderManager {
 
         try {
             ((GameRendererAccessor) mc.gameRenderer).vision_goggles$loadEffect(loc);
+            activeShaderLocation = loc; // Remember which shader we loaded
         } catch (Exception e) {
             Vision_goggles.LOGGER.error("Failed to load shader: " + loc, e);
         }
     }
 
+    /**
+     * Called every render frame (not just tick) to ensure external mods like
+     * Superb Warfare 0.8.9 (scope/drone cameras) cannot permanently clear our PostChain.
+     * This is the core compatibility guard against mods that call
+     * GameRenderer.loadEffect() or null postEffect for their own render passes.
+     */
+    public static void ensureShaderActive(Minecraft mc) {
+        if (activeShaderLocation == null || mc.level == null || mc.player == null) return;
+
+        PostChain current = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
+        if (current == null) {
+            // postEffect was cleared by an external mod — restore it silently
+            try {
+                ((GameRendererAccessor) mc.gameRenderer).vision_goggles$loadEffect(activeShaderLocation);
+            } catch (Exception e) {
+                // Fail silently to avoid log spam every frame
+            }
+        }
+    }
+
     public static void disableShader(Minecraft mc) {
+        activeShaderLocation = null; // Stop restoration — goggles deactivated
         try {
             PostChain effect = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
             if (effect != null) {

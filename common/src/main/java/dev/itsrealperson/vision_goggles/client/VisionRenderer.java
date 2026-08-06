@@ -204,21 +204,22 @@ public class VisionRenderer {
             // Update Shader State & Resilience
             if (grayscaleEnabled) {
                 boolean isUnderwater = mc.player.isUnderWater();
-                
-                // RE-ENABLE logic (Crucial para F5 y Embeddium)
+
+                // Initial enable if shader isn't loaded yet (first equip, F5 switch, etc.)
+                // Frame-rate restoration is handled by MixinGameRenderer.vision_goggles$ensureShaderPerFrame
                 if (!VisionShaderManager.isShaderActive()) {
                     VisionShaderManager.enableShader(mc, currentVisionMode);
                 }
 
-                if (currentVisionMode != null) {
-                    if (currentVisionMode == VisionMode.HYDRO && isUnderwater != lastWasUnderwater) {
-                        VisionShaderManager.enableShader(mc, currentVisionMode);
-                    }
+                // Hydro-mode needs a shader swap when entering/leaving water
+                if (currentVisionMode == VisionMode.HYDRO && isUnderwater != lastWasUnderwater) {
+                    VisionShaderManager.enableShader(mc, currentVisionMode);
                 }
                 lastWasUnderwater = isUnderwater;
-                
+
                 VisionShaderManager.update(currentVisionMode, currentBatteryPct, damageFlickerTimer > 0);
             }
+
             
             dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
             
