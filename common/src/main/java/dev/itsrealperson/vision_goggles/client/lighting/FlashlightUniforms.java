@@ -22,6 +22,12 @@ public class FlashlightUniforms {
     public static final float[] range2Array    = new float[GLSL_MAX];
     public static final float[] range3Array    = new float[GLSL_MAX];
     public static final float[] range4Array    = new float[GLSL_MAX];
+    public static final float[] range5Array    = new float[GLSL_MAX];
+    public static final float[] range6Array    = new float[GLSL_MAX];
+    public static final float[] range7Array    = new float[GLSL_MAX];
+    public static final float[] range8Array    = new float[GLSL_MAX];
+    public static final float[] isLocalArray   = new float[GLSL_MAX];
+    public static final float[] isWallArray   = new float[GLSL_MAX];
 
     public static final org.joml.Quaternionf currentCamRot = new org.joml.Quaternionf();
 
@@ -44,6 +50,12 @@ public class FlashlightUniforms {
             range2Array[i]    = 0;
             range3Array[i]    = 0;
             range4Array[i]    = 0;
+            range5Array[i]    = 0;
+            range6Array[i]    = 0;
+            range7Array[i]    = 0;
+            range8Array[i]    = 0;
+            isLocalArray[i]   = 0;
+            isWallArray[i]   = 0;
         }
         if (camRot != null) {
             currentCamRot.set(camRot);
@@ -51,14 +63,26 @@ public class FlashlightUniforms {
     }
 
     public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f color, FlashlightMode mode) {
-        addFlashlight(pos, dir, new Vector3f(0, 1, 0), new Vector3f(1, 0, 0), color, mode, new float[]{mode.range, mode.range, mode.range, mode.range, mode.range});
+        float[] dummy = new float[9];
+        for (int i = 0; i < 9; i++) dummy[i] = mode.range;
+        addFlashlight(pos, dir, new Vector3f(0, 1, 0), new Vector3f(1, 0, 0), color, mode, dummy, false, false);
     }
 
     public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f color, FlashlightMode mode, float range) {
-        addFlashlight(pos, dir, new Vector3f(0, 1, 0), new Vector3f(1, 0, 0), color, mode, new float[]{range, range, range, range, range});
+        float[] dummy = new float[9];
+        for (int i = 0; i < 9; i++) dummy[i] = range;
+        addFlashlight(pos, dir, new Vector3f(0, 1, 0), new Vector3f(1, 0, 0), color, mode, dummy, false, false);
     }
 
     public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f up, Vector3f right, Vector3f color, FlashlightMode mode, float[] ranges) {
+        addFlashlight(pos, dir, up, right, color, mode, ranges, false, false);
+    }
+
+    public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f up, Vector3f right, Vector3f color, FlashlightMode mode, float[] ranges, boolean isLocal) {
+        addFlashlight(pos, dir, up, right, color, mode, ranges, isLocal, false);
+    }
+
+    public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f up, Vector3f right, Vector3f color, FlashlightMode mode, float[] ranges, boolean isLocal, boolean isWall) {
         int serverLimit = dev.itsrealperson.vision_goggles.util.ModConfig.getMaxFlashlights();
         if (currentCount >= serverLimit) return;
 
@@ -87,12 +111,18 @@ public class FlashlightUniforms {
         coneOuterArray[currentCount] = mode.coneOuter;
         rangeArray[currentCount]     = ranges[0];
         intensityArray[currentCount] = mode.intensity;
+        isLocalArray[currentCount]   = isLocal ? 1.0f : 0.0f;
+        isWallArray[currentCount]   = isWall ? 1.0f : 0.0f;
 
         range0Array[currentCount] = ranges[0];
         range1Array[currentCount] = ranges[1];
         range2Array[currentCount] = ranges[2];
         range3Array[currentCount] = ranges[3];
         range4Array[currentCount] = ranges[4];
+        range5Array[currentCount] = (ranges.length >= 9) ? ranges[5] : ranges[0];
+        range6Array[currentCount] = (ranges.length >= 9) ? ranges[6] : ranges[0];
+        range7Array[currentCount] = (ranges.length >= 9) ? ranges[7] : ranges[0];
+        range8Array[currentCount] = (ranges.length >= 9) ? ranges[8] : ranges[0];
 
         currentCount++;
     }
@@ -112,12 +142,17 @@ public class FlashlightUniforms {
         int locOuter     = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsConeOuter");
         int locRange     = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange");
         int locIntensity = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsIntensity");
+        int locIsLocal   = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsIsLocal");
 
         int locRange0    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange0");
         int locRange1    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange1");
         int locRange2    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange2");
         int locRange3    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange3");
         int locRange4    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange4");
+        int locRange5    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange5");
+        int locRange6    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange6");
+        int locRange7    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange7");
+        int locRange8    = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsRange8");
 
         if (locCount != -1)     org.lwjgl.opengl.GL20.glUniform1i(locCount, currentCount);
         if (locPos != -1)       org.lwjgl.opengl.GL20.glUniform3fv(locPos, posArray);
@@ -129,12 +164,17 @@ public class FlashlightUniforms {
         if (locOuter != -1)     org.lwjgl.opengl.GL20.glUniform1fv(locOuter, coneOuterArray);
         if (locRange != -1)     org.lwjgl.opengl.GL20.glUniform1fv(locRange, rangeArray);
         if (locIntensity != -1) org.lwjgl.opengl.GL20.glUniform1fv(locIntensity, intensityArray);
+        if (locIsLocal != -1)   org.lwjgl.opengl.GL20.glUniform1fv(locIsLocal, isLocalArray);
 
         if (locRange0 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange0, range0Array);
         if (locRange1 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange1, range1Array);
         if (locRange2 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange2, range2Array);
         if (locRange3 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange3, range3Array);
         if (locRange4 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange4, range4Array);
+        if (locRange5 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange5, range5Array);
+        if (locRange6 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange6, range6Array);
+        if (locRange7 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange7, range7Array);
+        if (locRange8 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange8, range8Array);
 
         int locInv = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "IViewRotMat");
         if (locInv != -1) {

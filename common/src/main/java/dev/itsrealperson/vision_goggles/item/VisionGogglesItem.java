@@ -14,13 +14,20 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
-
+import net.minecraft.server.level.ServerLevel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntSupplier;
 
-public class VisionGogglesItem extends Item {
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.util.GeckoLibUtil;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+
+public class VisionGogglesItem extends Item implements GeoItem {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final List<VisionMode> supportedModes;
     private final IntSupplier batteryCapacity;
 
@@ -116,12 +123,66 @@ public class VisionGogglesItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        player.startUsingItem(hand);
         
-        if (level.isClientSide) {
-            NetworkManager.INSTANCE.sendToServer(new EquipPacket());
-            return InteractionResultHolder.sidedSuccess(stack, true);
-        }
+        return InteractionResultHolder.consume(stack);
+    }
 
-        return InteractionResultHolder.pass(stack);
+    @Override
+    public ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
+        if (entity instanceof Player player && level.isClientSide) {
+            NetworkManager.INSTANCE.sendToServer(new EquipPacket());
+        }
+        return stack;
+    }
+
+    @Override
+    public int getUseDuration(ItemStack stack) {
+        return 10; // 0.5 segundos
+    }
+
+    @Override
+    public UseAnim getUseAnimation(ItemStack stack) {
+        return UseAnim.BOW;
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        // Añadir controladores si hay animaciones
+    }
+
+    private final java.util.function.Supplier<Object> renderProvider = new java.util.function.Supplier<Object>() {
+        private software.bernie.geckolib.animatable.client.RenderProvider geoRenderProvider;
+        @Override
+        public Object get() {
+            if (this.geoRenderProvider == null) {
+                createRenderer(provider -> this.geoRenderProvider = (software.bernie.geckolib.animatable.client.RenderProvider) provider);
+            }
+            return this.geoRenderProvider;
+        }
+    };
+
+    @Override
+    public void createRenderer(java.util.function.Consumer<Object> consumer) {
+        consumer.accept(new software.bernie.geckolib.animatable.client.RenderProvider() {
+            private dev.itsrealperson.vision_goggles.client.renderer.VisionGogglesGeoRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (this.renderer == null)
+                    this.renderer = new dev.itsrealperson.vision_goggles.client.renderer.VisionGogglesGeoRenderer();
+                return this.renderer;
+            }
+        });
+    }
+
+    @Override
+    public java.util.function.Supplier<Object> getRenderProvider() {
+        return this.renderProvider;
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
 }

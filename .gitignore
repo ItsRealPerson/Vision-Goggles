@@ -117,3 +117,15 @@ runs/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
+
+# Custom ignores
+No mover/
+snippet.json
+update_bones.js
+update_display.js
+common/TestTime.java
+DEV_GUIDE_THERMAL_XENON.md
+RELEASE_v1.0.0.md
+RELEASE_v2.0.0.md
+
+

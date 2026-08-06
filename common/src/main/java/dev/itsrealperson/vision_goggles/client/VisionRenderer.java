@@ -266,28 +266,54 @@ public class VisionRenderer {
                     int modeId = playerHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
                     dev.itsrealperson.vision_goggles.util.FlashlightMode fMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
                     
-                    float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.8f;
+                    float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.85f;
+                    float diagOffset = offsetAngle * 0.7071f;
                     
                     org.joml.Vector3f dirCenter = new org.joml.Vector3f(dir);
-                    org.joml.Vector3f dirUp = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, right.x, right.y, right.z);
-                    org.joml.Vector3f dirDown = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, right.x, right.y, right.z);
-                    org.joml.Vector3f dirLeft = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, up.x, up.y, up.z);
-                    org.joml.Vector3f dirRight = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, up.x, up.y, up.z);
+                    org.joml.Vector3f dirUp = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, right.x, right.y, right.z);
+                    org.joml.Vector3f dirDown = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, right.x, right.y, right.z);
+                    org.joml.Vector3f dirLeft = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, up.x, up.y, up.z);
+                    org.joml.Vector3f dirRight = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, up.x, up.y, up.z);
                     
-                    float[] hitRanges = new float[5];
+                    org.joml.Vector3f dirUpLeft = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
+                    org.joml.Vector3f dirUpRight = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
+                    org.joml.Vector3f dirDownLeft = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
+                    org.joml.Vector3f dirDownRight = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
+                    
+                    float[] hitRanges = new float[9];
                     hitRanges[0] = performRaycast(player, playerEyePos, dirCenter, fMode.range);
-                    hitRanges[1] = performRaycast(player, playerEyePos, dirUp, fMode.range);
-                    hitRanges[2] = performRaycast(player, playerEyePos, dirDown, fMode.range);
-                    hitRanges[3] = performRaycast(player, playerEyePos, dirLeft, fMode.range);
-                    hitRanges[4] = performRaycast(player, playerEyePos, dirRight, fMode.range);
+                    hitRanges[1] = performRaycast(player, playerEyePos, dirUp, fMode.range);       // 90 deg
+                    hitRanges[2] = performRaycast(player, playerEyePos, dirDown, fMode.range);     // 270 deg
+                    hitRanges[3] = performRaycast(player, playerEyePos, dirRight, fMode.range);    // 0 deg
+                    hitRanges[4] = performRaycast(player, playerEyePos, dirLeft, fMode.range);     // 180 deg
+                    hitRanges[5] = performRaycast(player, playerEyePos, dirUpLeft, fMode.range);   // 135 deg
+                    hitRanges[6] = performRaycast(player, playerEyePos, dirUpRight, fMode.range);  // 45 deg
+                    hitRanges[7] = performRaycast(player, playerEyePos, dirDownLeft, fMode.range); // 225 deg
+                    hitRanges[8] = performRaycast(player, playerEyePos, dirDownRight, fMode.range);// 315 deg
                     
-                    if (mc.player.tickCount % 20 == 0) {
-                        System.out.println("FLASH_DEBUG: Center=" + hitRanges[0] + ", Up=" + hitRanges[1] + ", Down=" + hitRanges[2] + ", Left=" + hitRanges[3] + ", Right=" + hitRanges[4]);
-                    }
-                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges);
+                    net.minecraft.client.Minecraft mcInst = net.minecraft.client.Minecraft.getInstance();
+                    boolean isLocal = (player == mcInst.player) && mcInst.options.getCameraType().isFirstPerson();
+                    boolean isWall = checkIsWall(player, playerEyePos, dirCenter, fMode.range);
+                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges, isLocal, isWall);
                 }
             }
         }
+    }
+
+    private static boolean checkIsWall(Player player, net.minecraft.world.phys.Vec3 startVec, org.joml.Vector3f dir, float maxRange) {
+        net.minecraft.world.phys.Vec3 endVec = startVec.add(dir.x() * maxRange, dir.y() * maxRange, dir.z() * maxRange);
+        net.minecraft.world.level.ClipContext context = new net.minecraft.world.level.ClipContext(
+            startVec, endVec,
+            net.minecraft.world.level.ClipContext.Block.COLLIDER,
+            net.minecraft.world.level.ClipContext.Fluid.NONE,
+            player
+        );
+        net.minecraft.world.phys.HitResult hitResult = player.level().clip(context);
+        if (hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK && hitResult instanceof net.minecraft.world.phys.BlockHitResult bhr) {
+            net.minecraft.core.Direction face = bhr.getDirection();
+            return face == net.minecraft.core.Direction.NORTH || face == net.minecraft.core.Direction.SOUTH || face == net.minecraft.core.Direction.EAST || face == net.minecraft.core.Direction.WEST;
+        }
+        return false;
     }
 
     private static float performRaycast(Player player, net.minecraft.world.phys.Vec3 startVec, org.joml.Vector3f dir, float maxRange) {

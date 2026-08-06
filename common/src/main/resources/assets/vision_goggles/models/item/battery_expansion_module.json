@@ -1,6 +1,1 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "vision_goggles:item/battery_expansion_module"
-  }
-}
+{   "parent": "minecraft:item/generated",   "textures": {     "layer0": "vision_goggles:item/battery_expansion_module"   } }

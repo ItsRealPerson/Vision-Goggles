@@ -3,6 +3,12 @@ loaderVersion = "[47,)"
 #issueTrackerURL = ""
 license = "GNU GPL 3.0"
 
+[[mixins]]
+config = "vision_goggles.mixins.json"
+
+[[mixins]]
+config = "vision_goggles.forge.mixins.json"
+
 [[mods]]
 modId = "vision_goggles"
 version = "${version}"
