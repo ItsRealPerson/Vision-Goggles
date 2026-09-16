@@ -1,18 +1,19 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
+import dev.itsrealperson.vision_goggles.item.BatteryItem;
+import dev.itsrealperson.vision_goggles.item.BatteryItem.RechargeTargetInfo;
+import dev.itsrealperson.vision_goggles.item.BatteryItem.TargetType;
+import dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem;
+import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
-import dev.itsrealperson.vision_goggles.util.PlatformMethods;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Supplier;
-
-import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
-import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 
 public class BatteryPacket {
     public BatteryPacket() {}
@@ -25,47 +26,32 @@ public class BatteryPacket {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
             if (player == null) return;
 
-            ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-            if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) return;
-
-            float max = (float) goggles.getBatteryCapacity();
-            if (goggles instanceof ModularGogglesItem modular) {
-                max = (float) modular.getBatteryCapacity(helmet);
-            }
-
-            CompoundTag nbt = helmet.getOrCreateTag();
-            float current = nbt.getFloat(ModConstants.TAG_BATTERY);
-            
-            if (current < max) {
-                boolean batteryFound = false;
-                float chargeAmount = 0.0f;
-                ItemStack batteryStack = ItemStack.EMPTY;
-                
-                ItemStack handStack = player.getMainHandItem();
-                if (ModConfig.getBatteryCharge(handStack) > 0) {
-                    batteryStack = handStack;
-                    chargeAmount = ModConfig.getBatteryCharge(handStack);
-                    batteryFound = true;
-                } else {
-                    ItemStack offHandStack = player.getOffhandItem();
-                    if (ModConfig.getBatteryCharge(offHandStack) > 0) {
-                        batteryStack = offHandStack;
-                        chargeAmount = ModConfig.getBatteryCharge(offHandStack);
-                        batteryFound = true;
-                    }
-                }
-
-                if (batteryFound && !batteryStack.isEmpty()) {
+            RechargeTargetInfo target = BatteryItem.resolveTarget(player);
+            if (target.canCharge()) {
+                ItemStack batteryStack = findBattery(player);
+                if (!batteryStack.isEmpty()) {
+                    float chargeAmount = ModConfig.getBatteryCharge(batteryStack);
                     if (!player.getAbilities().instabuild) {
                         batteryStack.shrink(1);
                     }
-                    
-                    // Recharge 50% of the CURRENT max capacity
-                    float news = Math.min(max, current + (max * chargeAmount));
-                    nbt.putFloat(ModConstants.TAG_BATTERY, news);
+                    float news = Math.min(target.max, target.current + (target.max * chargeAmount));
+                    if (target.type == TargetType.FLASHLIGHT) {
+                        TacticalFlashlightItem.setBattery(target.stack, news);
+                    } else {
+                        target.stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, news);
+                    }
+                    player.level().playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.6f, 1.2f);
                     player.containerMenu.broadcastChanges();
                 }
             }
         });
+    }
+
+    private static ItemStack findBattery(ServerPlayer player) {
+        ItemStack handStack = player.getMainHandItem();
+        if (ModConfig.getBatteryCharge(handStack) > 0) return handStack;
+        ItemStack offHandStack = player.getOffhandItem();
+        if (ModConfig.getBatteryCharge(offHandStack) > 0) return offHandStack;
+        return ItemStack.EMPTY;
     }
 }

@@ -14,4 +14,7 @@ dependencies {
 
     // Geckolib
     modCompileOnly "software.bernie.geckolib:geckolib-fabric-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
+
+    // Lua Scripting Engine (Java 17 compatible, pure Java)
+    implementation "org.luaj:luaj-jse:3.0.1"
 }

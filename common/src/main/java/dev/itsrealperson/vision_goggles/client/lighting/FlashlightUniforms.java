@@ -83,7 +83,7 @@ public class FlashlightUniforms {
     }
 
     public static void addFlashlight(Vector3f pos, Vector3f dir, Vector3f up, Vector3f right, Vector3f color, FlashlightMode mode, float[] ranges, boolean isLocal, boolean isWall) {
-        int serverLimit = dev.itsrealperson.vision_goggles.util.ModConfig.getMaxFlashlights();
+        int serverLimit = GLSL_MAX;
         if (currentCount >= serverLimit) return;
 
         int offset = currentCount * 3;
@@ -175,20 +175,5 @@ public class FlashlightUniforms {
         if (locRange6 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange6, range6Array);
         if (locRange7 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange7, range7Array);
         if (locRange8 != -1)    org.lwjgl.opengl.GL20.glUniform1fv(locRange8, range8Array);
-
-        int locInv = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "IViewRotMat");
-        if (locInv != -1) {
-            net.minecraft.client.Camera cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
-            float pitch = cam.getXRot();
-            float yaw   = cam.getYRot();
-            org.joml.Matrix3f inv = new org.joml.Matrix3f()
-                .rotationY((float) Math.toRadians(-(yaw + 180.0f)))
-                .rotateX((float) Math.toRadians(-pitch));
-
-            java.nio.FloatBuffer buf = org.lwjgl.system.MemoryUtil.memAllocFloat(9);
-            inv.get(buf);
-            org.lwjgl.opengl.GL20.glUniformMatrix3fv(locInv, false, buf);
-            org.lwjgl.system.MemoryUtil.memFree(buf);
-        }
     }
 }

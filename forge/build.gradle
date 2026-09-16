@@ -43,6 +43,10 @@ dependencies {
     // Geckolib
     modImplementation "software.bernie.geckolib:geckolib-forge-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
 
+    // Lua Scripting Engine
+    implementation "org.luaj:luaj-jse:3.0.1"
+    shadowBundle "org.luaj:luaj-jse:3.0.1"
+
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
 }
@@ -62,6 +66,8 @@ shadowJar {
 
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
+
+    relocate 'org.luaj', 'dev.itsrealperson.vision_goggles.shadow.org.luaj'
 }
 
 remapJar {

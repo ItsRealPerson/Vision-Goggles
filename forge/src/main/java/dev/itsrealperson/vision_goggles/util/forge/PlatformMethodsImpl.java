@@ -58,9 +58,59 @@ public class PlatformMethodsImpl {
     }
 
     public static ItemStack getEquippedHelmet(Player player) {
-        return CuriosApi.getCuriosHelper().findFirstCurio(player, stack -> 
-            stack.getItem() instanceof VisionGogglesItem
-        ).map(slot -> slot.stack()).orElse(ItemStack.EMPTY);
+        try {
+            var curio = CuriosApi.getCuriosHelper().findFirstCurio(player, stack -> 
+                stack.getItem() instanceof VisionGogglesItem
+            );
+            if (curio.isPresent()) {
+                return curio.get().stack();
+            }
+        } catch (Throwable ignored) {}
+        
+        ItemStack head = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+        if (head.getItem() instanceof VisionGogglesItem) {
+            return head;
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public static boolean equipFlashlight(Player player, ItemStack stack) {
+        AtomicBoolean success = new AtomicBoolean(false);
+        CuriosApi.getCuriosHelper().getCuriosHandler(player).ifPresent(handler -> {
+            String[] possibleSlots = {"body", "belt", "curio", "charm"};
+            for (String slotId : possibleSlots) {
+                handler.getStacksHandler(slotId).ifPresent(stacksHandler -> {
+                    IDynamicStackHandler dynamicHandler = stacksHandler.getStacks();
+                    for (int i = 0; i < dynamicHandler.getSlots(); i++) {
+                        if (dynamicHandler.getStackInSlot(i).isEmpty()) {
+                            dynamicHandler.setStackInSlot(i, stack.copy());
+                            stack.setCount(0);
+                            success.set(true);
+                            return;
+                        }
+                    }
+                });
+                if (success.get()) break;
+            }
+        });
+        return success.get();
+    }
+
+    public static ItemStack getEquippedFlashlight(Player player) {
+        try {
+            var curio = CuriosApi.getCuriosHelper().findFirstCurio(player, stack -> 
+                stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem
+            );
+            if (curio.isPresent()) {
+                return curio.get().stack();
+            }
+        } catch (Throwable ignored) {}
+        
+        ItemStack chest = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
+        if (chest.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+            return chest;
+        }
+        return ItemStack.EMPTY;
     }
 }
 

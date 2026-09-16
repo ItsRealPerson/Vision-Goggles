@@ -1,1 +1,6 @@
-{   "parent": "item/generated",   "textures": {     "layer0": "vision_goggles:item/spawn_security_module"   } }
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "vision_goggles:item/spawn_security_module_v2"
+  }
+}

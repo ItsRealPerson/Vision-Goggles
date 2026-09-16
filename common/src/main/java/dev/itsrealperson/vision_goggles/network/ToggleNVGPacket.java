@@ -44,11 +44,16 @@ public class ToggleNVGPacket {
             CompoundTag nbt = helmet.getOrCreateTag();
             List<VisionMode> modes;
             List<ModuleType> utils = new java.util.ArrayList<>();
+            boolean hasAnyModules = false;
             if (goggles instanceof ModularGogglesItem modular) {
                 modes = modular.getModes(helmet);
                 utils = modular.getUtilityModules(helmet);
+                if (nbt.contains(ModConstants.TAG_MODULES) && !nbt.getList(ModConstants.TAG_MODULES, net.minecraft.nbt.Tag.TAG_STRING).isEmpty()) {
+                    hasAnyModules = true;
+                }
             } else {
                 modes = goggles.getSupportedModes();
+                hasAnyModules = !modes.isEmpty();
             }
             
             if (this.switchMode) {
@@ -69,8 +74,8 @@ public class ToggleNVGPacket {
             } else {
                 boolean newState = !nbt.getBoolean(ModConstants.TAG_ACTIVE);
                 if (newState) {
-                    // Can activate if has vision modes OR utility modules
-                    if (modes.isEmpty() && utils.isEmpty()) {
+                    // Can activate if has vision modes, utility modules, OR any custom programmed modules
+                    if (!hasAnyModules && modes.isEmpty() && utils.isEmpty()) {
                         newState = false; 
                     } else {
                         // If has modes, ensure one is selected

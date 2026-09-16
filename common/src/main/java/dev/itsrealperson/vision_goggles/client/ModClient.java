@@ -16,6 +16,7 @@ public class ModClient {
         MenuRegistry.registerScreenFactory(ModMenus.MODIFICATION_STATION_MENU.get(), ModificationStationScreen::new);
         ModKeyMappings.init();
         VisionRenderer.init();
+        dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.init();
 
         // Registrar módulos del HUD (El orden importa: los primeros se dibujan debajo)
         VisionHUDOverlay.registerModule(new DurabilityModule()); // Primero las grietas (fondo)
@@ -47,6 +48,7 @@ public class ModClient {
                 return 0.0f;
             }
         );
+
     }
 
 }

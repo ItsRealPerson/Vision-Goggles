@@ -18,5 +18,6 @@ public class NetworkManager {
         INSTANCE.register(ToggleFlashlightPacket.class, ToggleFlashlightPacket::toBytes, ToggleFlashlightPacket::new, ToggleFlashlightPacket::handle);
         INSTANCE.register(SyncFlashlightPacket.class, SyncFlashlightPacket::encode, SyncFlashlightPacket::new, SyncFlashlightPacket::handle);
         INSTANCE.register(CycleFlashlightModePacket.class, CycleFlashlightModePacket::encode, CycleFlashlightModePacket::new, CycleFlashlightModePacket::handle);
+        INSTANCE.register(OpenLuaScreenPacket.class, OpenLuaScreenPacket::encode, OpenLuaScreenPacket::new, OpenLuaScreenPacket::handle);
     }
 }

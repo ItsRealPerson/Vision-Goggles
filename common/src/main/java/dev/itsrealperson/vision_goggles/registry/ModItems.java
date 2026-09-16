@@ -63,6 +63,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> FLASHLIGHT_MODULE = ITEMS.register("flashlight_module",
             () -> new Item(new Item.Properties().stacksTo(1)));
             
+    public static final RegistrySupplier<Item> TACTICAL_FLASHLIGHT = ITEMS.register("tactical_flashlight",
+            () -> new dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem(new Item.Properties().stacksTo(1)));
+            
     public static final RegistrySupplier<Item> SPAWN_SECURITY_MODULE = ITEMS.register("spawn_security_module",
             () -> new Item(new Item.Properties().stacksTo(1)));
 
@@ -80,6 +83,12 @@ public class ModItems {
 
     public static final RegistrySupplier<Item> NVG_BATTERY = ITEMS.register("nvg_battery",
             () -> new BatteryItem(new Item.Properties().stacksTo(16)));
+
+    public static final RegistrySupplier<Item> PROGRAMMABLE_MODULE = ITEMS.register("programmable_module",
+            () -> new dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem());
+
+    public static final RegistrySupplier<Item> INSTALLATION_SCRIPT = ITEMS.register("installation_script",
+            () -> new dev.itsrealperson.vision_goggles.item.InstallationScriptItem());
 
     public static void register() {
         ITEMS.register();

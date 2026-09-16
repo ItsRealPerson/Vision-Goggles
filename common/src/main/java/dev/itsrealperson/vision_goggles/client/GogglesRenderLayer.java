@@ -45,6 +45,31 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
     public void render(PoseStack matrixStack, MultiBufferSource buffer, int packedLight, T livingEntity, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
         if (!(livingEntity instanceof Player player)) return;
 
+        // 1. Render Vest Mounted Flashlight on torso if equipped
+        ItemStack flashlight = PlatformMethods.getEquippedFlashlight(player);
+        if (!flashlight.isEmpty() && this.getParentModel() instanceof HumanoidModel<?> baseModel) {
+            matrixStack.pushPose();
+            baseModel.body.translateAndRotate(matrixStack);
+
+            // Positioned securely on the chest with head/switch on top and lens facing directly forward into the world
+            matrixStack.translate(0.18f, 0.20f, -0.16f);
+            matrixStack.scale(0.32f, 0.32f, 0.32f);
+            matrixStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180.0f));
+
+            Minecraft.getInstance().getItemRenderer().renderStatic(
+                flashlight,
+                net.minecraft.world.item.ItemDisplayContext.NONE,
+                packedLight,
+                OverlayTexture.NO_OVERLAY,
+                matrixStack,
+                buffer,
+                player.level(),
+                0
+            );
+            matrixStack.popPose();
+        }
+
+        // 2. Render Goggles on head
         ItemStack stack = PlatformMethods.getEquippedHelmet(player);
         if (stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem goggles)) return;
 

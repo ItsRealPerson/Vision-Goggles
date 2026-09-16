@@ -35,5 +35,7 @@ public class VisionHUDOverlay {
                 module.render(gui, goggles, partialTicks, width, height);
             }
         }
+
+        dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.onRenderHud(gui, partialTicks);
     }
 }

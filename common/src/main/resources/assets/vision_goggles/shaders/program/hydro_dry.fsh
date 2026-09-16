@@ -1,43 +1,49 @@
-#version 120
+#version 150
 
 uniform sampler2D DiffuseSampler;
-varying vec2 texCoord;
+in vec2 texCoord;
+out vec4 fragColor;
+
 uniform float time;
 uniform float battery;
 uniform float focus;
+uniform float u_DSPActive;
 
 void main() {
     vec2 uv = texCoord;
 
-    // No wobble (dry)
-    
     vec2 center = vec2(0.5, 0.5);
-    float dist = length(uv - center);
+    vec2 maskPos = (uv - center);
+    maskPos.x *= 1.15;
+    float dist = length(maskPos);
     
-    vec4 baseColor = texture2D(DiffuseSampler, uv);
+    // 1. Procedural Condensation Droplets running down dry lens
+    float dropPattern = sin(uv.x * 140.0) * sin(uv.y * 100.0 + time * 0.15);
+    float drops = step(0.88, dropPattern) * 0.0035;
+    vec2 dropUV = uv + vec2(drops, drops * 1.5);
     
-    // Desaturated and blurry look (simulating dry glass masking vision)
-    // Blur increases slightly with focus? Or decreases to simulate "focusing"
-    float blurOffset = 0.002 + focus * 0.001;
+    vec4 baseColor = texture(DiffuseSampler, dropUV);
+    
+    // 2. Optical Glass Fogging / Blur (simulating moisture-fogged tempered glass)
+    float blurOffset = (u_DSPActive > 0.5) ? (0.0007 + focus * 0.0004) : (0.0018 + focus * 0.0008);
     vec4 blurColor = baseColor;
-    blurColor += texture2D(DiffuseSampler, uv + vec2(blurOffset, blurOffset));
-    blurColor += texture2D(DiffuseSampler, uv + vec2(-blurOffset, -blurOffset));
-    blurColor += texture2D(DiffuseSampler, uv + vec2(blurOffset, -blurOffset));
-    blurColor += texture2D(DiffuseSampler, uv + vec2(-blurOffset, blurOffset));
+    blurColor += texture(DiffuseSampler, dropUV + vec2(blurOffset, blurOffset));
+    blurColor += texture(DiffuseSampler, dropUV + vec2(-blurOffset, -blurOffset));
+    blurColor += texture(DiffuseSampler, dropUV + vec2(blurOffset, -blurOffset));
+    blurColor += texture(DiffuseSampler, dropUV + vec2(-blurOffset, blurOffset));
     blurColor /= 5.0;
 
     vec3 dryColor = blurColor.rgb;
     
-    // Slight tint
-    dryColor *= vec3(0.9, 0.95, 1.0);
+    // Cool moisture tint with slight edge chromatic aberration
+    dryColor *= vec3(0.92, 0.96, 1.00);
 
-    // Heavy Vignette (Tunnel vision out of water), tightens with focus
-    float vignette = smoothstep(0.7 - focus * 0.2, 0.25 - focus * 0.1, dist);
+    // 3. Anatomical Diving Mask Peripheral Vignette
+    float vignette = smoothstep(0.68 - focus * 0.18, 0.28 - focus * 0.09, dist);
     dryColor *= vignette;
 
     float globalAlpha = 1.0;
     if (battery < 0.15) {
-        // ... (rest of the code)
         if (battery < 0.06) {
             float death = (0.06 - battery) / 0.06;
             float pulse = sin(time * (20.0 + death * 40.0));
@@ -46,5 +52,5 @@ void main() {
         }
     }
 
-    gl_FragColor = vec4(dryColor * globalAlpha, 1.0);
+    fragColor = vec4(dryColor * globalAlpha, 1.0);
 }
