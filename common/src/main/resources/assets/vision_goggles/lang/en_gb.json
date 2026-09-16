@@ -97,5 +97,6 @@
   "message.vision_goggles.sonar_mode": "§bSonar Mode: §f%s",
   "message.vision_goggles.flashlight_mode.focused": "§eFlashlight: §fFocused Beam",
   "message.vision_goggles.flashlight_mode.wide": "§eFlashlight: §fWide Flood",
-  "message.vision_goggles.flashlight_mode.close": "§eFlashlight: §fClose Burst"
+  "message.vision_goggles.flashlight_mode.close": "§eFlashlight: §fClose Burst",
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
 }

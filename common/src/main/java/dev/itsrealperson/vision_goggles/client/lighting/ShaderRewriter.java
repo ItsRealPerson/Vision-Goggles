@@ -53,10 +53,8 @@ public class ShaderRewriter {
             "        float outer = VisionFlashlightsConeOuter[i];\n" +
             "        if (spotEffect > inner) {\n" +
             "            float physRange = (inner > 0.90) ? 32.0 : ((inner > 0.50) ? 16.0 : 8.0);\n" +
-            "            vec3 fNormal = normalize(cross(dFdx(vertexPos), dFdy(vertexPos)));\n" +
-            "            if (dot(fNormal, -lightDir) <= 0.01) continue;\n" +
             "            if (VisionFlashlightsIsLocal[i] > 0.5) {\n" +
-            "                if (depthAlongAxis > physRange) continue;\n" +
+            "                if (depthAlongAxis > physRange || dist < 0.3) continue;\n" +
             "                float attenuation = 1.0 / (1.0 + 0.05 * dist + 0.02 * dist * dist);\n" +
             "                attenuation *= 1.0 - smoothstep(physRange * 0.8, physRange, dist);\n" +
             "                float falloff = smoothstep(inner, outer, spotEffect);\n" +
@@ -84,9 +82,10 @@ public class ShaderRewriter {
             if (resourceOpt.isEmpty()) return resourceOpt;
 
             String path = location.getPath();
+            if (path.contains("item") || path.contains("hand")) return resourceOpt;
             boolean isFsh = path.endsWith(".fsh");
             boolean isVsh = path.endsWith(".vsh");
-            if ((isFsh || isVsh) && (path.contains("rendertype_solid") || path.contains("rendertype_cutout") || path.contains("rendertype_translucent") || path.contains("rendertype_entity") || path.contains("rendertype_water") || path.contains("particle"))) {
+            if ((isFsh || isVsh) && (path.contains("rendertype_solid") || path.contains("rendertype_cutout") || path.contains("rendertype_translucent") || path.contains("rendertype_entity") || path.contains("rendertype_armor") || path.contains("rendertype_water") || path.contains("particle"))) {
                 try {
                     Resource res = resourceOpt.get();
                     InputStream is = res.open();

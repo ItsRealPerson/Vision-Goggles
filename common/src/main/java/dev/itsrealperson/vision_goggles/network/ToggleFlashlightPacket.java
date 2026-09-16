@@ -27,6 +27,7 @@ public class ToggleFlashlightPacket {
             ServerPlayer player = (ServerPlayer) contextSupplier.get().getPlayer();
             if (player == null) return;
 
+            boolean toggled = false;
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
             if (!helmet.isEmpty() && helmet.getItem() instanceof ModularGogglesItem modular) {
                 List<ModuleType> utils = modular.getUtilityModules(helmet);
@@ -41,8 +42,18 @@ public class ToggleFlashlightPacket {
                         player.serverLevel().players(),
                         new SyncFlashlightPacket(player.getId(), !isActive, modeId)
                     );
+                    toggled = true;
                 }
             }
+
+            if (!toggled) {
+                ItemStack vest = PlatformMethods.getEquippedFlashlight(player);
+                if (!vest.isEmpty() && vest.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+                    dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.toggle(vest, player);
+                    toggled = true;
+                }
+            }
+
             player.containerMenu.broadcastChanges();
         });
     }

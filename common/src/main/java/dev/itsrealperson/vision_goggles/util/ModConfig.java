@@ -55,8 +55,14 @@ public class ModConfig {
         public float nvgGenericLightIntensity  = 1.5f;
 
         // ── Flashlight ────────────────────────────────────────────────────
-        /** Max simultaneous flashlights rendered per client. Range: 1–128. (Values above 32 may degrade GPU performance). */
+        /** Max simultaneous flashlights rendered per client. Range: 1–16. */
         public int maxSimultaneousFlashlights  = 16;
+
+        // ── Modular Goggles Slots ─────────────────────────────────────────
+        /** Max modules that can be installed in base Modular Goggles. Default: 2. */
+        public int modularMaxModules = 2;
+        /** Max modules that can be installed in Pro Modular Goggles. Default: 4. */
+        public int proModularMaxModules = 4;
     }
 
     public static class ClientConfig {
@@ -152,7 +158,11 @@ public class ModConfig {
     public static float getNvgGenericLightIntensity() { return Math.max(0.0f, common.nvgGenericLightIntensity); }
 
     // ─── Flashlight getter ────────────────────────────────────────────────────
-    public static int getMaxFlashlights() { return Math.max(1, Math.min(128, common.maxSimultaneousFlashlights)); }
+    public static int getMaxFlashlights() { return Math.max(1, Math.min(16, common.maxSimultaneousFlashlights)); }
+
+    // ─── Slot capacity getters ────────────────────────────────────────────────
+    public static int getModularMaxModules()    { return Math.max(1, common.modularMaxModules); }
+    public static int getProModularMaxModules() { return Math.max(1, common.proModularMaxModules); }
 
     // ─── Client getters ───────────────────────────────────────────────────────
     public static int getNvgColorTheme()             { return client.nvgColorTheme; }

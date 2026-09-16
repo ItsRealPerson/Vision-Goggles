@@ -97,5 +97,6 @@
   "message.vision_goggles.sonar_mode": "§bModalità Sonar: §f%s",
   "message.vision_goggles.flashlight_mode.focused": "§eTorcia: §fFascio Focalizzato",
   "message.vision_goggles.flashlight_mode.wide": "§eTorcia: §fFascio Ampio",
-  "message.vision_goggles.flashlight_mode.close": "§eTorcia: §fRaffica Ravvicinata"
+  "message.vision_goggles.flashlight_mode.close": "§eTorcia: §fRaffica Ravvicinata",
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
 }

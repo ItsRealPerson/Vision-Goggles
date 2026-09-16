@@ -68,5 +68,48 @@ public class PlatformMethodsImpl {
         }
         return ItemStack.EMPTY;
     }
+
+    public static boolean equipFlashlight(Player player, ItemStack stack) {
+        AccessoriesCapability capability = AccessoriesCapability.get(player);
+        if (capability != null) {
+            String[] possibleSlots = {"body", "chest", "belt"};
+            for (String slotId : possibleSlots) {
+                var container = capability.getContainers().get(slotId);
+                if (container != null) {
+                    for (int i = 0; i < container.getSize(); i++) {
+                        if (container.getAccessories().getItem(i).isEmpty()) {
+                            container.getAccessories().setItem(i, stack.copy());
+                            stack.setCount(0);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static ItemStack getEquippedFlashlight(Player player) {
+        AccessoriesCapability capability = AccessoriesCapability.get(player);
+        if (capability != null) {
+            String[] possibleSlots = {"body", "chest", "belt"};
+            for (String slotId : possibleSlots) {
+                var container = capability.getContainers().get(slotId);
+                if (container != null) {
+                    for (int i = 0; i < container.getSize(); i++) {
+                        ItemStack stack = container.getAccessories().getItem(i);
+                        if (stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+                            return stack;
+                        }
+                    }
+                }
+            }
+        }
+        ItemStack chest = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
+        if (chest.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+            return chest;
+        }
+        return ItemStack.EMPTY;
+    }
 }
 

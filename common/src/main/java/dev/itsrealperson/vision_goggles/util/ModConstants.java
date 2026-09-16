@@ -40,4 +40,10 @@ public class ModConstants {
     public static final String ID_THERMAL = "vision_goggles:thermal";
     public static final String ID_HYDRO = "vision_goggles:hydro";
     public static final String ID_BIOMETRIC = "vision_goggles:biometric";
+
+    // Script & Programmable Module Tags
+    public static final String TAG_PROGRAMMED_ID = "programmed_id";
+    public static final String TAG_SCRIPT_NAME = "script_name";
+    public static final String TAG_SCRIPT_COLOR = "script_color";
+    public static final String ID_PROGRAMMABLE = "vision_goggles:programmable";
 }

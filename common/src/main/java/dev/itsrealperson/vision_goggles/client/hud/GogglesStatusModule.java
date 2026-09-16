@@ -36,8 +36,9 @@ public class GogglesStatusModule implements IHudModule {
 
         if (showMode) {
             Component modeName = mode.getDisplayName();
-            int xMode = width - mc.font.width(modeName) - 5;
-            gui.drawString(mc.font, modeName.getVisualOrderText(), xMode, 5, 0xFFAAAAAA, true);
+            int xMode = width - mc.font.width(modeName) - 8;
+            int yMode = height - 15; // Posición abajo a la derecha
+            gui.drawString(mc.font, modeName.getVisualOrderText(), xMode, yMode, 0xFFAAAAAA, true);
         }
 
         // 2. Renderizar Batería (Lógica original recuperada)

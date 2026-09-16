@@ -14,4 +14,14 @@ public class PlatformMethods {
     public static ItemStack getEquippedHelmet(Player player) {
         throw new AssertionError();
     }
+
+    @ExpectPlatform
+    public static boolean equipFlashlight(Player player, ItemStack stack) {
+        throw new AssertionError();
+    }
+
+    @ExpectPlatform
+    public static ItemStack getEquippedFlashlight(Player player) {
+        throw new AssertionError();
+    }
 }

@@ -1,14 +1,55 @@
-#version 120
+#version 150
 
 uniform sampler2D DiffuseSampler;
-varying vec2 texCoord;
+in vec2 texCoord;
+out vec4 fragColor;
+
 uniform float time;
 uniform float battery;
 uniform float focus;
 uniform float Interference;
+uniform float u_DSPActive;
 
-float noise(vec2 co) {
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+float hashNoise(vec2 p, float t) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z + fract(t * 13.37));
+}
+
+vec3 ironbow(float t) {
+    t = clamp(t, 0.0, 1.0);
+    vec3 c0 = vec3(0.01, 0.02, 0.08); // Dark navy
+    vec3 c1 = vec3(0.28, 0.00, 0.55); // Purple
+    vec3 c2 = vec3(0.85, 0.10, 0.15); // Red
+    vec3 c3 = vec3(1.00, 0.55, 0.00); // Orange
+    vec3 c4 = vec3(1.00, 0.95, 0.30); // Yellow
+    vec3 c5 = vec3(1.00, 1.00, 1.00); // White
+
+    if (t < 0.20) return mix(c0, c1, t / 0.20);
+    if (t < 0.40) return mix(c1, c2, (t - 0.20) / 0.20);
+    if (t < 0.70) return mix(c2, c3, (t - 0.40) / 0.30);
+    if (t < 0.90) return mix(c3, c4, (t - 0.70) / 0.20);
+    return mix(c4, c5, (t - 0.90) / 0.10);
+}
+
+float getLum(vec2 coord) {
+    return dot(texture(DiffuseSampler, coord).rgb, vec3(0.299, 0.587, 0.114));
+}
+
+float sobelEdge(vec2 coord) {
+    vec2 d = vec2(0.0012, 0.0012);
+    float tl = getLum(coord + vec2(-d.x,  d.y));
+    float t  = getLum(coord + vec2( 0.0,  d.y));
+    float tr = getLum(coord + vec2( d.x,  d.y));
+    float l  = getLum(coord + vec2(-d.x,  0.0));
+    float r  = getLum(coord + vec2( d.x,  0.0));
+    float bl = getLum(coord + vec2(-d.x, -d.y));
+    float b  = getLum(coord + vec2( 0.0, -d.y));
+    float br = getLum(coord + vec2( d.x, -d.y));
+
+    float gx = -tl - 2.0 * l - bl + tr + 2.0 * r + br;
+    float gy = -tl - 2.0 * t - tr + bl + 2.0 * b + br;
+    return length(vec2(gx, gy));
 }
 
 void main() {
@@ -46,57 +87,80 @@ void main() {
         }
     }
 
-    vec4 baseColor = texture2D(DiffuseSampler, uv);
+    vec4 baseColor = texture(DiffuseSampler, uv);
     
     // Slight pixelation effect when zooming in thermal
     if (focus > 0.5) {
         float pixels = 400.0 - (focus - 0.5) * 200.0;
         uv = floor(uv * pixels) / pixels;
-        baseColor = texture2D(DiffuseSampler, uv);
+        baseColor = texture(DiffuseSampler, uv);
     }
 
     float lum = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
-    
-    vec3 coldBackground = vec3(lum * 0.0, lum * 0.15, lum * 0.45);
     float heatSignal = 0.0;
     
-    // Detect Cyan (Living Entities) - More Strict
-    // min(G, B) - R must be high AND R must be low to avoid bright white/sand
+    // Detect Living Entities (Tinted entity mask or high cyan/green relative to red)
     float cyanBias = min(baseColor.g, baseColor.b) - baseColor.r;
 
     if (cyanBias > 0.5 && baseColor.r < 0.6) {
         heatSignal = 1.0;
     } 
-    // Ignore Pure White and very bright yellowish blocks (Sand at day)
-    else if (baseColor.r > 0.8 && baseColor.g > 0.8) {
+    // Ignore pure bright daylight sand/snow
+    else if (baseColor.r > 0.85 && baseColor.g > 0.85 && baseColor.b > 0.85) {
         heatSignal = 0.0;
     }
-    // Fallback for natural heat (Lava, Fire) -> High lum + Warm tint (R > B)
-    else if (lum > 0.85 && baseColor.r > baseColor.b) {
-        heatSignal = (lum - 0.85) * 4.0;
+    // Natural thermal sources (Lava, Fire, Magma)
+    else if (lum > 0.80 && baseColor.r > baseColor.b) {
+        heatSignal = (lum - 0.80) * 4.0;
     }
     
-    vec3 heatColor = vec3(1.0, 0.4, 0.0) * 2.0;
-    vec3 visionColor = mix(coldBackground, heatColor, clamp(heatSignal, 0.0, 1.0)) * 1.6;
-    visionColor = max(visionColor, vec3(0.0, 0.05, 0.15));
+    // Thermal Ironbow calculation
+    float baseTemp = lum * 0.35;
+    float finalTemp = clamp(baseTemp + clamp(heatSignal, 0.0, 1.0) * 0.70, 0.0, 1.0);
+    vec3 visionColor = ironbow(finalTemp);
     
-    // Noise and Scanlines increase with focus
+    // 1. Thermal Radiation Bleed / Heat Aura around hot targets
+    if (heatSignal > 0.4) {
+        vec3 heatBloom = vec3(1.0, 0.45, 0.05) * (heatSignal - 0.4) * 0.40;
+        visionColor += heatBloom;
+    }
+    
+    // 2. Microbolometer Fixed Pattern Noise (Column FPN stripes inherent to uncooled FLIR sensors)
+    float fpn = sin(uv.x * 1280.0) * ((u_DSPActive > 0.5) ? 0.003 : 0.015);
+    visionColor += vec3(fpn);
+    
+    // 3. ENVG Edge Fusion (DSP Mode with CC: Tweaked)
+    if (u_DSPActive > 0.5) {
+        float edge = sobelEdge(uv);
+        edge = smoothstep(0.12, 0.36, edge);
+        vec3 edgeColor = vec3(0.12, 0.92, 1.0) * edge * 0.90;
+        visionColor += edgeColor;
+        
+        // Digital NUC (Non-Uniformity Correction) shutter recalibration click every 35s
+        float nucCycle = mod(time, 35.0);
+        if (nucCycle < 0.06) {
+            visionColor = mix(visionColor, vec3(0.08, 0.08, 0.12), 0.80);
+        }
+    }
+    
+    // 4. Sensor grain
     float noiseIntensity = 0.08 + pow(wear, 1.5) * 1.5 + focus * 0.04;
-    visionColor *= (0.8 + 0.2 * noise(uv * 100.0 + time));
+    if (u_DSPActive > 0.5) noiseIntensity *= 0.25;
+    visionColor *= (0.90 + 0.10 * hashNoise(uv * 400.0, time));
     
-    // Thermal Interference (Noise and Color shift)
+    // Thermal Interference (e.g. in the Nether)
     if (Interference > 0.0) {
-        float interferenceNoise = noise(uv * 200.0 + time * 25.0) * Interference;
+        float interferenceNoise = hashNoise(uv * 300.0, time * 3.0) * Interference;
         visionColor += vec3(interferenceNoise * 2.0, interferenceNoise * 0.4, 0.0);
         
-        // Make the screen pulse with a reddish tint
         float pulse = (sin(time * 15.0) * 0.5 + 0.5) * Interference;
         visionColor = mix(visionColor, vec3(1.0, 0.1, 0.0), pulse * 0.4);
     }
 
-    visionColor -= sin(uv.y * 600.0) * 0.03;
+    visionColor -= sin(uv.y * 600.0) * 0.02;
     
-    visionColor *= (1.0 - smoothstep(0.45 - focus * 0.1, 0.7 - focus * 0.15, dist));
+    // Military thermal ocular vignette
+    visionColor *= (1.0 - smoothstep(0.44 - focus * 0.08, 0.70 - focus * 0.14, dist));
     
-    gl_FragColor = vec4(visionColor * globalAlpha, 1.0);
+    fragColor = vec4(visionColor * globalAlpha, 1.0);
 }

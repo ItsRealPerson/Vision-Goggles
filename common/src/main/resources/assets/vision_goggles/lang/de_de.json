@@ -97,5 +97,6 @@
   "message.vision_goggles.sonar_mode": "§bSonarmodus: §f%s",
   "message.vision_goggles.flashlight_mode.focused": "§eTaschenlampe: §fFokussierter Strahl",
   "message.vision_goggles.flashlight_mode.wide": "§eTaschenlampe: §fBreiter Lichtkegel",
-  "message.vision_goggles.flashlight_mode.close": "§eTaschenlampe: §fNahbereichs-Burst"
+  "message.vision_goggles.flashlight_mode.close": "§eTaschenlampe: §fNahbereichs-Burst",
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
 }

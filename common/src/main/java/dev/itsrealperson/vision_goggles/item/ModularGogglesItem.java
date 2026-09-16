@@ -70,12 +70,51 @@ public class ModularGogglesItem extends VisionGogglesItem {
 
     @Override
     public boolean hasModule(ItemStack stack, String moduleName) {
+        if (moduleName == null || moduleName.isEmpty()) return false;
         CompoundTag tag = stack.getTag();
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            String strippedReq = moduleName.contains(":") ? moduleName.split(":")[1] : moduleName;
+
             for (int i = 0; i < modules.size(); i++) {
                 String mod = modules.getString(i);
-                if (mod.equals(moduleName)) return true;
+                if (mod.equalsIgnoreCase(moduleName)) return true;
+                String strippedMod = mod.contains(":") ? mod.split(":")[1] : mod;
+                if (strippedMod.equalsIgnoreCase(strippedReq)) return true;
+
+                // Alias de tipeo: thread_scanner <-> threat_scanner
+                if (("thread_scanner".equalsIgnoreCase(strippedReq) && "threat_scanner".equalsIgnoreCase(strippedMod)) ||
+                    ("threat_scanner".equalsIgnoreCase(strippedReq) && "thread_scanner".equalsIgnoreCase(strippedMod))) {
+                    return true;
+                }
+
+                // Alias biométrico: bio <-> biometric
+                if (("bio".equalsIgnoreCase(strippedReq) || "biometric".equalsIgnoreCase(strippedReq)) &&
+                    ("bio".equalsIgnoreCase(strippedMod) || "biometric".equalsIgnoreCase(strippedMod) || mod.contains("biometric"))) {
+                    return true;
+                }
+
+                // Alias visión nocturna: nvg <-> night_vision
+                if (("nvg".equalsIgnoreCase(strippedReq) || "night_vision".equalsIgnoreCase(strippedReq)) &&
+                    ("nvg".equalsIgnoreCase(strippedMod) || "night_vision".equalsIgnoreCase(strippedMod) || mod.contains("night_vision"))) {
+                    return true;
+                }
+
+                // Alias térmico: thermal
+                if ("thermal".equalsIgnoreCase(strippedReq) && ("thermal".equalsIgnoreCase(strippedMod) || mod.contains("thermal"))) {
+                    return true;
+                }
+
+                // Alias hydro: hydro
+                if ("hydro".equalsIgnoreCase(strippedReq) && ("hydro".equalsIgnoreCase(strippedMod) || mod.contains("hydro"))) {
+                    return true;
+                }
+
+                if ("programmable".equalsIgnoreCase(moduleName) || "generic".equalsIgnoreCase(moduleName)) {
+                    if (mod.equals(ModConstants.ID_PROGRAMMABLE) || (!mod.contains("night_vision") && !mod.contains("thermal") && !mod.contains("hydro") && !mod.contains("biometric") && ModuleType.byId(mod) == null)) {
+                        return true;
+                    }
+                }
 
                 // Check for ModuleType matches (handles both new ID and legacy name)
                 ModuleType type = ModuleType.byId(mod);
@@ -126,8 +165,22 @@ public class ModularGogglesItem extends VisionGogglesItem {
         return base;
     }
 
+    public static int customModularMax = -1;
+    public static int customProMax = -1;
+
+    public static void setCustomModularMax(int max) { customModularMax = max; }
+    public static void setCustomProMax(int max) { customProMax = max; }
+    public static int getCustomModularMax() { return customModularMax; }
+    public static int getCustomProMax() { return customProMax; }
+
     public int getMaxModules() {
-        return maxModules;
+        if (this instanceof ProModularGogglesItem) {
+            if (customProMax > 0) return customProMax;
+            return ModConfig.getProModularMaxModules();
+        } else {
+            if (customModularMax > 0) return customModularMax;
+            return ModConfig.getModularMaxModules();
+        }
     }
 
     public boolean canInstallModule(ItemStack stack, String moduleId) {
@@ -157,8 +210,19 @@ public class ModularGogglesItem extends VisionGogglesItem {
             return true;
         }
 
-        // Functional modules count
-        int functionalCount = modes.size() + utils.size();
+        // Functional modules count (including custom programmed Lua modules)
+        int customCount = 0;
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            ListTag list = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            for (int i = 0; i < list.size(); i++) {
+                String m = list.getString(i);
+                if (VisionMode.byLocation(m) == null && ModuleType.byId(m) == null) {
+                    customCount++;
+                }
+            }
+        }
+        int functionalCount = modes.size() + utils.size() + customCount;
         // Don't count Battery Expansion towards the limit if we are checking a functional module
         functionalCount -= utils.contains(ModuleType.BATTERY_EXPANSION) ? 1 : 0;
 
@@ -190,8 +254,19 @@ public class ModularGogglesItem extends VisionGogglesItem {
 
         List<VisionMode> modes = getModes(stack);
         List<ModuleType> utils = getUtilityModules(stack);
+        List<String> customModules = new ArrayList<>();
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            ListTag list = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            for (int i = 0; i < list.size(); i++) {
+                String m = list.getString(i);
+                if (VisionMode.byLocation(m) == null && ModuleType.byId(m) == null) {
+                    customModules.add(m);
+                }
+            }
+        }
 
-        if (!modes.isEmpty() || !utils.isEmpty()) {
+        if (!modes.isEmpty() || !utils.isEmpty() || !customModules.isEmpty()) {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.installed_modules").withStyle(ChatFormatting.GRAY));
             for (VisionMode mode : modes) {
                 String modeName = "nvg";
@@ -203,6 +278,13 @@ public class ModularGogglesItem extends VisionGogglesItem {
             for (ModuleType util : utils) {
                 String utilName = util.getId().contains(":") ? util.getId().split(":")[1] : util.getId().toLowerCase();
                 tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + utilName + "_module")).withStyle(ChatFormatting.YELLOW));
+            }
+            for (String customId : customModules) {
+                String name = tag != null && tag.contains("mod_name_" + customId) ? tag.getString("mod_name_" + customId) : customId;
+                if (ModConstants.ID_PROGRAMMABLE.equals(customId)) {
+                    name = "Módulo Programable (Virgen)";
+                }
+                tooltipComponents.add(Component.literal("- " + name).withStyle(ChatFormatting.GREEN));
             }
         } else {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.no_modules").withStyle(ChatFormatting.RED));

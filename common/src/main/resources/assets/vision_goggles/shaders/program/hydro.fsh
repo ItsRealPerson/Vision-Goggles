@@ -1,39 +1,47 @@
-#version 120
+#version 150
 
 uniform sampler2D DiffuseSampler;
-varying vec2 texCoord;
+in vec2 texCoord;
+out vec4 fragColor;
+
 uniform float time;
 uniform float battery;
 uniform float focus;
+uniform float u_DSPActive;
 
 void main() {
     vec2 uv = texCoord;
 
-    // Underwater wobble effect
-    uv.x += sin(uv.y * 30.0 + time * 0.05) * 0.005;
-    uv.y += cos(uv.x * 30.0 + time * 0.05) * 0.005;
+    // Underwater hydro-fluid wobble effect (digitally stabilized in DSP mode)
+    float wobbleFactor = (u_DSPActive > 0.5) ? 0.0012 : 0.0045;
+    uv.x += sin(uv.y * 32.0 + time * 0.06) * wobbleFactor;
+    uv.y += cos(uv.x * 32.0 + time * 0.06) * wobbleFactor;
 
-    // Vignette
     vec2 center = vec2(0.5, 0.5);
     float dist = length(uv - center);
     
-    vec4 baseColor = texture2D(DiffuseSampler, uv);
-    float lum = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
+    // 1. Water Chromatic Refraction (Red wavelengths absorb fast underwater, blue/cyan penetrate)
+    float ca = 0.0020;
+    float r = texture(DiffuseSampler, uv + vec2(ca, 0.0)).r;
+    float g = texture(DiffuseSampler, uv).g;
+    float b = texture(DiffuseSampler, uv - vec2(ca, 0.0)).b;
+    vec4 baseColor = vec4(r, g, b, 1.0);
     
-    // Hydro Color Palette (Cyan/Deep Blue)
-    // Deep blue-ish tint mixed with the original luminance
-    vec3 hydroColor = vec3(lum * 0.1, lum * 0.8, lum * 1.0);
+    float lum = dot(baseColor.rgb, vec3(0.28, 0.60, 0.12));
     
-    // Boost brightness slightly
-    hydroColor *= (1.2 + focus * 0.3);
+    // 2. High-Tech Abyssal Hydro Palette (Rich Cyan / Deep Marine Blue with contrast boost)
+    vec3 deepWater = vec3(lum * 0.08, lum * 0.72, lum * 1.05);
+    vec3 hydroColor = mix(baseColor.rgb * 0.35, deepWater, 0.85);
+    
+    // Brightness boost for crystal-clear navigation
+    hydroColor *= (1.25 + focus * 0.35);
 
-    // Battery failure effect (flicker and darken)
+    // Battery failure effect
     float globalAlpha = 1.0;
     if (battery < 0.15) {
         float wear = (0.15 - battery) / 0.15;
-        hydroColor *= (battery / 0.15); // Dimming
+        hydroColor *= (battery / 0.15);
         
-        // IMPROVED CHAOTIC FLICKER AT < 6%
         if (battery < 0.06) {
             float death = (0.06 - battery) / 0.06;
             float pulse = sin(time * (20.0 + death * 40.0));
@@ -42,9 +50,13 @@ void main() {
         }
     }
 
-    // Heavy vignette for diving mask feel, tightens with focus
-    float vignette = smoothstep(0.6 - focus * 0.2, 0.3 - focus * 0.1, dist);
+    // 3. Tempered Glass Diving Mask Optical Vignette
+    // Anatomical oval mask curve with smooth falloff
+    vec2 maskPos = (uv - center);
+    maskPos.x *= 1.15; // Slightly wider horizontal viewport
+    float maskDist = length(maskPos);
+    float vignette = smoothstep(0.64 - focus * 0.15, 0.30 - focus * 0.08, maskDist);
     hydroColor *= vignette;
 
-    gl_FragColor = vec4(hydroColor * globalAlpha, 1.0);
+    fragColor = vec4(hydroColor * globalAlpha, 1.0);
 }

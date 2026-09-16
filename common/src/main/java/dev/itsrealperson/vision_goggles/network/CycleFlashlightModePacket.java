@@ -30,27 +30,38 @@ public class CycleFlashlightModePacket {
             ServerPlayer player = (ServerPlayer) ctx.get().getPlayer();
             if (player == null) return;
 
+            boolean cycled = false;
             ItemStack goggles = PlatformMethods.getEquippedHelmet(player);
-            if (goggles.isEmpty() || !(goggles.getItem() instanceof ModularGogglesItem modular)) return;
+            if (!goggles.isEmpty() && goggles.getItem() instanceof ModularGogglesItem modular) {
+                List<ModuleType> utils = modular.getUtilityModules(goggles);
+                if (utils.contains(ModuleType.FLASHLIGHT)) {
+                    boolean isOn = goggles.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
+                    if (isOn) {
+                        int currentId = goggles.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                        FlashlightMode next = FlashlightMode.byId(currentId).next();
+                        goggles.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next.id);
 
-            List<ModuleType> utils = modular.getUtilityModules(goggles);
-            if (!utils.contains(ModuleType.FLASHLIGHT)) return;
+                        dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
+                            player.serverLevel().players(),
+                            new SyncFlashlightPacket(player.getId(), isOn, next.id)
+                        );
+                        cycled = true;
+                    }
+                }
+            }
 
-            // Only cycle if the flashlight is on
-            boolean isOn = goggles.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
-            if (!isOn) return;
+            if (!cycled) {
+                ItemStack vest = PlatformMethods.getEquippedFlashlight(player);
+                if (!vest.isEmpty() && vest.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+                    int currentId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(vest);
+                    int next = (currentId + 1) % 3;
+                    vest.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next);
+                    player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.4f, 1.2f + next * 0.15f);
+                    cycled = true;
+                }
+            }
 
-            int currentId = goggles.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
-            FlashlightMode next = FlashlightMode.byId(currentId).next();
-            goggles.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next.id);
-
-            Vision_goggles.LOGGER.debug("Flashlight mode cycled to {} for {}", next.name, player.getName().getString());
-
-            // Broadcast new state (mode + active) to all players in the level
-            dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
-                player.serverLevel().players(),
-                new SyncFlashlightPacket(player.getId(), isOn, next.id)
-            );
+            player.containerMenu.broadcastChanges();
         });
     }
 }

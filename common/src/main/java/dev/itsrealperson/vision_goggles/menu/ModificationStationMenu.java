@@ -74,8 +74,12 @@ public class ModificationStationMenu extends AbstractContainerMenu {
                 }
                 slot.onQuickCraft(itemstack1, itemstack);
                 // Consume inputs because moveItemStackTo bypasses removeItem
-                this.container.removeItem(0, 1);
-                this.container.removeItem(1, 1);
+                if (!(this.container.getItem(0).getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
+                    this.container.removeItem(0, 1);
+                }
+                if (!(this.container.getItem(1).getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
+                    this.container.removeItem(1, 1);
+                }
             } else if (index < 3) { // From Station Inputs to Player
                 if (!this.moveItemStackTo(itemstack1, 3, 39, false)) {
                     return ItemStack.EMPTY;

@@ -27,6 +27,7 @@ public class VisionRenderer {
     private static int lastModeId = -1;
     private static VisionMode currentVisionMode = VisionMode.NIGHT_VISION;
     private static float currentBatteryPct = 1.0f;
+    public static float getCurrentBatteryPct() { return currentBatteryPct; }
     private static int damageFlickerTimer = 0;
     private static boolean lastServerActive = false;
     private static boolean lastWasUnderwater = false;
@@ -35,11 +36,17 @@ public class VisionRenderer {
     private static float zoomActiveAmount = 0.0f; // 0 to 1 for lerp
     private static float currentZoom = 1.0f; // 1.0 = no zoom
 
+    private static boolean lastFlashlightActive = false;
+    private static int lastFlashlightModeId = -1;
+
     private static int sonarPulseTimer = 0;
     private static final int SONAR_PULSE_INTERVAL = 200; // 10 seconds
     private static final int SONAR_PULSE_DURATION = 40; 
 
+    private static boolean visionModeActive = false;
+
     public static boolean isVisorActive() { return visorActive; }
+    public static boolean isVisionModeActive() { return visionModeActive; }
     public static VisionMode getCurrentVisionMode() { return currentVisionMode; }
     public static boolean isZoomActive() { return zoomActive; }
     public static float getZoomMultiplier() { return currentZoom; }
@@ -68,6 +75,10 @@ public class VisionRenderer {
 
     public static void onClientTick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
+
+        if (damageFlickerTimer > 0) {
+            damageFlickerTimer--;
+        }
 
         while (ModKeyMappings.toggleGrayscaleKey.consumeClick()) {
             NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(false));
@@ -121,8 +132,9 @@ public class VisionRenderer {
             float maxBattery = (float) goggles.getBatteryCapacity(helmet);
             float currentBattery = nbt.contains(ModConstants.TAG_BATTERY) ? nbt.getFloat(ModConstants.TAG_BATTERY) : maxBattery;
             currentBatteryPct = currentBattery / maxBattery;
-            boolean isFlashlightActive = nbt.getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
-            visorActive = isServerActive || isFlashlightActive;
+            boolean isFlashlightActive = nbt.getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && currentBatteryPct > 0.0f;
+            visionModeActive = isServerActive && currentVisionMode != null;
+            visorActive = isServerActive;
 
             // Zoom & Utility Logic
             boolean hasZoom = false;
@@ -137,10 +149,14 @@ public class VisionRenderer {
             boolean shaderNeeded = (currentVisionMode != null);
 
             if (isServerActive != lastServerActive || (isServerActive && nbtModeId != lastModeId)) {
-                if (isServerActive && shaderNeeded) {
-                    grayscaleEnabled = true;
-                    VisionShaderManager.enableShader(mc, currentVisionMode);
-                    
+                if (isServerActive) {
+                    if (shaderNeeded) {
+                        grayscaleEnabled = true;
+                        VisionShaderManager.enableShader(mc, currentVisionMode);
+                    } else {
+                        grayscaleEnabled = false;
+                        VisionShaderManager.disableShader(mc);
+                    }
                     lastModeId = nbtModeId;
                     if (isServerActive != lastServerActive) mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
                 } else {
@@ -161,6 +177,22 @@ public class VisionRenderer {
                 }
                 lastServerActive = isServerActive;
             }
+            int flashlightModeId = nbt.contains(ModConstants.TAG_FLASHLIGHT_MODE) ? nbt.getInt(ModConstants.TAG_FLASHLIGHT_MODE) : 0;
+            ItemStack heldFlashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(mc.player);
+            if (!heldFlashlight.isEmpty() && !isFlashlightActive) {
+                isFlashlightActive = true;
+                flashlightModeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(heldFlashlight);
+            }
+
+            if (isFlashlightActive != lastFlashlightActive || (isFlashlightActive && flashlightModeId != lastFlashlightModeId)) {
+                if (isFlashlightActive) {
+                    VisionShaderManager.enableFlashlight(mc, flashlightModeId);
+                } else {
+                    VisionShaderManager.disableFlashlight(mc);
+                }
+                lastFlashlightActive = isFlashlightActive;
+                lastFlashlightModeId = flashlightModeId;
+            }
 
             // Update Grayscale state for tick updates
             grayscaleEnabled = isServerActive && shaderNeeded;
@@ -179,14 +211,10 @@ public class VisionRenderer {
 
             // Oxygen Alert
             if (isServerActive && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
-                if (mc.player.isUnderWater() || mc.player.getAirSupply() < mc.player.getMaxAirSupply()) {
-                    int airTicks = mc.player.getAirSupply();
-                    float baseSeconds = Math.max(0, airTicks / 20.0f);
-                    int resp = net.minecraft.world.item.enchantment.EnchantmentHelper.getRespiration(mc.player);
-                    float realSeconds = baseSeconds * (resp + 1);
-                    if (realSeconds < 5.0f && mc.level.getGameTime() % 20 == 0) {
-                        mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 1.0f);
-                    }
+                int air = mc.player.getAirSupply();
+                int maxAir = mc.player.getMaxAirSupply();
+                if (air < maxAir * 0.20 && mc.level.getGameTime() % 20 == 0) {
+                    mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 0.8f);
                 }
             }
 
@@ -199,10 +227,8 @@ public class VisionRenderer {
             }
             currentZoom = 1.0f - (zoomActiveAmount * 0.67f);
 
-            if (damageFlickerTimer > 0) damageFlickerTimer--;
-
-            // Update Shader State & Resilience
-            if (grayscaleEnabled) {
+            // Shader updates (battery failure, color filter, etc.)
+            if (isServerActive && shaderNeeded) {
                 boolean isUnderwater = mc.player.isUnderWater();
 
                 // Initial enable if shader isn't loaded yet (first equip, F5 switch, etc.)
@@ -220,12 +246,39 @@ public class VisionRenderer {
                 VisionShaderManager.update(currentVisionMode, currentBatteryPct, damageFlickerTimer > 0);
             }
 
-            
-            dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
-            
-        } else if (grayscaleEnabled || lastServerActive) {
-            cleanup(mc);
+            try {
+                dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
+            } catch (Throwable ignored) {}
+        } else {
+            // Check handheld tactical flashlight when not wearing goggles
+            currentVisionMode = null;
+            visionModeActive = false;
+            visorActive = false;
+
+            ItemStack heldFlashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(mc.player);
+            boolean isHandheldActive = !heldFlashlight.isEmpty();
+            int handFlashlightModeId = isHandheldActive ? dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(heldFlashlight) : 0;
+
+            if (isHandheldActive != lastFlashlightActive || (isHandheldActive && handFlashlightModeId != lastFlashlightModeId)) {
+                if (isHandheldActive) {
+                    VisionShaderManager.enableFlashlight(mc, handFlashlightModeId);
+                } else {
+                    VisionShaderManager.disableFlashlight(mc);
+                }
+                lastFlashlightActive = isHandheldActive;
+                lastFlashlightModeId = handFlashlightModeId;
+            }
+
+            if (isHandheldActive) {
+                currentBatteryPct = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getBattery(heldFlashlight) / dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.MAX_BATTERY;
+            }
+
+            if (grayscaleEnabled || lastServerActive) {
+                cleanup(mc);
+            }
         }
+
+        dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.onClientTick(mc, currentBatteryPct);
     }
 
     public static void updateFlashlightEveryFrame(net.minecraft.client.Camera camera, float partialTick) {
@@ -236,15 +289,29 @@ public class VisionRenderer {
         net.minecraft.world.phys.Vec3 camPos = camera.getPosition();
 
         for (Player player : mc.level.players()) {
+            boolean flashlightOn = false;
+            int modeId = 0;
+
             ItemStack playerHelmet = PlatformMethods.getEquippedHelmet(player);
             if (playerHelmet.getItem() instanceof ModularGogglesItem modular) {
                 List<ModuleType> utils = modular.getUtilityModules(playerHelmet);
-                
                 boolean hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
                 float batteryLvl = playerHelmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
-                boolean flashlightOn = hasFlashlight && playerHelmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0;
+                if (hasFlashlight && playerHelmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0) {
+                    flashlightOn = true;
+                    modeId = playerHelmet.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                }
+            }
 
-                if (flashlightOn) {
+            if (!flashlightOn) {
+                ItemStack heldFlashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(player);
+                if (!heldFlashlight.isEmpty()) {
+                    flashlightOn = true;
+                    modeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(heldFlashlight);
+                }
+            }
+
+            if (flashlightOn) {
                     net.minecraft.world.phys.Vec3 playerEyePos = player.getEyePosition(partialTick);
                     org.joml.Vector3f pos = new org.joml.Vector3f(
                         (float)(playerEyePos.x - camPos.x),
@@ -264,7 +331,6 @@ public class VisionRenderer {
                     
                     org.joml.Vector3f color = new org.joml.Vector3f(1.0f, 0.95f, 0.85f);
                     
-                    int modeId = playerHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
                     dev.itsrealperson.vision_goggles.util.FlashlightMode fMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
                     
                     float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.85f;
@@ -297,7 +363,6 @@ public class VisionRenderer {
                     boolean isWall = checkIsWall(player, playerEyePos, dirCenter, fMode.range);
                     dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges, isLocal, isWall);
                 }
-            }
         }
     }
 
@@ -336,10 +401,13 @@ public class VisionRenderer {
 
     private static void cleanup(Minecraft mc) {
         visorActive = false;
+        visionModeActive = false;
+        currentVisionMode = null;
         grayscaleEnabled = false;
         lastServerActive = false;
         lastModeId = -1;
         sonarPulseTimer = 0;
+        damageFlickerTimer = 0;
         zoomActive = false;
         zoomActiveAmount = 0.0f;
         currentZoom = 1.0f;
@@ -348,7 +416,9 @@ public class VisionRenderer {
         if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
             mc.player.removeEffect(MobEffects.NIGHT_VISION);
         }
-        dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
+        try {
+            dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
+        } catch (Throwable ignored) {}
     }
 
     public static void renderHUD(GuiGraphics g, float partialTicks) {

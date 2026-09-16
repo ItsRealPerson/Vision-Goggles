@@ -134,8 +134,8 @@ public class ThermalEntityPainter {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        // Check if thermal vision is active on the local player
-        if (!VisionRenderer.isVisorActive() || VisionRenderer.getCurrentVisionMode() != dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) return;
+        // Check if thermal vision mode is active on the local player
+        if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) return;
 
         // Resize FBO if window changed
         int w = mc.getMainRenderTarget().width;
@@ -300,7 +300,21 @@ public class ThermalEntityPainter {
         RenderSystem.activeTexture(GL20.GL_TEXTURE0);
         GlStateManager._bindTexture(colorTexture);
         GL20.glUniform1i(GL20.glGetUniformLocation(programId, "EntityMask"), 0);
-        GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), TINT_R, TINT_G, TINT_B, TINT_A);
+
+        float tintR = TINT_R;
+        float tintG = TINT_G;
+        float tintB = TINT_B;
+        float tintA = TINT_A;
+        Integer luaColor = dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.hookThermalColor("general", false);
+        if (luaColor != null) {
+            tintA = ((luaColor >> 24) & 0xFF) / 255.0f;
+            tintR = ((luaColor >> 16) & 0xFF) / 255.0f;
+            tintG = ((luaColor >> 8) & 0xFF) / 255.0f;
+            tintB = (luaColor & 0xFF) / 255.0f;
+            if (tintA <= 0.0f) tintA = 0.85f;
+        }
+
+        GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), tintR, tintG, tintB, tintA);
 
         GL30.glBindVertexArray(quadVAO);
         GL30.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);

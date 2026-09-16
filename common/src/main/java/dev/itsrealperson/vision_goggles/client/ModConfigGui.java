@@ -128,7 +128,7 @@ public class ModConfigGui {
                     .setSaveConsumer(v -> ModConfig.common.nvgGenericLightIntensity = v)
                     .build());
 
-            server.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.max_flashlights"), ModConfig.getMaxFlashlights(), 1, 128)
+            server.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.max_flashlights"), ModConfig.getMaxFlashlights(), 1, 16)
                     .setDefaultValue(16)
                     .setTooltip(Component.translatable("config.vision_goggles.max_flashlights.tooltip"))
                     .setSaveConsumer(v -> ModConfig.common.maxSimultaneousFlashlights = v)

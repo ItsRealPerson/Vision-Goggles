@@ -37,6 +37,7 @@ public class ModEvents {
                     return 1;
                 })
             );
+            dev.itsrealperson.vision_goggles.command.CommandVisionGoggles.register(dispatcher);
         });
         TickEvent.PLAYER_POST.register(player -> {
             if (player instanceof ServerPlayer) {

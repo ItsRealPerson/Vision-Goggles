@@ -109,6 +109,11 @@ public final class Vision_gogglesForge {
                     .size(1)
                     .icon(new ResourceLocation(Vision_goggles.MOD_ID, "slot/empty_eyes_slot"))
                     .build());
+        InterModComms.sendTo(CuriosApi.MODID, SlotTypeMessage.REGISTER_TYPE, 
+            () -> new SlotTypeMessage.Builder("body")
+                    .priority(20)
+                    .size(1)
+                    .build());
     }
 
     public void clientSetup(final FMLClientSetupEvent event) {

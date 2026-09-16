@@ -5,7 +5,6 @@ import dev.itsrealperson.vision_goggles.client.VisionShaderManager;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -20,21 +19,38 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MixinGameRenderer {
 
     /**
-     * Per-frame injection: called at the end of GameRenderer.render() just before
-     * the PostChain is processed. This ensures that mods like Superb Warfare 0.8.9
-     * (which temporarily hijack postEffect for scope/drone camera passes) cannot
-     * permanently leave postEffect as null, causing Vision Goggles shaders to disappear.
+     * Process our shader RIGHT AFTER the world is rendered, BEFORE any GUI/HUD is drawn.
+     * This ensures:
+     *   - World view: has NVG/thermal effect applied ✓
+     *   - Hotbar, hearts, HUD: rendered on top, NOT tinted ✓
+     *   - Pause menu, inventory, any screen: NOT tinted ✓
      *
-     * We use TAIL (end of render()) so all other mods have already done their frame
-     * setup and our shader gets the final say before the screen is presented.
+     * Injecting after renderLevel() also means this only fires when a world is loaded,
+     * so it never runs in the main menu or loading screens.
+     *
+     * require = 0: if the target method signature ever changes, fail silently rather than crash.
      */
-    @Inject(method = "render", at = @At("TAIL"))
-    private void vision_goggles$ensureShaderPerFrame(float partialTick, long nanoTime, boolean renderLevel, CallbackInfo ci) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null) {
-            VisionShaderManager.ensureShaderActive(mc);
-        }
+    @Inject(method = "render",
+            at = @At(value = "INVOKE",
+                     target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(FJLcom/mojang/blaze3d/vertex/PoseStack;)V",
+                     shift = At.Shift.AFTER),
+            require = 0)
+    private void vision_goggles$processOurShader(float partialTick, long nanoTime, boolean renderLevel, CallbackInfo ci) {
+        VisionShaderManager.processShader(partialTick);
+        VisionShaderManager.processFlashlight(partialTick);
     }
+
+
+    /**
+     * When the window is resized (e.g. windowed ↔ fullscreen toggle), resize our PostChain
+     * framebuffers to match. Since our chain is NOT in GameRenderer.postEffect, the vanilla
+     * resize code won't touch it — we handle it here to avoid the mismatched-resolution glitch.
+     */
+    @Inject(method = "resize", at = @At("TAIL"))
+    private void vision_goggles$resizeOurChain(int width, int height, CallbackInfo ci) {
+        VisionShaderManager.onResize(width, height);
+    }
+
 
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
     private void vision_goggles$applyZoom(CallbackInfoReturnable<Double> cir) {

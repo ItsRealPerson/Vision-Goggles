@@ -40,10 +40,13 @@ public class ModTabs {
             () -> new ItemStack(ModItems.SPAWN_SECURITY_MODULE.get()),
             () -> new ItemStack(ModItems.CHUNK_VIEWER_MODULE.get()),
             () -> new ItemStack(ModItems.FLASHLIGHT_MODULE.get()),
+            () -> new ItemStack(ModItems.TACTICAL_FLASHLIGHT.get()),
             () -> new ItemStack(ModItems.MODULAR_GOGGLES.get()),
             () -> new ItemStack(ModItems.PRO_MODULAR_GOGGLES.get()),
             () -> new ItemStack(ModItems.MODIFICATION_STATION.get()),
-            () -> new ItemStack(ModItems.NVG_BATTERY.get())
+            () -> new ItemStack(ModItems.NVG_BATTERY.get()),
+            () -> new ItemStack(ModItems.PROGRAMMABLE_MODULE.get()),
+            () -> new ItemStack(ModItems.INSTALLATION_SCRIPT.get())
         );
     }
 }
