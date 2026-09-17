@@ -45,6 +45,8 @@ dependencies {
 }
 
 shadowJar {
+    exclude "META-INF/services/**"
+
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
 
