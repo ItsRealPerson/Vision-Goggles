@@ -22,6 +22,9 @@
     ],
     "modmenu": [
       "dev.itsrealperson.vision_goggles.fabric.client.ModMenuIntegration"
+    ],
+    "jei_mod_plugin": [
+      "dev.itsrealperson.vision_goggles.fabric.compat.jei.VisionGogglesJeiFabricPlugin"
     ]
   },
   "depends": {

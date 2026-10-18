@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Фрезерованный корпус фонаря",
   "item.vision_goggles.tactical_processor": "Тактический DSP-процессор",
   "item.vision_goggles.thermal_core": "Тепловизионное сенсорное ядро",
-  "item.vision_goggles.lifesign_sensor": "Биометрический датчик жизненных показателей"
+  "item.vision_goggles.lifesign_sensor": "Биометрический датчик жизненных показателей",
+  "jei.vision_goggles.install_module": "Установить аппаратный модуль",
+  "jei.vision_goggles.flash_firmware": "Прошить скрипт в программируемый модуль",
+  "jei.vision_goggles.install_script_module": "Установить модуль с прошитым скриптом"
 }

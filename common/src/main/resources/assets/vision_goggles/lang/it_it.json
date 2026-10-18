@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Corpo Lavorato per Torcia",
   "item.vision_goggles.tactical_processor": "Processore DSP Tattico",
   "item.vision_goggles.thermal_core": "Nucleo Sensore Termico",
-  "item.vision_goggles.lifesign_sensor": "Sensore Biometrico di Segni Vitali"
+  "item.vision_goggles.lifesign_sensor": "Sensore Biometrico di Segni Vitali",
+  "jei.vision_goggles.install_module": "Installa modulo hardware",
+  "jei.vision_goggles.flash_firmware": "Scrivi script su modulo programmabile",
+  "jei.vision_goggles.install_script_module": "Installa modulo con script programmato"
 }
