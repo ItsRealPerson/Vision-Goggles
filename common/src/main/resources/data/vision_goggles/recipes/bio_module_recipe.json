@@ -1,14 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "EAE",
-    "AHA",
-    "EAE"
+    " L ",
+    "ASA",
+    " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
+    "L": { "item": "vision_goggles:optical_lens" },
     "A": { "item": "minecraft:amethyst_shard" },
-    "H": { "item": "minecraft:dragon_head" }
+    "S": { "item": "vision_goggles:lifesign_sensor" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:bio_module" }
 }

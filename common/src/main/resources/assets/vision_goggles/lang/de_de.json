@@ -159,5 +159,11 @@
   "tooltip.vision_goggles.prog_burn_hint": "Kombiniere mit einem Installations-Skript zum Programmieren.",
   "item.vision_goggles.programmable_module.blank": "Programmierbares Modul (Leer)",
   "item.vision_goggles.installation_script.unconfigured": "Unkonfiguriertes Skript",
-  "hud.vision_goggles.damage_critical": "!!! BRILLE KRITISCH BESCHÄDIGT !!!"
+  "hud.vision_goggles.damage_critical": "!!! BRILLE KRITISCH BESCHÄDIGT !!!",
+  "item.vision_goggles.optical_lens": "Präzisionsoptiklinse",
+  "item.vision_goggles.tactical_frame": "Taktischer Gehäuserahmen",
+  "item.vision_goggles.flashlight_body": "Gefräster Taschenlampenkörper",
+  "item.vision_goggles.tactical_processor": "Taktischer DSP-Prozessor",
+  "item.vision_goggles.thermal_core": "Wärmesensorkern",
+  "item.vision_goggles.lifesign_sensor": "Biometrischer Lebenszeichensensor"
 }

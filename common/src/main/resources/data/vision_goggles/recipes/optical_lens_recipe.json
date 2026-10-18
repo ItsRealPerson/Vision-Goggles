@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " G ",
+    "ATA",
+    " G "
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "T": { "item": "minecraft:tinted_glass" }
+  },
+  "result": {
+    "item": "vision_goggles:optical_lens",
+    "count": 2
+  }
+}

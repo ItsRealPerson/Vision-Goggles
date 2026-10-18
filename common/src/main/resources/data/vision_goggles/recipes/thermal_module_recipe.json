@@ -1,14 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "EGE",
-    "GNG",
-    "EGE"
+    " L ",
+    "GTG",
+    " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
+    "L": { "item": "vision_goggles:optical_lens" },
     "G": { "item": "minecraft:gold_ingot" },
-    "N": { "item": "minecraft:nether_star" }
+    "T": { "item": "vision_goggles:thermal_core" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:thermal_module" }
 }

@@ -159,5 +159,11 @@
   "tooltip.vision_goggles.prog_burn_hint": "Combine with an Installation Script to program it.",
   "item.vision_goggles.programmable_module.blank": "Programmable Module (Blank)",
   "item.vision_goggles.installation_script.unconfigured": "Unconfigured Script",
-  "hud.vision_goggles.damage_critical": "!!! GOGGLES DAMAGE CRITICAL !!!"
+  "hud.vision_goggles.damage_critical": "!!! GOGGLES DAMAGE CRITICAL !!!",
+  "item.vision_goggles.optical_lens": "Precision Optical Lens",
+  "item.vision_goggles.tactical_frame": "Tactical Chassis Frame",
+  "item.vision_goggles.flashlight_body": "Machined Flashlight Body",
+  "item.vision_goggles.tactical_processor": "Tactical DSP Processor",
+  "item.vision_goggles.thermal_core": "Thermal Sensor Core",
+  "item.vision_goggles.lifesign_sensor": "Biometric Lifesign Sensor"
 }

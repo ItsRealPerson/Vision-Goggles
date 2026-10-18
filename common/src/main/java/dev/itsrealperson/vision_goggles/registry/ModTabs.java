@@ -45,7 +45,13 @@ public class ModTabs {
             () -> new ItemStack(ModItems.MODIFICATION_STATION.get()),
             () -> new ItemStack(ModItems.NVG_BATTERY.get()),
             () -> new ItemStack(ModItems.PROGRAMMABLE_MODULE.get()),
-            () -> new ItemStack(ModItems.INSTALLATION_SCRIPT.get())
+            () -> new ItemStack(ModItems.INSTALLATION_SCRIPT.get()),
+            () -> new ItemStack(ModItems.OPTICAL_LENS.get()),
+            () -> new ItemStack(ModItems.TACTICAL_FRAME.get()),
+            () -> new ItemStack(ModItems.FLASHLIGHT_BODY.get()),
+            () -> new ItemStack(ModItems.TACTICAL_PROCESSOR.get()),
+            () -> new ItemStack(ModItems.THERMAL_CORE.get()),
+            () -> new ItemStack(ModItems.LIFESIGN_SENSOR.get())
         );
     }
 }
