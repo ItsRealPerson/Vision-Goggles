@@ -31,27 +31,28 @@ void main() {
     
     float dist = distance(pos, center);
     
-    // Parabolic Reflector Optical Geometry
-    float hotspotRadius = 0.07;
-    float spillRadius = 0.44;
-    float cutoffRadius = 0.53;
-    float hotspotPower = 0.24;
-    float spillPower = 0.065;
+    // Parabolic Reflector Optical Geometry per Mode
+    // 0: FOCUSED (Searchlight / Spot)
+    float hotspotRadius = 0.06;
+    float spillRadius = 0.18;
+    float cutoffRadius = 0.26;
+    float hotspotPower = 0.35;
+    float spillPower = 0.04;
     
     if (FlashlightMode > 1.5) {
-        // CLOSE / FLOOD MODE
-        hotspotRadius = 0.15;
+        // 2: CLOSE / FLOOD MODE (Wide wall of light)
+        hotspotRadius = 0.22;
         spillRadius = 0.60;
-        cutoffRadius = 0.68;
-        hotspotPower = 0.15;
-        spillPower = 0.085;
+        cutoffRadius = 0.72;
+        hotspotPower = 0.14;
+        spillPower = 0.09;
     } else if (FlashlightMode > 0.5) {
-        // WIDE / BALANCED MODE
-        hotspotRadius = 0.10;
-        spillRadius = 0.52;
-        cutoffRadius = 0.60;
-        hotspotPower = 0.19;
-        spillPower = 0.075;
+        // 1: WIDE / BALANCED MODE (Medium range duty light)
+        hotspotRadius = 0.12;
+        spillRadius = 0.40;
+        cutoffRadius = 0.50;
+        hotspotPower = 0.21;
+        spillPower = 0.07;
     }
 
     // DSP Mode: Precision Micro-Collimator enhancement
@@ -65,7 +66,7 @@ void main() {
     float emitterRings = sin(dist * 260.0) * 0.018 * hotspot;
     hotspot = clamp(hotspot + emitterRings, 0.0, 1.0);
     
-    // 2. Spill / Corona: Wide secondary reflector emission
+    // 2. Spill / Corona: Secondary reflector emission
     float spill = 1.0 - smoothstep(hotspotRadius * 0.75, spillRadius, dist);
     
     // 3. Bezel Cutoff with TIR Chromatic Dispersion (Color Fringing)
@@ -75,16 +76,19 @@ void main() {
     // Chromatic separation at lens edge: warm interior, cool cyan/blue exterior rim
     vec3 fringeColor = mix(vec3(1.02, 0.97, 0.90), vec3(0.85, 0.96, 1.20), fringe);
     
-    // 4. Multi-Layer Atmospheric Volumetric Dust Motes
-    vec2 moteCoord1 = texCoord * 70.0 + vec2(time * 0.02, time * 0.01);
-    vec2 moteCoord2 = texCoord * 140.0 - vec2(time * 0.035, time * 0.015);
-    float motes = pow(hashNoise(moteCoord1, time * 0.05), 9.0) * 0.35 + (hashNoise(moteCoord2, time * 0.1) - 0.5) * 0.025;
+    // 4. Multi-Layer Atmospheric Volumetric Dust Motes & Air Scattering
+    // Strictly illuminated by beam photons only (zero static in dark void)
+    vec2 moteCoord1 = texCoord * 75.0 + vec2(time * 0.02, time * 0.01);
+    vec2 moteCoord2 = texCoord * 150.0 - vec2(time * 0.035, time * 0.015);
+    float dustSparkles = pow(hashNoise(moteCoord1, time * 0.05), 8.5) * 0.40;
+    float airTurbulence = (hashNoise(moteCoord2, time * 0.1) - 0.5) * 0.025;
     
-    float totalBeam = (hotspot * hotspotPower + spill * spillPower) * cutoff;
-    totalBeam = max(0.0, totalBeam + motes * cutoff * 0.8);
+    float beamCore = (hotspot * hotspotPower + spill * spillPower) * cutoff;
+    float illuminatedDust = (dustSparkles + airTurbulence) * beamCore * 2.8;
+    float totalBeam = max(0.0, beamCore + illuminatedDust);
     
-    // 5. Ambient Back-Scatter (Soft indirect diffuse bounce illuminating immediate surroundings)
-    float ambientBounce = (1.0 - smoothstep(0.0, 0.85, dist)) * 0.018 * hotspotPower;
+    // 5. Ambient Back-Scatter (Soft indirect diffuse bounce)
+    float ambientBounce = (1.0 - smoothstep(0.0, cutoffRadius * 1.3, dist)) * 0.012 * hotspotPower;
     
     // 6. Dynamic LED Voltage / Thermal Temperature Curve (5500K -> 3200K warm as battery drains)
     vec3 highKelvin = vec3(0.96, 0.98, 1.00); // 5500K crisp tactical daylight

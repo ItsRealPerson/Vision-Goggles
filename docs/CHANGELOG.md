@@ -8,3 +8,4 @@
 - **Station Model Rotation**: Fixed invalid `-20.0` degree rotation on `screen_display` to `-22.5` to prevent `JsonParseException` missing texture block.
 - **Smart Battery Recharging**: Implemented smart target resolution prioritizing held items and automatically choosing the most depleted equipped wearable.
 - **Item Textures**: Updated electrical parts sprite to a 16x16 Minecraft-style handful of electronic components.
+- **Flashlight Mode Coherent Beam & Static**: Optical geometry (hotspot, spill, cutoff) now adapts per mode. Volumetric static/dust is strictly bound to photons inside the illuminated cone, eliminating the oversized noise circle in the pitch-black sky.
