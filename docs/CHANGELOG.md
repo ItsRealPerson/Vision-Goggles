@@ -54,6 +54,15 @@
     - `modular_goggles` (2 sockets): Rebalanced from RNG Enchanted Golden Apple into an earned, high-value tech headset (`optical_lens` x2, `tactical_processor`, `tactical_frame` x2, `nvg_battery`, `electrical_parts`, `gold_ingot`).
     - `pro_modular_goggles` (4 sockets): Elite military upgrade preserving all installed module NBT via `GogglesUpgradeRecipe` (`tactical_processor` x2, `netherite_ingot`, `modular_goggles`, `echo_shard` x2, `battery_expansion_module`).
     - Dedicated Modules (`thermal_module`, `bio_module`, `zoom_module`, `sonar_module`) and Goggles (`thermal_goggles`, `biometric_goggles`): Completely migrated to utilize corresponding physical sensor cores and tactical frames instead of mismatched boss drops.
+    - **100% Mod-Wide Recipe Unification**: Extended TEMS architecture across all remaining wearable goggles and modules:
+      - `night_vision_goggles` & `hydro_goggles`: Completely unified to assemble from `tactical_frame` + respective module (`nvg_module`, `hydro_module`) + `nvg_battery`.
+      - `nvg_module` & `hydro_module`: Now require `optical_lens` at the objective head + copper heat conductors + biological sensory core (`golden_carrot`, `pufferfish`) + `electrical_parts`.
+      - `spawn_security_module`: Equipped with `optical_lens` wide-angle scanner + redstone torch light photometric sensors + daylight detector + `electrical_parts`.
+      - `environment_module`: Reconstructed with copper enclosure + amethyst geomagnetic orientation crystal + compass + `electrical_parts`.
+      - `vital_info_module`: Precision health telemetric probe using amethyst resonance prism + glistering melon slice + copper bus + `electrical_parts`.
+      - `solar_module`: Built with daylight collector + quartz photovoltaic die + gold bus + `electrical_parts`.
+      - `battery_expansion_module`: Heavy-duty dual battery bank encased with copper heat dissipation brackets and gold bridge contacts (`nvg_battery` x2 + `copper_ingot` x4 + `gold_ingot` + `electrical_parts` x2).
+      - `programmable_module`: Microchip EEPROM package using quartz flash die + redstone I/O bus + gold contacts + `electrical_parts`.
   - **Complete Assets & 12-Language Translations**: Created 6 custom 16x16 pixel art textures matching vanilla and Argon palette aesthetics, item models, creative tab integration, and synchronized translations across all 12 supported languages (`en_us`, `en_gb`, `es_es`, `es_mx`, `es_ar`, `es_cl`, `de_de`, `fr_fr`, `it_it`, `pl_pl`, `pt_br`, `ru_ru`).
 
 

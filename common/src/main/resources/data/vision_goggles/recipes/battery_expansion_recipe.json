@@ -1,13 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "EEE",
-    "EBE",
-    "EEE"
+    "CBC",
+    "EGE",
+    "CBC"
   ],
   "key": {
+    "C": { "item": "minecraft:copper_ingot" },
+    "B": { "item": "vision_goggles:nvg_battery" },
     "E": { "item": "vision_goggles:electrical_parts" },
-    "B": { "item": "vision_goggles:nvg_battery" }
+    "G": { "item": "minecraft:gold_ingot" }
   },
   "result": { "item": "vision_goggles:battery_expansion_module" }
 }

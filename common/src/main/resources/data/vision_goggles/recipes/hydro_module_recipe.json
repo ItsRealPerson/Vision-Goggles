@@ -1,16 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "ECE",
+    " L ",
     "CPC",
-    "ECE"
+    " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
+    "L": { "item": "vision_goggles:optical_lens" },
     "C": { "item": "minecraft:copper_ingot" },
-    "P": {
-      "item": "minecraft:pufferfish"
-    }
+    "P": { "item": "minecraft:pufferfish" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:hydro_module" }
 }
