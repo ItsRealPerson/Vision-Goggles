@@ -247,30 +247,35 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         return items.get(slot);
     }
 
+    public void onTakeOutput(Player player) {
+        ItemStack slot0 = this.items.get(0);
+        ItemStack slot1 = this.items.get(1);
+
+        // Extracción de módulo: slot 1 vacío, remover módulo de las gafas en slot 0 sin destruir las gafas
+        if (slot1.isEmpty() && slot0.getItem() instanceof ModularGogglesItem modular) {
+            String lastMod = modular.getLastInstalledModule(slot0);
+            if (lastMod != null) {
+                modular.removeModule(slot0, lastMod);
+            }
+        } else {
+            // Ensamblaje, reparación o grabado de firmware: consumir entradas correspondientes
+            if (!slot0.isEmpty() && !(slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
+                slot0.shrink(1);
+            }
+            if (!slot1.isEmpty() && !(slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
+                slot1.shrink(1);
+            }
+        }
+        this.setChanged();
+    }
+
     @Override
     public ItemStack removeItem(int slot, int amount) {
         ItemStack result = ContainerHelper.removeItem(items, slot, amount);
         if (!result.isEmpty()) {
-            // If the output was taken, consume inputs
-            if (slot == 2) {
-                ItemStack slot0 = this.items.get(0);
-                ItemStack slot1 = this.items.get(1);
-                // Extracción de módulo: slot 1 vacío, remover módulo de las gafas en slot 0 sin destruir las gafas
-                if (slot1.isEmpty() && slot0.getItem() instanceof ModularGogglesItem modular) {
-                    String lastMod = modular.getLastInstalledModule(slot0);
-                    if (lastMod != null) {
-                        modular.removeModule(slot0, lastMod);
-                    }
-                } else {
-                    if (!(slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
-                        slot0.shrink(1);
-                    }
-                    if (!(slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
-                        slot1.shrink(1);
-                    }
-                }
+            if (slot != 2) {
+                this.setChanged();
             }
-            this.setChanged();
         }
         return result;
     }
