@@ -97,6 +97,5 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLanterna: §fFoco Fechado",
   "message.vision_goggles.flashlight_mode.wide": "§eLanterna: §fFoco Aberto (Flood)",
   "message.vision_goggles.flashlight_mode.close": "§eLanterna: §fExplosão Curta (Burst)",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
-  "key.vision_goggles.recharge": "Recarga Rápida de Bateria"
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
 }

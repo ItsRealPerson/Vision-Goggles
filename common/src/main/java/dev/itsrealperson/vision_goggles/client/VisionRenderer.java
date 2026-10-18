@@ -153,12 +153,6 @@ public class VisionRenderer {
             }
         }
 
-        while (ModKeyMappings.rechargeKey.consumeClick()) {
-            if (hasHelmet || dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
-                NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.BatteryPacket());
-            }
-        }
-
         if (hasHelmet) {
             CompoundTag nbt = helmet.getOrCreateTag();
             boolean isServerActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
