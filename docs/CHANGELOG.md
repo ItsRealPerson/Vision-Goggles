@@ -35,3 +35,4 @@
 - **Server-Side Sonar Packet Guard**: `ToggleSonarPacket` validates on the server that the helmet actually contains the Sonar module and forces `player.inventoryMenu.broadcastChanges()` for instantaneous client-side NBT state synchronization.
 - **Tactical Zoom Lock**: Added Zoom Lock toggle option in the radial menu (`2.5x` magnification) while preserving analog continuous scroll-zoom when holding `V`.
 - **Dynamic Radial Spacing & Framed Hub**: Enhanced `TacticalRadialScreen` with dynamic radius expansion (`86px` when options > 5) and adaptive center hub telemetry framing for seamless tactical readability.
+- **Recharge Keybind Removal**: Removed dedicated 'B' physical key mapping (`rechargeKey`) from `ModKeyMappings` and `VisionRenderer`, making quick battery recharge an exclusive and streamlined tactical action inside the Radial Menu (`N`). Cleaned up translation keys across all 12 languages.
