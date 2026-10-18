@@ -44,6 +44,9 @@ public class ModificationStationMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack stack) {
+                if (container instanceof dev.itsrealperson.vision_goggles.block.entity.ModificationStationBlockEntity station) {
+                    station.onTakeOutput(player);
+                }
                 super.onTake(player, stack);
             }
         });
@@ -73,13 +76,8 @@ public class ModificationStationMenu extends AbstractContainerMenu {
                     return ItemStack.EMPTY;
                 }
                 slot.onQuickCraft(itemstack1, itemstack);
-                // Consume inputs because moveItemStackTo bypasses removeItem
-                if (!(this.container.getItem(0).getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
-                    this.container.removeItem(0, 1);
-                }
-                if (!(this.container.getItem(1).getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
-                    this.container.removeItem(1, 1);
-                }
+                slot.onTake(player, itemstack);
+                return itemstack;
             } else if (index < 3) { // From Station Inputs to Player
                 if (!this.moveItemStackTo(itemstack1, 3, 39, false)) {
                     return ItemStack.EMPTY;
