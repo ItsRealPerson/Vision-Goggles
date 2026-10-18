@@ -57,8 +57,8 @@ public class CycleFlashlightModePacket {
                 ItemStack flashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getAnyHeldFlashlight(player);
                 if (!flashlight.isEmpty() && flashlight.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
                     int currentId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(flashlight);
-                    int next = (currentId + 1) % 3;
-                    FlashlightMode nextMode = FlashlightMode.byId(next);
+                    FlashlightMode nextMode = FlashlightMode.byId(currentId).next();
+                    int next = nextMode.id;
                     flashlight.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next);
                     player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_MODE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 1.0f + next * 0.1f);
                     player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.flashlight_mode." + nextMode.name), true);

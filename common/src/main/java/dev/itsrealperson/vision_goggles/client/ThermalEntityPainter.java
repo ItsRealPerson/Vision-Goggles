@@ -220,8 +220,10 @@ public class ThermalEntityPainter {
             float heat = maxHeat;
             if (heat <= 0.11f) continue; // Too weak or fully blocked
 
-            poseStack.pushPose();
-            poseStack.translate(dx, dy, dz);
+            PoseStack entityPoseStack = new PoseStack();
+            entityPoseStack.last().pose().set(poseStack.last().pose());
+            entityPoseStack.last().normal().set(poseStack.last().normal());
+            entityPoseStack.translate(dx, dy, dz);
             
             // Set global shader color alpha to 1.0 (we will control alpha per vertex now)
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -256,16 +258,14 @@ public class ThermalEntityPainter {
                     }
                 };
                 
-                dispatcher.render(entity, 0, 0, 0, lerpYaw, partialTick, poseStack, wrappedSource, 15728880);
-            } catch (Exception ignored) {}
-            
-            // Flush immediately so the shader color applies correctly to this entity
-            maskBufferSource.endBatch();
-            
-            // Flush dummy buffer silently
-            try { dummyBufferSource.endBatch(); } catch (Exception ignored) {}
-            
-            poseStack.popPose();
+                dispatcher.render(entity, 0, 0, 0, lerpYaw, partialTick, entityPoseStack, wrappedSource, 15728880);
+            } catch (Throwable ignored) {
+            } finally {
+                // Flush immediately so the shader color applies correctly to this entity
+                try { maskBufferSource.endBatch(); } catch (Throwable ignored) {}
+                // Flush dummy buffer silently
+                try { dummyBufferSource.endBatch(); } catch (Throwable ignored) {}
+            }
         }
 
         // Reset shader color for normal rendering

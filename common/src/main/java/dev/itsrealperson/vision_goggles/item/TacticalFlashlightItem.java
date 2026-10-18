@@ -84,7 +84,8 @@ public class TacticalFlashlightItem extends Item {
             }
             // If already full, cycle modes
             int currentMode = getMode(stack);
-            int nextMode = (currentMode + 1) % 3;
+            FlashlightMode next = FlashlightMode.byId(currentMode).next();
+            int nextMode = next.id;
             stack.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, nextMode);
             level.playSound(null, player.blockPosition(), ModSounds.FLASHLIGHT_MODE.get(), SoundSource.PLAYERS, 0.6f, 1.0f + nextMode * 0.1f);
 

@@ -61,13 +61,10 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
     private void updateResult() {
         ItemStack slot0 = this.items.get(0);
         ItemStack slot1 = this.items.get(1);
-        ItemStack outputStack = this.items.get(2);
 
         // Reset output if slot 0 is completely empty
         if (slot0.isEmpty()) {
-            if (!outputStack.isEmpty()) {
-                this.items.set(2, ItemStack.EMPTY);
-            }
+            this.items.set(2, ItemStack.EMPTY);
             return;
         }
 
@@ -81,14 +78,11 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                     return;
                 }
             }
-            if (!outputStack.isEmpty()) {
-                this.items.set(2, ItemStack.EMPTY);
-            }
+            this.items.set(2, ItemStack.EMPTY);
             return;
         }
 
-        // Only process if output is empty
-        if (!outputStack.isEmpty()) return;
+        ItemStack newOutput = ItemStack.EMPTY;
 
         // SCENARIO 1: Tactical Durability Repair (Goggles + Tactical Frame or Electrical Parts)
         ItemStack repairGoggles = ItemStack.EMPTY;
@@ -105,98 +99,101 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             if (repairMaterial.getItem() == dev.itsrealperson.vision_goggles.registry.ModItems.TACTICAL_FRAME.get()) {
                 ItemStack repaired = repairGoggles.copy();
                 repaired.setDamageValue(0);
-                this.items.set(2, repaired);
-                return;
+                newOutput = repaired;
             } else if (repairMaterial.getItem() == dev.itsrealperson.vision_goggles.registry.ModItems.ELECTRICAL_PARTS.get()) {
                 ItemStack repaired = repairGoggles.copy();
                 int repairAmt = Math.max(1, (int)(repaired.getMaxDamage() * 0.35f));
                 repaired.setDamageValue(Math.max(0, repaired.getDamageValue() - repairAmt));
-                this.items.set(2, repaired);
-                return;
+                newOutput = repaired;
             }
         }
 
         // SCENARIO 2: Flashing / Programming a Programmable Module (works in either slot!)
-        ItemStack chip = ItemStack.EMPTY;
-        ItemStack script = ItemStack.EMPTY;
-        if (slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
-            slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem) {
-            chip = slot0;
-            script = slot1;
-        } else if (slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
-                   slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem) {
-            chip = slot1;
-            script = slot0;
-        }
+        if (newOutput.isEmpty()) {
+            ItemStack chip = ItemStack.EMPTY;
+            ItemStack script = ItemStack.EMPTY;
+            if (slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
+                slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem) {
+                chip = slot0;
+                script = slot1;
+            } else if (slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
+                       slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem) {
+                chip = slot1;
+                script = slot0;
+            }
 
-        if (!chip.isEmpty() && dev.itsrealperson.vision_goggles.item.InstallationScriptItem.hasScript(script)) {
-            String scriptId = dev.itsrealperson.vision_goggles.item.InstallationScriptItem.getScriptId(script);
-            String scriptName = dev.itsrealperson.vision_goggles.item.InstallationScriptItem.getScriptName(script);
-            String scriptColor = dev.itsrealperson.vision_goggles.item.InstallationScriptItem.getScriptColor(script);
+            if (!chip.isEmpty() && dev.itsrealperson.vision_goggles.item.InstallationScriptItem.hasScript(script)) {
+                String scriptId = dev.itsrealperson.vision_goggles.item.InstallationScriptItem.getScriptId(script);
+                String scriptName = dev.itsrealperson.vision_goggles.item.InstallationScriptItem.getScriptName(script);
+                String scriptColor = dev.itsrealperson.vision_goggles.item.InstallationScriptItem.getScriptColor(script);
 
-            ItemStack programmedResult = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.createProgrammed(chip, scriptId, scriptName, scriptColor);
-            this.items.set(2, programmedResult);
-            return;
+                newOutput = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.createProgrammed(chip, scriptId, scriptName, scriptColor);
+            }
         }
 
         // SCENARIO 3: Installing Module into Modular Goggles (works in either slot!)
-        ItemStack gogglesStack = ItemStack.EMPTY;
-        ItemStack moduleStack = ItemStack.EMPTY;
+        if (newOutput.isEmpty()) {
+            ItemStack gogglesStack = ItemStack.EMPTY;
+            ItemStack moduleStack = ItemStack.EMPTY;
 
-        if (slot0.getItem() instanceof ModularGogglesItem) {
-            gogglesStack = slot0;
-            moduleStack = slot1;
-        } else if (slot1.getItem() instanceof ModularGogglesItem) {
-            gogglesStack = slot1;
-            moduleStack = slot0;
-        }
+            if (slot0.getItem() instanceof ModularGogglesItem) {
+                gogglesStack = slot0;
+                moduleStack = slot1;
+            } else if (slot1.getItem() instanceof ModularGogglesItem) {
+                gogglesStack = slot1;
+                moduleStack = slot0;
+            }
 
-        if (!gogglesStack.isEmpty() && gogglesStack.getItem() instanceof ModularGogglesItem modularGoggles) {
-            String newModuleId = getModuleIdFromStack(moduleStack);
+            if (!gogglesStack.isEmpty() && gogglesStack.getItem() instanceof ModularGogglesItem modularGoggles) {
+                String newModuleId = getModuleIdFromStack(moduleStack);
 
-            if (newModuleId != null && modularGoggles.canInstallModule(gogglesStack, newModuleId)) {
-                // Compatibility check: If moduleStack is a programmed chip with a Lua script, check requirements!
-                if (moduleStack.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
-                    dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.isProgrammed(moduleStack)) {
-                    
-                    String scriptId = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.getProgrammedId(moduleStack);
-                    dev.itsrealperson.vision_goggles.scripting.LuaCustomModule luaMod = 
-                        dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.findModuleByIdOrPath(scriptId);
-                    
-                    if (luaMod != null) {
-                        String req = luaMod.getRequiredModule();
-                        // If script specifies a required prerequisite module (e.g. bio, nvg, thermal) distinct from itself:
-                        boolean isSelf = req != null && (req.equalsIgnoreCase(scriptId) || req.equalsIgnoreCase(newModuleId) 
-                            || (luaMod.getId() != null && (req.equalsIgnoreCase(luaMod.getId().getPath()) || req.equalsIgnoreCase(luaMod.getId().toString()))));
+                if (newModuleId != null && modularGoggles.canInstallModule(gogglesStack, newModuleId)) {
+                    // Compatibility check: If moduleStack is a programmed chip with a Lua script, check requirements!
+                    boolean allowed = true;
+                    if (moduleStack.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
+                        dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.isProgrammed(moduleStack)) {
                         
-                        if (req != null && !req.isEmpty() && !isSelf) {
-                            // Check if goggles already have this prerequisite hardware module installed!
-                            if (!modularGoggles.hasModule(gogglesStack, req)) {
-                                // Goggles do NOT have the required prerequisite hardware module!
-                                this.items.set(2, ItemStack.EMPTY);
-                                return;
+                        String scriptId = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.getProgrammedId(moduleStack);
+                        dev.itsrealperson.vision_goggles.scripting.LuaCustomModule luaMod = 
+                            dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.findModuleByIdOrPath(scriptId);
+                        
+                        if (luaMod != null) {
+                            String req = luaMod.getRequiredModule();
+                            // If script specifies a required prerequisite module (e.g. bio, nvg, thermal) distinct from itself:
+                            boolean isSelf = req != null && (req.equalsIgnoreCase(scriptId) || req.equalsIgnoreCase(newModuleId) 
+                                || (luaMod.getId() != null && (req.equalsIgnoreCase(luaMod.getId().getPath()) || req.equalsIgnoreCase(luaMod.getId().toString()))));
+                            
+                            if (req != null && !req.isEmpty() && !isSelf) {
+                                // Check if goggles already have this prerequisite hardware module installed!
+                                if (!modularGoggles.hasModule(gogglesStack, req)) {
+                                    allowed = false;
+                                }
                             }
                         }
                     }
+
+                    if (allowed) {
+                        ItemStack result = gogglesStack.copy();
+                        result.setCount(1);
+                        modularGoggles.installModule(result, newModuleId);
+
+                        // If installing a custom programmed module, record display name and color!
+                        if (moduleStack.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
+                            dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.isProgrammed(moduleStack)) {
+                            String name = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.getProgrammedName(moduleStack);
+                            String color = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.getProgrammedColor(moduleStack);
+                            CompoundTag tag = result.getOrCreateTag();
+                            tag.putString("mod_name_" + newModuleId, name);
+                            tag.putString("mod_color_" + newModuleId, color);
+                        }
+
+                        newOutput = result;
+                    }
                 }
-
-                ItemStack result = gogglesStack.copy();
-                result.setCount(1);
-                modularGoggles.installModule(result, newModuleId);
-
-                // If installing a custom programmed module, record display name and color!
-                if (moduleStack.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
-                    dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.isProgrammed(moduleStack)) {
-                    String name = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.getProgrammedName(moduleStack);
-                    String color = dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.getProgrammedColor(moduleStack);
-                    CompoundTag tag = result.getOrCreateTag();
-                    tag.putString("mod_name_" + newModuleId, name);
-                    tag.putString("mod_color_" + newModuleId, color);
-                }
-
-                this.items.set(2, result);
             }
         }
+
+        this.items.set(2, newOutput);
     }
 
     private static java.util.Map<net.minecraft.world.item.Item, String> MODULE_MAP = null;

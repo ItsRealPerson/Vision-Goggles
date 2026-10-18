@@ -99,6 +99,20 @@
   - **Realidad Aumentada Lua (`world.worldToScreen`)**:
     - Implementada proyección matemática de cámara 3D a coordenadas 2D de pantalla (`worldToScreen(x, y, z)`) en `LuaWorldScanner.java`, permitiendo a los scripts crear retículas de seguimiento AR, waypoints y corchetes dinámicos sobre entidades en pantalla.
     - Ampliado `wrapEntity` con coordenadas `eye_y`, `pitch` y `yaw`.
+- **Hotfix de Estabilización y Corrección Crítica (Build 2.0.0-Alpha.1 // Plan v19)**:
+  - **Corrección de Crash en Visión Térmica (`Pose stack not empty`)**:
+    - Aislamiento completo de la pila de transformaciones en `ThermalEntityPainter.java`. Ahora se instancia un `PoseStack` local para cada entidad proyectada con copia exacta de la matriz de vista, eliminando cualquier mutación sobre el `PoseStack` global de `LevelRenderer`.
+    - Envoltorio de renderizado de entidades en bloques `try ... finally` para garantizar que `endBatch()` y la limpieza matricial se ejecuten sin excepción, solucionando el crash `IllegalStateException: Pose stack not empty` en Forge.
+  - **Activación del Modo Estroboscópico de la Linterna**:
+    - Reemplazado el cálculo estático de conmutación `(currentMode + 1) % 3` por `FlashlightMode.byId(currentMode).next().id` tanto en `TacticalFlashlightItem.java` (Shift + Clic Derecho) como en `CycleFlashlightModePacket.java` (tecla 'K').
+    - El 4.º modo (`STROBE`) ahora es 100% accesible e interactivo.
+  - **Corrección de Deslumbramiento Falso en NVG con Linterna Apagada**:
+    - Actualizado `VisionShaderManager.isHoldingLight()` para verificar formalmente `TacticalFlashlightItem.isActive(stack)`.
+    - Extraer una linterna desde el inventario creativo o sostener una linterna apagada ya no activa el destello blanco de sobrecarga en gafas de visión nocturna.
+  - **Corrección de Ranuras y Salida en Estación de Modificación**:
+    - Refactorizado `ModificationStationBlockEntity.updateResult()`: eliminada la guarda residual `if (!outputStack.isEmpty()) return;` que dejaba congelada la ranura de salida con el módulo de desmontaje.
+    - Ahora, al insertar cualquier ítem en la Ranura 1, la salida se limpia y recalcula de forma inmediata, permitiendo instalar nuevos módulos, reparar gafas o colocar ítems sin conflicto con la mecánica de extracción.
+
 
 
 
