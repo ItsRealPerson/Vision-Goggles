@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Minecraft;
@@ -87,6 +88,30 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
         this.model.head_bone.yRot = 0;
         this.model.head_bone.zRot = 0;
 
+        boolean isActive = false;
+        if (stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+            float batt = stack.getTag().contains(ModConstants.TAG_BATTERY) ? stack.getTag().getFloat(ModConstants.TAG_BATTERY) : 1.0f;
+            if (batt > 0.0f) {
+                isActive = true;
+            }
+        }
+
+        // Mechanical flip-up / flip-down animation posing
+        try {
+            net.minecraft.client.model.geom.ModelPart visor = this.model.head_bone.getChild("visor");
+            if (isActive) {
+                // Deployed over eyes
+                visor.xRot = 0.0F;
+                visor.y = -2.3355F;
+                visor.z = -7.7094F;
+            } else {
+                // Flipped up securely resting against the forehead / helmet
+                visor.xRot = -1.45F;
+                visor.y = -4.2F;
+                visor.z = -5.5F;
+            }
+        } catch (Exception ignored) {}
+
         ResourceLocation baseTex = NVG_TEXTURE;
         ResourceLocation glowTex = NVG_GLOW;
 
@@ -121,8 +146,11 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
         VertexConsumer baseConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(baseTex));
         this.model.head_bone.render(matrixStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 
-        VertexConsumer glowConsumer = buffer.getBuffer(RenderType.eyes(glowTex));
-        this.model.head_bone.render(matrixStack, glowConsumer, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        // Only emit optical lens glow when the goggles are actively powered on
+        if (isActive) {
+            VertexConsumer glowConsumer = buffer.getBuffer(RenderType.eyes(glowTex));
+            this.model.head_bone.render(matrixStack, glowConsumer, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        }
 
         matrixStack.popPose();
     }

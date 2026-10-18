@@ -16,8 +16,8 @@ public class GogglesHumSoundInstance extends AbstractTickableSoundInstance {
         this.player = player;
         this.looping = true;
         this.delay = 0;
-        this.volume = 0.4f; // Increased volume from 0.05
-        this.pitch = 0.6f; // Low pitch hum
+        this.volume = 0.22f; // Subtle authentic analog background hum
+        this.pitch = 0.85f; // Crisp cathode frequency
         this.relative = true;
     }
 

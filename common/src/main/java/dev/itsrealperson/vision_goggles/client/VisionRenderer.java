@@ -158,12 +158,16 @@ public class VisionRenderer {
                         VisionShaderManager.disableShader(mc);
                     }
                     lastModeId = nbtModeId;
-                    if (isServerActive != lastServerActive) mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
+                    if (isServerActive != lastServerActive) {
+                        mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
+                        mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, 1.25F));
+                    }
                 } else {
                     grayscaleEnabled = false;
                     lastModeId = -1;
                     VisionShaderManager.disableShader(mc);
                     mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.85F));
                 }
                 // Al cambiar de modo, limpiar el efecto de visión nocturna SOLO si el nuevo modo
                 // no lo requiere. THERMAL e HYDRO reciben NV del servidor, no se deben limpiar aquí.
