@@ -87,6 +87,25 @@ public class ModItems {
     public static final RegistrySupplier<Item> INSTALLATION_SCRIPT = ITEMS.register("installation_script",
             () -> new dev.itsrealperson.vision_goggles.item.InstallationScriptItem());
 
+    // Tactical Engineering Manufacturing System (TEMS)
+    public static final RegistrySupplier<Item> OPTICAL_LENS = ITEMS.register("optical_lens",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> TACTICAL_FRAME = ITEMS.register("tactical_frame",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> FLASHLIGHT_BODY = ITEMS.register("flashlight_body",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> TACTICAL_PROCESSOR = ITEMS.register("tactical_processor",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> THERMAL_CORE = ITEMS.register("thermal_core",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> LIFESIGN_SENSOR = ITEMS.register("lifesign_sensor",
+            () -> new Item(new Item.Properties()));
+
     public static void register() {
         ITEMS.register();
     }

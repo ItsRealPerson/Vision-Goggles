@@ -1,13 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " E ",
-    " C ",
+    " S ",
+    "ACA",
     " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
-    "C": { "item": "minecraft:echo_shard" }
+    "S": { "item": "minecraft:sculk_sensor" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:sonar_module" }
 }

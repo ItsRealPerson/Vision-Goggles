@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RGR",
+    "EDE",
+    "RGR"
+  ],
+  "key": {
+    "R": { "item": "minecraft:redstone" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "D": { "item": "minecraft:diamond" }
+  },
+  "result": {
+    "item": "vision_goggles:tactical_processor"
+  }
+}

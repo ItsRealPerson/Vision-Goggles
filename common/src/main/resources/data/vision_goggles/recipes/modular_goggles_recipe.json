@@ -1,16 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "N N",
-    "AEA",
-    "GBG"
+    "LPL",
+    "FBF",
+    "EGE"
   ],
   "key": {
-    "N": { "item": "minecraft:netherite_ingot" },
-    "A": { "item": "minecraft:amethyst_shard" },
-    "E": { "item": "minecraft:enchanted_golden_apple" },
-    "G": { "item": "minecraft:gold_ingot" },
-    "B": { "item": "vision_goggles:nvg_battery" }
+    "L": { "item": "vision_goggles:optical_lens" },
+    "P": { "item": "vision_goggles:tactical_processor" },
+    "F": { "item": "vision_goggles:tactical_frame" },
+    "B": { "item": "vision_goggles:nvg_battery" },
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "G": { "item": "minecraft:gold_ingot" }
   },
   "result": { "item": "vision_goggles:modular_goggles" }
 }

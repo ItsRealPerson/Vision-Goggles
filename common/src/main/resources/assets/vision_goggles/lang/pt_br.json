@@ -159,5 +159,11 @@
   "tooltip.vision_goggles.prog_burn_hint": "Combine com um Script de Instalação para programá-lo.",
   "item.vision_goggles.programmable_module.blank": "Módulo Programável (Virgem)",
   "item.vision_goggles.installation_script.unconfigured": "Script não configurado",
-  "hud.vision_goggles.damage_critical": "!!! DANO CRÍTICO NOS ÓCULOS !!!"
+  "hud.vision_goggles.damage_critical": "!!! DANO CRÍTICO NOS ÓCULOS !!!",
+  "item.vision_goggles.optical_lens": "Lente Óptica de Precisão",
+  "item.vision_goggles.tactical_frame": "Armação Tática Balística",
+  "item.vision_goggles.flashlight_body": "Corpo Usinado de Lanterna",
+  "item.vision_goggles.tactical_processor": "Processador DSP Tático",
+  "item.vision_goggles.thermal_core": "Núcleo de Sensor Térmico",
+  "item.vision_goggles.lifesign_sensor": "Sensor Biométrico de Sinais Vitais"
 }

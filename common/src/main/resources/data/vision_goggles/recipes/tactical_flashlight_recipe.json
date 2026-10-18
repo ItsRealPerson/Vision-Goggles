@@ -1,14 +1,14 @@
-﻿{
+{
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " I ",
-    " F ",
-    " E "
+    "M",
+    "B",
+    "X"
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "F": { "item": "vision_goggles:flashlight_module" },
-    "E": { "item": "vision_goggles:electrical_parts" }
+    "M": { "item": "vision_goggles:flashlight_module" },
+    "B": { "item": "vision_goggles:flashlight_body" },
+    "X": { "item": "vision_goggles:nvg_battery" }
   },
   "result": { "item": "vision_goggles:tactical_flashlight" }
 }

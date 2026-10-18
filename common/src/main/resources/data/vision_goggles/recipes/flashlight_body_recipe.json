@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " I ",
+    "LIL",
+    " E "
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "L": { "item": "minecraft:leather" },
+    "E": { "item": "vision_goggles:electrical_parts" }
+  },
+  "result": {
+    "item": "vision_goggles:flashlight_body"
+  }
+}

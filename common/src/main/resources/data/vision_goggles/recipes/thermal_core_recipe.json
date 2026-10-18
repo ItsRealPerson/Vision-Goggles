@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BGB",
+    "QMQ",
+    " G "
+  ],
+  "key": {
+    "B": { "item": "minecraft:blaze_rod" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "Q": { "item": "minecraft:quartz" },
+    "M": { "item": "minecraft:magma_cream" }
+  },
+  "result": {
+    "item": "vision_goggles:thermal_core"
+  }
+}

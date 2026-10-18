@@ -159,5 +159,11 @@
   "tooltip.vision_goggles.prog_burn_hint": "Połącz ze skryptem instalacyjnym, aby go zaprogramować.",
   "item.vision_goggles.programmable_module.blank": "Programowalny moduł (Czysty)",
   "item.vision_goggles.installation_script.unconfigured": "Nieskonfigurowany skrypt",
-  "hud.vision_goggles.damage_critical": "!!! KRYTYCZNE USZKODZENIE GOGLI !!!"
+  "hud.vision_goggles.damage_critical": "!!! KRYTYCZNE USZKODZENIE GOGLI !!!",
+  "item.vision_goggles.optical_lens": "Precyzyjna Soczewka Optyczna",
+  "item.vision_goggles.tactical_frame": "Taktyczna Rama Balistyczna",
+  "item.vision_goggles.flashlight_body": "Frezowany Korpus Latarki",
+  "item.vision_goggles.tactical_processor": "Taktyczny Procesor DSP",
+  "item.vision_goggles.thermal_core": "Rdzeń Czujnika Termicznego",
+  "item.vision_goggles.lifesign_sensor": "Biometryczny Czujnik Życia"
 }

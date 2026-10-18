@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " A ",
+    "TET",
+    " P "
+  ],
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "T": { "item": "minecraft:ghast_tear" },
+    "E": { "item": "minecraft:ender_eye" },
+    "P": { "item": "vision_goggles:electrical_parts" }
+  },
+  "result": {
+    "item": "vision_goggles:lifesign_sensor"
+  }
+}

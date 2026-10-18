@@ -159,5 +159,11 @@
   "tooltip.vision_goggles.prog_burn_hint": "Combinez avec un script d'installation pour le programmer.",
   "item.vision_goggles.programmable_module.blank": "Module programmable (Vierge)",
   "item.vision_goggles.installation_script.unconfigured": "Script non configuré",
-  "hud.vision_goggles.damage_critical": "!!! DÉGÂTS CRITIQUES DES LUNETTES !!!"
+  "hud.vision_goggles.damage_critical": "!!! DÉGÂTS CRITIQUES DES LUNETTES !!!",
+  "item.vision_goggles.optical_lens": "Lentille Optique de Précision",
+  "item.vision_goggles.tactical_frame": "Châssis Tactique Balistique",
+  "item.vision_goggles.flashlight_body": "Corps Usiné de Lampe Torche",
+  "item.vision_goggles.tactical_processor": "Processeur DSP Tactique",
+  "item.vision_goggles.thermal_core": "Cœur de Capteur Thermique",
+  "item.vision_goggles.lifesign_sensor": "Capteur Biométrique de Signes Vitaux"
 }

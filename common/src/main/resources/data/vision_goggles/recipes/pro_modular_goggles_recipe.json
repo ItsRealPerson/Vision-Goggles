@@ -1,16 +1,17 @@
 {
   "type": "vision_goggles:goggles_upgrade",
   "pattern": [
-    "N N",
-    "AMA",
-    "EBE"
+    "PNP",
+    "EME",
+    "SXS"
   ],
   "key": {
+    "P": { "item": "vision_goggles:tactical_processor" },
     "N": { "item": "minecraft:netherite_ingot" },
-    "A": { "item": "minecraft:amethyst_shard" },
-    "M": { "item": "vision_goggles:modular_goggles" },
     "E": { "item": "vision_goggles:electrical_parts" },
-    "B": { "item": "vision_goggles:nvg_battery" }
+    "M": { "item": "vision_goggles:modular_goggles" },
+    "S": { "item": "minecraft:echo_shard" },
+    "X": { "item": "vision_goggles:battery_expansion_module" }
   },
   "result": { "item": "vision_goggles:pro_modular_goggles" }
 }

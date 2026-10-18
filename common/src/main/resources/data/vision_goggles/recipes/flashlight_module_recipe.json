@@ -1,13 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " E ",
     " L ",
+    "CSC",
     " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
-    "L": { "item": "minecraft:lantern" }
+    "L": { "item": "vision_goggles:optical_lens" },
+    "S": { "item": "minecraft:sea_lantern" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:flashlight_module" }
 }

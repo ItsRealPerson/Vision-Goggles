@@ -159,5 +159,11 @@
   "tooltip.vision_goggles.prog_burn_hint": "Объедините со скриптом установки для прошивки.",
   "item.vision_goggles.programmable_module.blank": "Программируемый модуль (Чистый)",
   "item.vision_goggles.installation_script.unconfigured": "Ненастроенный скрипт",
-  "hud.vision_goggles.damage_critical": "!!! КРИТИЧЕСКОЕ ПОВРЕЖДЕНИЕ ОЧКОВ !!!"
+  "hud.vision_goggles.damage_critical": "!!! КРИТИЧЕСКОЕ ПОВРЕЖДЕНИЕ ОЧКОВ !!!",
+  "item.vision_goggles.optical_lens": "Прецизионная оптическая линза",
+  "item.vision_goggles.tactical_frame": "Тактический каркас очков",
+  "item.vision_goggles.flashlight_body": "Фрезерованный корпус фонаря",
+  "item.vision_goggles.tactical_processor": "Тактический DSP-процессор",
+  "item.vision_goggles.thermal_core": "Тепловизионное сенсорное ядро",
+  "item.vision_goggles.lifesign_sensor": "Биометрический датчик жизненных показателей"
 }
