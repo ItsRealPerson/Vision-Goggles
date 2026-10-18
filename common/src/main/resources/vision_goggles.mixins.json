@@ -10,6 +10,7 @@
     "client.MixinLevelRenderer",
     "client.MixinGameRenderer",
     "client.MixinMinecraft",
+    "client.MixinMouseHandler",
     "client.GameRendererAccessor",
     "client.PostChainAccessor",
     "lighting.ShaderInstanceMixin",
