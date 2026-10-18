@@ -38,7 +38,6 @@ public class ModTabs {
             () -> new ItemStack(ModItems.ENVIRONMENT_MODULE.get()),
             () -> new ItemStack(ModItems.BATTERY_EXPANSION_MODULE.get()),
             () -> new ItemStack(ModItems.SPAWN_SECURITY_MODULE.get()),
-            () -> new ItemStack(ModItems.CHUNK_VIEWER_MODULE.get()),
             () -> new ItemStack(ModItems.FLASHLIGHT_MODULE.get()),
             () -> new ItemStack(ModItems.TACTICAL_FLASHLIGHT.get()),
             () -> new ItemStack(ModItems.MODULAR_GOGGLES.get()),

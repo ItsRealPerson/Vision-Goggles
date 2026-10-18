@@ -17,7 +17,6 @@
   "item.vision_goggles.solar_module": "Module Solaire",
   "item.vision_goggles.sonar_module": "Module Sonar",
   "item.vision_goggles.spawn_security_module": "Module Sécurité de Spawn",
-  "item.vision_goggles.chunk_viewer_module": "Module Visualiseur de Chunks",
   "item.vision_goggles.flashlight_module": "Module Lampe Torche",
   "block.vision_goggles.modification_station": "Station de Modification",
   "tooltip.vision_goggles.battery_info": "Énergie : %s / %s",
