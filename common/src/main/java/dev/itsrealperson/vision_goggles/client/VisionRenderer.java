@@ -122,11 +122,19 @@ public class VisionRenderer {
         }
         
         while (ModKeyMappings.toggleFlashlightKey.consumeClick()) {
-            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleFlashlightPacket());
+            if (dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
+                NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleFlashlightPacket());
+            }
         }
         
         while (ModKeyMappings.cycleFlashlightModeKey.consumeClick()) {
-            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.CycleFlashlightModePacket());
+            if (dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
+                NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.CycleFlashlightModePacket());
+            }
+        }
+
+        while (ModKeyMappings.rechargeKey.consumeClick()) {
+            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.BatteryPacket());
         }
 
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);

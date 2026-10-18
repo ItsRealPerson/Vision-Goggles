@@ -97,5 +97,6 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLatarka: §fSkupiona Wiązka",
   "message.vision_goggles.flashlight_mode.wide": "§eLatarka: §fSzeroki Strumień",
   "message.vision_goggles.flashlight_mode.close": "§eLatarka: §fBliski Błysk",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "key.vision_goggles.recharge": "Szybkie Ładowanie Baterii"
 }

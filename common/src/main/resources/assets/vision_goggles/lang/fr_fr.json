@@ -97,5 +97,6 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLampe Torche : §fFaisceau Concentré",
   "message.vision_goggles.flashlight_mode.wide": "§eLampe Torche : §fFaisceau Large",
   "message.vision_goggles.flashlight_mode.close": "§eLampe Torche : §fRaffale Courte",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "key.vision_goggles.recharge": "Recharge Rapide de Batterie"
 }

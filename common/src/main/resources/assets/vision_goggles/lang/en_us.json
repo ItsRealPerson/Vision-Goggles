@@ -96,6 +96,7 @@
   "key.vision_goggles.toggle_spawn_security": "Toggle Spawn Security Overlay",
   "key.vision_goggles.toggle_flashlight": "Toggle Flashlight",
   "key.vision_goggles.cycle_flashlight_mode": "Cycle Flashlight Mode",
+  "key.vision_goggles.recharge": "Fast Battery Recharge",
   "itemGroup.vision_goggles_group": "Vision Goggles",
   "key.categories.vision_goggles": "Vision Goggles",
   "message.vision_goggles.sonar_mode": "§bSonar Mode: §f%s",

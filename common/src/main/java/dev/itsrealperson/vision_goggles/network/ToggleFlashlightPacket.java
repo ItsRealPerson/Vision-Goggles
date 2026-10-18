@@ -47,9 +47,9 @@ public class ToggleFlashlightPacket {
             }
 
             if (!toggled) {
-                ItemStack vest = PlatformMethods.getEquippedFlashlight(player);
-                if (!vest.isEmpty() && vest.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
-                    dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.toggle(vest, player);
+                ItemStack flashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getAnyHeldFlashlight(player);
+                if (!flashlight.isEmpty() && flashlight.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+                    dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.toggle(flashlight, player);
                     toggled = true;
                 }
             }

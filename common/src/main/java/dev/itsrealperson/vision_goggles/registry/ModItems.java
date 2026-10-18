@@ -20,7 +20,7 @@ public class ModItems {
             () -> new VisionGogglesItem(ModConfig::getNvgDuration, VisionMode.NIGHT_VISION));
 
     public static final RegistrySupplier<Item> THERMAL_GOGGLES = ITEMS.register("thermal_goggles",
-            () -> new VisionGogglesItem(ModConfig::getThermalDuration, VisionMode.THERMAL, VisionMode.NIGHT_VISION));
+            () -> new VisionGogglesItem(ModConfig::getThermalDuration, VisionMode.THERMAL));
 
     public static final RegistrySupplier<Item> HYDRO_GOGGLES = ITEMS.register("hydro_goggles",
             () -> new VisionGogglesItem(ModConfig::getHydroDuration, VisionMode.HYDRO));

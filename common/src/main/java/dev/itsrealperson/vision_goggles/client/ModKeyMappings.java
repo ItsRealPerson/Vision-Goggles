@@ -54,6 +54,13 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
+    public static final KeyMapping rechargeKey = new KeyMapping(
+            "key.vision_goggles.recharge",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_B,
+            "key.categories.vision_goggles"
+    );
+
     public static void init() {
         try {
             KeyMappingRegistry.register(toggleGrayscaleKey);
@@ -63,6 +70,7 @@ public class ModKeyMappings {
             KeyMappingRegistry.register(switchSonarModeKey);
             KeyMappingRegistry.register(toggleFlashlightKey);
             KeyMappingRegistry.register(cycleFlashlightModeKey);
+            KeyMappingRegistry.register(rechargeKey);
         } catch (Exception e) {
             // Log or ignore if already registered
         }

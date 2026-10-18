@@ -51,11 +51,11 @@ public class CycleFlashlightModePacket {
             }
 
             if (!cycled) {
-                ItemStack vest = PlatformMethods.getEquippedFlashlight(player);
-                if (!vest.isEmpty() && vest.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
-                    int currentId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(vest);
+                ItemStack flashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getAnyHeldFlashlight(player);
+                if (!flashlight.isEmpty() && flashlight.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+                    int currentId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(flashlight);
                     int next = (currentId + 1) % 3;
-                    vest.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next);
+                    flashlight.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next);
                     player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.4f, 1.2f + next * 0.15f);
                     cycled = true;
                 }

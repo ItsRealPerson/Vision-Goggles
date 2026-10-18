@@ -97,5 +97,6 @@
   "message.vision_goggles.flashlight_mode.focused": "§eФонарь: §fФокусированный луч",
   "message.vision_goggles.flashlight_mode.wide": "§eФонарь: §fШирокий луч",
   "message.vision_goggles.flashlight_mode.close": "§eФонарь: §fБлижняя вспышка",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!"
+  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "key.vision_goggles.recharge": "Быстрая перезарядка батареи"
 }
