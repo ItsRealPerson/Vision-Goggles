@@ -326,6 +326,16 @@ public class VisionRenderer {
         dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.onClientTick(mc, currentBatteryPct);
     }
 
+    private static class ActiveFlashlightSource {
+        final FlashlightSlot slot;
+        final int modeId;
+
+        ActiveFlashlightSource(FlashlightSlot slot, int modeId) {
+            this.slot = slot;
+            this.modeId = modeId;
+        }
+    }
+
     public static void updateFlashlightEveryFrame(net.minecraft.client.Camera camera, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
@@ -334,82 +344,211 @@ public class VisionRenderer {
         net.minecraft.world.phys.Vec3 camPos = camera.getPosition();
 
         for (Player player : mc.level.players()) {
-            boolean flashlightOn = false;
-            int modeId = 0;
+            List<ActiveFlashlightSource> sources = new java.util.ArrayList<>();
 
+            // 1. Módulo en Gafas / Casco (Cabeza)
             ItemStack playerHelmet = PlatformMethods.getEquippedHelmet(player);
             if (playerHelmet.getItem() instanceof ModularGogglesItem modular) {
                 List<ModuleType> utils = modular.getUtilityModules(playerHelmet);
                 boolean hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
                 float batteryLvl = playerHelmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
                 if (hasFlashlight && playerHelmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0) {
-                    flashlightOn = true;
-                    modeId = playerHelmet.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                    int modeId = playerHelmet.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                    sources.add(new ActiveFlashlightSource(FlashlightSlot.HEAD_GOGGLES, modeId));
                 }
             }
 
-            if (!flashlightOn) {
-                ItemStack heldFlashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(player);
-                if (!heldFlashlight.isEmpty()) {
-                    flashlightOn = true;
-                    modeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(heldFlashlight);
-                }
+            // 2. Linterna de Torso / Chaleco (Curios, Trinkets, Slot Pechera)
+            ItemStack equippedChest = PlatformMethods.getEquippedFlashlight(player);
+            if (dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.isActive(equippedChest)) {
+                int modeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(equippedChest);
+                sources.add(new ActiveFlashlightSource(FlashlightSlot.TORSO_CHEST, modeId));
             }
 
-            if (flashlightOn) {
-                    net.minecraft.world.phys.Vec3 playerEyePos = player.getEyePosition(partialTick);
-                    org.joml.Vector3f pos = new org.joml.Vector3f(
-                        (float)(playerEyePos.x - camPos.x),
-                        (float)(playerEyePos.y - camPos.y),
-                        (float)(playerEyePos.z - camPos.z)
-                    );
-                    
-                    float yaw = player.getViewYRot(partialTick);
-                    float pitch = player.getViewXRot(partialTick);
-                    org.joml.Quaternionf rot = new org.joml.Quaternionf()
-                        .rotationY((float) Math.toRadians(-yaw))
-                        .rotateX((float) Math.toRadians(pitch));
+            // 3. Mano Principal (si no es la misma que la del pecho)
+            ItemStack mainHand = player.getMainHandItem();
+            if (mainHand != equippedChest && dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.isActive(mainHand)) {
+                int modeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(mainHand);
+                sources.add(new ActiveFlashlightSource(FlashlightSlot.MAIN_HAND, modeId));
+            }
 
-                    org.joml.Vector3f dir = rot.transform(new org.joml.Vector3f(0, 0, 1));
-                    org.joml.Vector3f up = rot.transform(new org.joml.Vector3f(0, 1, 0));
-                    org.joml.Vector3f right = rot.transform(new org.joml.Vector3f(1, 0, 0));
-                    
-                    org.joml.Vector3f color = new org.joml.Vector3f(1.0f, 0.95f, 0.85f);
-                    
-                    dev.itsrealperson.vision_goggles.util.FlashlightMode fMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
-                    
-                    float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.85f;
-                    float diagOffset = offsetAngle * 0.7071f;
-                    
-                    org.joml.Vector3f dirCenter = new org.joml.Vector3f(dir);
-                    org.joml.Vector3f dirUp = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, right.x, right.y, right.z);
-                    org.joml.Vector3f dirDown = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, right.x, right.y, right.z);
-                    org.joml.Vector3f dirLeft = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, up.x, up.y, up.z);
-                    org.joml.Vector3f dirRight = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, up.x, up.y, up.z);
-                    
-                    org.joml.Vector3f dirUpLeft = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
-                    org.joml.Vector3f dirUpRight = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
-                    org.joml.Vector3f dirDownLeft = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
-                    org.joml.Vector3f dirDownRight = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
-                    
-                    float[] hitRanges = new float[9];
-                    hitRanges[0] = performRaycast(player, playerEyePos, dirCenter, fMode.range);
-                    hitRanges[1] = performRaycast(player, playerEyePos, dirUp, fMode.range);       // 90 deg
-                    hitRanges[2] = performRaycast(player, playerEyePos, dirDown, fMode.range);     // 270 deg
-                    hitRanges[3] = performRaycast(player, playerEyePos, dirRight, fMode.range);    // 0 deg
-                    hitRanges[4] = performRaycast(player, playerEyePos, dirLeft, fMode.range);     // 180 deg
-                    hitRanges[5] = performRaycast(player, playerEyePos, dirUpLeft, fMode.range);   // 135 deg
-                    hitRanges[6] = performRaycast(player, playerEyePos, dirUpRight, fMode.range);  // 45 deg
-                    hitRanges[7] = performRaycast(player, playerEyePos, dirDownLeft, fMode.range); // 225 deg
-                    hitRanges[8] = performRaycast(player, playerEyePos, dirDownRight, fMode.range);// 315 deg
-                    
-                    net.minecraft.client.Minecraft mcInst = net.minecraft.client.Minecraft.getInstance();
-                    boolean isLocal = (player == mcInst.player) && mcInst.options.getCameraType().isFirstPerson();
-                    boolean isWall = checkIsWall(player, playerEyePos, dirCenter, fMode.range);
-                    dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges, isLocal, isWall);
+            // 4. Mano Secundaria
+            ItemStack offHand = player.getOffhandItem();
+            if (offHand != equippedChest && dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.isActive(offHand)) {
+                int modeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(offHand);
+                sources.add(new ActiveFlashlightSource(FlashlightSlot.OFF_HAND, modeId));
+            }
+
+            if (sources.isEmpty()) continue;
+
+            boolean isLocalPlayer = (player == mc.player);
+            boolean isFirstPerson = isLocalPlayer && (mc.options.getCameraType() != null && mc.options.getCameraType().isFirstPerson());
+
+            float yaw = player.getViewYRot(partialTick);
+            float pitch = player.getViewXRot(partialTick);
+            org.joml.Quaternionf headRot = new org.joml.Quaternionf()
+                .rotationY((float) Math.toRadians(-yaw))
+                .rotateX((float) Math.toRadians(pitch));
+
+            for (ActiveFlashlightSource src : sources) {
+                net.minecraft.world.phys.Vec3 originWorld;
+                org.joml.Vector3f dir;
+                org.joml.Vector3f up;
+                org.joml.Vector3f right;
+
+                if (isFirstPerson) {
+                    org.joml.Vector3f camDir = headRot.transform(new org.joml.Vector3f(0, 0, 1));
+                    org.joml.Vector3f camUp = headRot.transform(new org.joml.Vector3f(0, 1, 0));
+                    org.joml.Vector3f camRight = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+
+                    switch (src.slot) {
+                        case HEAD_GOGGLES -> {
+                            originWorld = camPos.add(camUp.x * 0.08 + camRight.x * 0.12,
+                                                     camUp.y * 0.08 + camRight.y * 0.12,
+                                                     camUp.z * 0.08 + camRight.z * 0.12);
+                            dir = new org.joml.Vector3f(camDir);
+                            up = new org.joml.Vector3f(camUp);
+                            right = new org.joml.Vector3f(camRight);
+                        }
+                        case TORSO_CHEST -> {
+                            originWorld = camPos.add(-camUp.x * 0.35 + camRight.x * 0.18 + camDir.x * 0.15,
+                                                     -camUp.y * 0.35 + camRight.y * 0.18 + camDir.y * 0.15,
+                                                     -camUp.z * 0.35 + camRight.z * 0.18 + camDir.z * 0.15);
+                            dir = new org.joml.Vector3f(camDir);
+                            up = new org.joml.Vector3f(camUp);
+                            right = new org.joml.Vector3f(camRight);
+                        }
+                        case MAIN_HAND -> {
+                            originWorld = camPos.add(-camUp.x * 0.25 + camRight.x * 0.32 + camDir.x * 0.35,
+                                                     -camUp.y * 0.25 + camRight.y * 0.32 + camDir.y * 0.35,
+                                                     -camUp.z * 0.25 + camRight.z * 0.32 + camDir.z * 0.35);
+                            net.minecraft.world.phys.Vec3 target = camPos.add(camDir.x * 30.0, camDir.y * 30.0, camDir.z * 30.0);
+                            net.minecraft.world.phys.Vec3 delta = target.subtract(originWorld).normalize();
+                            dir = new org.joml.Vector3f((float) delta.x, (float) delta.y, (float) delta.z);
+                            up = new org.joml.Vector3f(camUp);
+                            right = new org.joml.Vector3f(camRight);
+                        }
+                        case OFF_HAND -> {
+                            originWorld = camPos.add(-camUp.x * 0.25 - camRight.x * 0.32 + camDir.x * 0.35,
+                                                     -camUp.y * 0.25 - camRight.y * 0.32 + camDir.y * 0.35,
+                                                     -camUp.z * 0.25 - camRight.z * 0.32 + camDir.z * 0.35);
+                            net.minecraft.world.phys.Vec3 target = camPos.add(camDir.x * 30.0, camDir.y * 30.0, camDir.z * 30.0);
+                            net.minecraft.world.phys.Vec3 delta = target.subtract(originWorld).normalize();
+                            dir = new org.joml.Vector3f((float) delta.x, (float) delta.y, (float) delta.z);
+                            up = new org.joml.Vector3f(camUp);
+                            right = new org.joml.Vector3f(camRight);
+                        }
+                        default -> {
+                            originWorld = player.getEyePosition(partialTick);
+                            dir = new org.joml.Vector3f(camDir);
+                            up = new org.joml.Vector3f(camUp);
+                            right = new org.joml.Vector3f(camRight);
+                        }
+                    }
+                } else {
+                    // 3RA PERSONA Y JUGADORES REMOTOS
+                    double px = net.minecraft.util.Mth.lerp(partialTick, player.xo, player.getX());
+                    double py = net.minecraft.util.Mth.lerp(partialTick, player.yo, player.getY());
+                    double pz = net.minecraft.util.Mth.lerp(partialTick, player.zo, player.getZ());
+                    float bodyYaw = net.minecraft.util.Mth.rotLerp(partialTick, player.yBodyRotO, player.yBodyRot);
+
+                    switch (src.slot) {
+                        case HEAD_GOGGLES -> {
+                            originWorld = player.getEyePosition(partialTick);
+                            dir = headRot.transform(new org.joml.Vector3f(0, 0, 1));
+                            up = headRot.transform(new org.joml.Vector3f(0, 1, 0));
+                            right = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+                        }
+                        case TORSO_CHEST -> {
+                            double torsoY = py + (player.isCrouching() ? 1.05 : 1.25);
+                            float bodyPitch = player.isCrouching() ? 28.6f : 0.0f;
+                            org.joml.Quaternionf torsoRot = new org.joml.Quaternionf()
+                                .rotationY((float) Math.toRadians(-bodyYaw))
+                                .rotateX((float) Math.toRadians(bodyPitch));
+
+                            org.joml.Vector3f localOffset = torsoRot.transform(new org.joml.Vector3f(0.18f, -0.20f, 0.16f));
+                            originWorld = new net.minecraft.world.phys.Vec3(px + localOffset.x, torsoY + localOffset.y, pz + localOffset.z);
+
+                            dir = torsoRot.transform(new org.joml.Vector3f(0, 0, 1));
+                            up = torsoRot.transform(new org.joml.Vector3f(0, 1, 0));
+                            right = torsoRot.transform(new org.joml.Vector3f(1, 0, 0));
+                        }
+                        case MAIN_HAND -> {
+                            boolean isRightArm = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT;
+                            originWorld = computeArmHandWorldPos(player, px, py, pz, bodyYaw, headRot, isRightArm, partialTick);
+                            dir = headRot.transform(new org.joml.Vector3f(0, 0, 1));
+                            up = headRot.transform(new org.joml.Vector3f(0, 1, 0));
+                            right = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+                        }
+                        case OFF_HAND -> {
+                            boolean isRightArm = player.getMainArm() != net.minecraft.world.entity.HumanoidArm.RIGHT;
+                            originWorld = computeArmHandWorldPos(player, px, py, pz, bodyYaw, headRot, isRightArm, partialTick);
+                            dir = headRot.transform(new org.joml.Vector3f(0, 0, 1));
+                            up = headRot.transform(new org.joml.Vector3f(0, 1, 0));
+                            right = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+                        }
+                        default -> {
+                            originWorld = player.getEyePosition(partialTick);
+                            dir = headRot.transform(new org.joml.Vector3f(0, 0, 1));
+                            up = headRot.transform(new org.joml.Vector3f(0, 1, 0));
+                            right = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+                        }
+                    }
                 }
+
+                org.joml.Vector3f pos = new org.joml.Vector3f(
+                    (float)(originWorld.x - camPos.x),
+                    (float)(originWorld.y - camPos.y),
+                    (float)(originWorld.z - camPos.z)
+                );
+
+                org.joml.Vector3f color = new org.joml.Vector3f(1.0f, 0.95f, 0.85f);
+                FlashlightMode fMode = FlashlightMode.byId(src.modeId);
+
+                float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.85f;
+                float diagOffset = offsetAngle * 0.7071f;
+
+                org.joml.Vector3f dirCenter = new org.joml.Vector3f(dir);
+                org.joml.Vector3f dirUp = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, right.x, right.y, right.z);
+                org.joml.Vector3f dirDown = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, right.x, right.y, right.z);
+                org.joml.Vector3f dirLeft = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, up.x, up.y, up.z);
+                org.joml.Vector3f dirRight = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, up.x, up.y, up.z);
+
+                org.joml.Vector3f dirUpLeft = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
+                org.joml.Vector3f dirUpRight = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
+                org.joml.Vector3f dirDownLeft = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
+                org.joml.Vector3f dirDownRight = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
+
+                float[] hitRanges = new float[9];
+                hitRanges[0] = performRaycast(player, originWorld, dirCenter, fMode.range);
+                hitRanges[1] = performRaycast(player, originWorld, dirUp, fMode.range);
+                hitRanges[2] = performRaycast(player, originWorld, dirDown, fMode.range);
+                hitRanges[3] = performRaycast(player, originWorld, dirRight, fMode.range);
+                hitRanges[4] = performRaycast(player, originWorld, dirLeft, fMode.range);
+                hitRanges[5] = performRaycast(player, originWorld, dirUpLeft, fMode.range);
+                hitRanges[6] = performRaycast(player, originWorld, dirUpRight, fMode.range);
+                hitRanges[7] = performRaycast(player, originWorld, dirDownLeft, fMode.range);
+                hitRanges[8] = performRaycast(player, originWorld, dirDownRight, fMode.range);
+
+                boolean isLocal = isLocalPlayer && isFirstPerson;
+                boolean isWall = checkIsWall(player, originWorld, dirCenter, fMode.range);
+                dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges, isLocal, isWall);
+            }
         }
     }
+
+    private static net.minecraft.world.phys.Vec3 computeArmHandWorldPos(Player player, double px, double py, double pz, float bodyYaw, org.joml.Quaternionf headRot, boolean rightArm, float partialTick) {
+        double shoulderY = py + (player.isCrouching() ? 1.05 : 1.25);
+        float sideSign = rightArm ? 1.0f : -1.0f;
+
+        org.joml.Quaternionf bodyRot = new org.joml.Quaternionf().rotationY((float) Math.toRadians(-bodyYaw));
+        org.joml.Vector3f shoulderOffset = bodyRot.transform(new org.joml.Vector3f(sideSign * 0.35f, 0.0f, 0.0f));
+        net.minecraft.world.phys.Vec3 shoulderPos = new net.minecraft.world.phys.Vec3(px + shoulderOffset.x, shoulderY + shoulderOffset.y, pz + shoulderOffset.z);
+
+        org.joml.Vector3f armLook = headRot.transform(new org.joml.Vector3f(0, 0, 1));
+        return shoulderPos.add(armLook.x * 0.38, armLook.y * 0.38 - 0.22, armLook.z * 0.38);
+    }
+
 
     private static boolean checkIsWall(Player player, net.minecraft.world.phys.Vec3 startVec, org.joml.Vector3f dir, float maxRange) {
         net.minecraft.world.phys.Vec3 endVec = startVec.add(dir.x() * maxRange, dir.y() * maxRange, dir.z() * maxRange);

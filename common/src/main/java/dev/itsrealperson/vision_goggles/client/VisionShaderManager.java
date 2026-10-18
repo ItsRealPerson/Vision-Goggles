@@ -200,6 +200,7 @@ public class VisionShaderManager {
         if (savedFlashlightChain == null) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
+        if (mc.options.getCameraType() != null && !mc.options.getCameraType().isFirstPerson()) return;
 
         try {
             float time = (float) mc.level.getGameTime() + mc.getFrameTime();
