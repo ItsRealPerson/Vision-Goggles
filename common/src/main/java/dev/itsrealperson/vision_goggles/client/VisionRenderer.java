@@ -33,8 +33,12 @@ public class VisionRenderer {
     private static boolean lastWasUnderwater = false;
 
     private static boolean zoomActive = false;
-    private static float zoomActiveAmount = 0.0f; // 0 to 1 for lerp
-    private static float currentZoom = 1.0f; // 1.0 = no zoom
+    private static float targetZoomFactor = 1.0f; // 1.0x to 8.0x
+    private static float currentZoomFactor = 1.0f; // Smooth lerped magnification
+    private static float currentZoom = 1.0f; // FOV multiplier = 1.0f / currentZoomFactor
+
+    private static long nKeyHoldStart = 0L;
+    private static boolean radialMenuOpened = false;
 
     private static boolean lastFlashlightActive = false;
     private static int lastFlashlightModeId = -1;
@@ -48,8 +52,9 @@ public class VisionRenderer {
     public static boolean isVisorActive() { return visorActive; }
     public static boolean isVisionModeActive() { return visionModeActive; }
     public static VisionMode getCurrentVisionMode() { return currentVisionMode; }
-    public static boolean isZoomActive() { return zoomActive; }
+    public static boolean isZoomActive() { return zoomActive || currentZoomFactor > 1.05f; }
     public static float getZoomMultiplier() { return currentZoom; }
+    public static float getCurrentZoomFactor() { return currentZoomFactor; }
     public static boolean isSonarActive() { return sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION; }
 
     public static void init() {
@@ -80,8 +85,25 @@ public class VisionRenderer {
             damageFlickerTimer--;
         }
 
-        while (ModKeyMappings.toggleGrayscaleKey.consumeClick()) {
-            NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(false));
+        // 'N' Key: Quick tap (< 220ms) = Toggle on/off; Long press (> 220ms) = Tactical Radial Menu
+        if (ModKeyMappings.toggleGrayscaleKey.isDown()) {
+            if (nKeyHoldStart == 0L) {
+                nKeyHoldStart = System.currentTimeMillis();
+                radialMenuOpened = false;
+            } else if (!radialMenuOpened && (System.currentTimeMillis() - nKeyHoldStart > 220L)) {
+                if (mc.screen == null && mc.player != null) {
+                    radialMenuOpened = true;
+                    mc.setScreen(new dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen());
+                }
+            }
+        } else {
+            if (nKeyHoldStart != 0L) {
+                if (!radialMenuOpened) {
+                    NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(false));
+                }
+                nKeyHoldStart = 0L;
+                radialMenuOpened = false;
+            }
         }
 
         while (ModKeyMappings.switchModeKey.consumeClick()) {
@@ -224,12 +246,20 @@ public class VisionRenderer {
 
             if (isServerActive && hasZoom && ModKeyMappings.zoomKey.isDown()) {
                 zoomActive = true;
-                zoomActiveAmount = Math.min(1.0f, zoomActiveAmount + 0.15f);
+                if (targetZoomFactor < 1.2f) {
+                    targetZoomFactor = 2.0f; // Default starting magnification
+                }
             } else {
                 zoomActive = false;
-                zoomActiveAmount = Math.max(0.0f, zoomActiveAmount - 0.15f);
+                targetZoomFactor = 1.0f;
             }
-            currentZoom = 1.0f - (zoomActiveAmount * 0.67f);
+
+            // Smooth continuous FOV lerp
+            currentZoomFactor += (targetZoomFactor - currentZoomFactor) * 0.22f;
+            if (Math.abs(currentZoomFactor - 1.0f) < 0.01f && !zoomActive) {
+                currentZoomFactor = 1.0f;
+            }
+            currentZoom = 1.0f / currentZoomFactor;
 
             // Shader updates (battery failure, color filter, etc.)
             if (isServerActive && shaderNeeded) {
@@ -413,7 +443,8 @@ public class VisionRenderer {
         sonarPulseTimer = 0;
         damageFlickerTimer = 0;
         zoomActive = false;
-        zoomActiveAmount = 0.0f;
+        targetZoomFactor = 1.0f;
+        currentZoomFactor = 1.0f;
         currentZoom = 1.0f;
         VisionShaderManager.disableShader(mc);
         dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(null);
@@ -425,11 +456,39 @@ public class VisionRenderer {
         } catch (Throwable ignored) {}
     }
 
+    public static boolean onMouseScroll(double delta) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return false;
+
+        ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
+        if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) return false;
+
+        boolean hasZoom = false;
+        if (goggles instanceof ModularGogglesItem modular) {
+            hasZoom = modular.getUtilityModules(helmet).contains(ModuleType.ZOOM);
+        }
+
+        boolean isServerActive = helmet.hasTag() && helmet.getTag().getBoolean(ModConstants.TAG_ACTIVE);
+        if (isServerActive && hasZoom && ModKeyMappings.zoomKey.isDown()) {
+            if (delta > 0) {
+                targetZoomFactor = Math.min(8.0f, targetZoomFactor + 0.5f);
+            } else if (delta < 0) {
+                targetZoomFactor = Math.max(1.2f, targetZoomFactor - 0.5f);
+            }
+            mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 0.5f, 1.4f);
+            return true;
+        }
+        return false;
+    }
+
     public static void renderHUD(GuiGraphics g, float partialTicks) {
         if (!visorActive) return;
         
         // Delegar al nuevo sistema modular
         VisionHUDOverlay.render(g, partialTicks);
+
+        // Rangefinder telemetría táctica
+        renderRangefinder(g);
 
         // Renderizar Sonar Pulse (Legacy, pendiente de mover a módulo en v2.1.0)
         if (sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION) {
@@ -437,6 +496,64 @@ public class VisionRenderer {
             int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
             float progress = 1.0f - ((float)sonarPulseTimer / (float)SONAR_PULSE_DURATION);
             renderSonarPulse(g, width, height, progress);
+        }
+    }
+
+    private static void renderRangefinder(GuiGraphics g) {
+        if (currentZoomFactor <= 1.05f) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
+        int cx = screenW / 2;
+        int cy = screenH / 2;
+
+        double maxRange = 128.0;
+        net.minecraft.world.phys.HitResult hit = mc.player.pick(maxRange, 0.0f, false);
+        double distance = mc.player.getEyePosition().distanceTo(hit.getLocation());
+
+        net.minecraft.world.phys.Vec3 eye = mc.player.getEyePosition();
+        net.minecraft.world.phys.Vec3 view = mc.player.getViewVector(1.0f).scale(maxRange);
+        net.minecraft.world.phys.Vec3 end = eye.add(view);
+        net.minecraft.world.phys.AABB aabb = mc.player.getBoundingBox().expandTowards(view).inflate(1.0);
+        net.minecraft.world.phys.EntityHitResult entityHit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
+            mc.player, eye, end, aabb, e -> !e.isSpectator() && e.isPickable(), maxRange * maxRange
+        );
+
+        String targetName = "";
+        if (entityHit != null && entityHit.getEntity() != null) {
+            distance = eye.distanceTo(entityHit.getLocation());
+            targetName = entityHit.getEntity().getDisplayName().getString().toUpperCase();
+        }
+
+        int bracketSize = 16;
+        int bracketColor = 0xCC00FF88;
+
+        // Tactical reticle brackets
+        g.hLine(cx - bracketSize, cx - bracketSize + 5, cy - bracketSize, bracketColor);
+        g.vLine(cx - bracketSize, cy - bracketSize, cy - bracketSize + 5, bracketColor);
+
+        g.hLine(cx + bracketSize - 5, cx + bracketSize, cy - bracketSize, bracketColor);
+        g.vLine(cx + bracketSize, cy - bracketSize, cy - bracketSize + 5, bracketColor);
+
+        g.hLine(cx - bracketSize, cx - bracketSize + 5, cy + bracketSize, bracketColor);
+        g.vLine(cx - bracketSize, cy + bracketSize - 5, cy + bracketSize, bracketColor);
+
+        g.hLine(cx + bracketSize - 5, cx + bracketSize, cy + bracketSize, bracketColor);
+        g.vLine(cx + bracketSize, cy + bracketSize - 5, cy + bracketSize, bracketColor);
+
+        // Zoom and Range telemetry
+        String zoomStr = String.format(java.util.Locale.ROOT, "[ %.1fx ]", currentZoomFactor);
+        String distStr = (distance >= maxRange) ? "> 128m" : String.format(java.util.Locale.ROOT, "%.1fm", distance);
+
+        g.drawString(mc.font, zoomStr, cx - mc.font.width(zoomStr) / 2, cy - bracketSize - 11, bracketColor, true);
+        g.drawString(mc.font, distStr, cx - mc.font.width(distStr) / 2, cy + bracketSize + 4, 0xFFFFFFFF, true);
+
+        if (!targetName.isEmpty()) {
+            String tag = "< " + targetName + " >";
+            g.drawString(mc.font, tag, cx - mc.font.width(tag) / 2, cy + bracketSize + 14, 0xFFFF4444, true);
         }
     }
 

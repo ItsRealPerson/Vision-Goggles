@@ -13,3 +13,7 @@
 - **Dynamic Emissive Optical Lenses**: Goggle lenses in 3rd person only emit glowing phosphor light when active.
 - **Analog Power-Up Sequence**: Realistic 650ms phosphor overvoltage flash, micro-strobe blackout, and warm-up ramp in shaders upon activation.
 - **Tactical Audio Immersion**: Added heavy Wilcox mount mechanical clack sounds on toggle and balanced subtle cathode tube ambient hum.
+- **Continuous Smooth Zoom (1.0x - 8.0x)**: Holding the Zoom key (`V`) and scrolling the mouse wheel now smoothly scales optical magnification, overriding hotbar scrolling.
+- **Tactical Rangefinder Telemetry HUD**: Displays holographic targeting brackets, active zoom factor (`[ 4.0x ]`), target entity tags (`< ZOMBIE >`), and live block/meter distance calculations up to 128 blocks.
+- **Unified Key 'N' Tactical Radial Menu**: Holding 'N' (> 220ms) opens a 360-degree tactical dial for instant selection of vision modes (NVG, Thermal, Bio, Hydro), flashlight, battery recharge, and standby. Quick tap (< 220ms) retains instantaneous NVG toggle.
+- **Direct Mode Selection Network Packet**: `SelectVisionModePacket` synchronizes client radial dial selections cleanly with server-side NBT state.
