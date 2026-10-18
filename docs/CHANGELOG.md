@@ -17,3 +17,7 @@
 - **Tactical Rangefinder Telemetry HUD**: Displays holographic targeting brackets, active zoom factor (`[ 4.0x ]`), target entity tags (`< ZOMBIE >`), and live block/meter distance calculations up to 128 blocks.
 - **Unified Key 'N' Tactical Radial Menu**: Holding 'N' (> 220ms) opens a 360-degree tactical dial for instant selection of vision modes (NVG, Thermal, Bio, Hydro), flashlight, battery recharge, and standby. Quick tap (< 220ms) retains instantaneous NVG toggle.
 - **Direct Mode Selection Network Packet**: `SelectVisionModePacket` synchronizes client radial dial selections cleanly with server-side NBT state.
+- **Tactical Radial Menu Keyhold Fix**: Query physical GLFW key state directly to keep the radial dial open smoothly while 'N' is held, executing on release or click.
+- **Pure Optical Magnification**: Removed Rangefinder telemetry brackets and entity tracking from Zoom mode to maintain a clean optic view.
+- **Fixed Inactive Goggle Posing**: Restored native Blockbench visor alignment when powered off; optical lenses stay dark without unnatural deformation.
+- **Smooth Flashlight Beam & Extended Reach**: Replaced sparkling high-frequency hash noise with subtle smooth atmospheric haze (eliminating floating white static dots) and increased beam reach (Focused: 52m, Wide: 32m, Close: 18m).

@@ -32,38 +32,38 @@ void main() {
     float dist = distance(pos, center);
     
     // Parabolic Reflector Optical Geometry per Mode
-    // 0: FOCUSED (Searchlight / Spot)
-    float hotspotRadius = 0.06;
-    float spillRadius = 0.18;
-    float cutoffRadius = 0.26;
-    float hotspotPower = 0.35;
-    float spillPower = 0.04;
+    // 0: FOCUSED (Searchlight / Spot - High-power long thrower)
+    float hotspotRadius = 0.08;
+    float spillRadius = 0.30;
+    float cutoffRadius = 0.45;
+    float hotspotPower = 0.52;
+    float spillPower = 0.08;
     
     if (FlashlightMode > 1.5) {
-        // 2: CLOSE / FLOOD MODE (Wide wall of light)
-        hotspotRadius = 0.22;
-        spillRadius = 0.60;
-        cutoffRadius = 0.72;
-        hotspotPower = 0.14;
-        spillPower = 0.09;
+        // 2: CLOSE / FLOOD MODE (Wide room-clearing wall of light)
+        hotspotRadius = 0.26;
+        spillRadius = 0.70;
+        cutoffRadius = 0.88;
+        hotspotPower = 0.24;
+        spillPower = 0.18;
     } else if (FlashlightMode > 0.5) {
-        // 1: WIDE / BALANCED MODE (Medium range duty light)
-        hotspotRadius = 0.12;
-        spillRadius = 0.40;
-        cutoffRadius = 0.50;
-        hotspotPower = 0.21;
-        spillPower = 0.07;
+        // 1: WIDE / BALANCED MODE (Medium-long range duty light)
+        hotspotRadius = 0.15;
+        spillRadius = 0.50;
+        cutoffRadius = 0.68;
+        hotspotPower = 0.32;
+        spillPower = 0.12;
     }
 
     // DSP Mode: Precision Micro-Collimator enhancement
     if (u_DSPActive > 0.5) {
-        hotspotPower *= 1.25;
-        spillPower *= 1.15;
+        hotspotPower *= 1.30;
+        spillPower *= 1.20;
     }
     
     // 1. Hotspot: High-intensity emitter core with subtle orange-peel micro-fluting
     float hotspot = 1.0 - smoothstep(0.0, hotspotRadius, dist);
-    float emitterRings = sin(dist * 260.0) * 0.018 * hotspot;
+    float emitterRings = sin(dist * 260.0) * 0.015 * hotspot;
     hotspot = clamp(hotspot + emitterRings, 0.0, 1.0);
     
     // 2. Spill / Corona: Secondary reflector emission
@@ -76,16 +76,10 @@ void main() {
     // Chromatic separation at lens edge: warm interior, cool cyan/blue exterior rim
     vec3 fringeColor = mix(vec3(1.02, 0.97, 0.90), vec3(0.85, 0.96, 1.20), fringe);
     
-    // 4. Multi-Layer Atmospheric Volumetric Dust Motes & Air Scattering
-    // Strictly illuminated by beam photons only (zero static in dark void)
-    vec2 moteCoord1 = texCoord * 75.0 + vec2(time * 0.02, time * 0.01);
-    vec2 moteCoord2 = texCoord * 150.0 - vec2(time * 0.035, time * 0.015);
-    float dustSparkles = pow(hashNoise(moteCoord1, time * 0.05), 8.5) * 0.40;
-    float airTurbulence = (hashNoise(moteCoord2, time * 0.1) - 0.5) * 0.025;
-    
+    // 4. Smooth Atmospheric Forward Scattering (Clean, smooth light without harsh noise dots)
     float beamCore = (hotspot * hotspotPower + spill * spillPower) * cutoff;
-    float illuminatedDust = (dustSparkles + airTurbulence) * beamCore * 2.8;
-    float totalBeam = max(0.0, beamCore + illuminatedDust);
+    float airHaze = (sin(texCoord.x * 24.0 + time * 0.15) * cos(texCoord.y * 24.0 - time * 0.1) * 0.006) * beamCore;
+    float totalBeam = max(0.0, beamCore + airHaze);
     
     // 5. Ambient Back-Scatter (Soft indirect diffuse bounce)
     float ambientBounce = (1.0 - smoothstep(0.0, cutoffRadius * 1.3, dist)) * 0.012 * hotspotPower;

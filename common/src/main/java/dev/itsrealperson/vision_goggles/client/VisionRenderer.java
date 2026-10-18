@@ -85,6 +85,13 @@ public class VisionRenderer {
             damageFlickerTimer--;
         }
 
+        // Do not process in-game hotkeys if a screen is active
+        if (mc.screen instanceof dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen) {
+            nKeyHoldStart = 0L;
+            radialMenuOpened = false;
+            return;
+        }
+
         // 'N' Key: Quick tap (< 220ms) = Toggle on/off; Long press (> 220ms) = Tactical Radial Menu
         if (ModKeyMappings.toggleGrayscaleKey.isDown()) {
             if (nKeyHoldStart == 0L) {
@@ -487,73 +494,12 @@ public class VisionRenderer {
         // Delegar al nuevo sistema modular
         VisionHUDOverlay.render(g, partialTicks);
 
-        // Rangefinder telemetría táctica
-        renderRangefinder(g);
-
         // Renderizar Sonar Pulse (Legacy, pendiente de mover a módulo en v2.1.0)
         if (sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION) {
             int width = Minecraft.getInstance().getWindow().getGuiScaledWidth();
             int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
             float progress = 1.0f - ((float)sonarPulseTimer / (float)SONAR_PULSE_DURATION);
             renderSonarPulse(g, width, height, progress);
-        }
-    }
-
-    private static void renderRangefinder(GuiGraphics g) {
-        if (currentZoomFactor <= 1.05f) return;
-
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
-
-        int screenW = mc.getWindow().getGuiScaledWidth();
-        int screenH = mc.getWindow().getGuiScaledHeight();
-        int cx = screenW / 2;
-        int cy = screenH / 2;
-
-        double maxRange = 128.0;
-        net.minecraft.world.phys.HitResult hit = mc.player.pick(maxRange, 0.0f, false);
-        double distance = mc.player.getEyePosition().distanceTo(hit.getLocation());
-
-        net.minecraft.world.phys.Vec3 eye = mc.player.getEyePosition();
-        net.minecraft.world.phys.Vec3 view = mc.player.getViewVector(1.0f).scale(maxRange);
-        net.minecraft.world.phys.Vec3 end = eye.add(view);
-        net.minecraft.world.phys.AABB aabb = mc.player.getBoundingBox().expandTowards(view).inflate(1.0);
-        net.minecraft.world.phys.EntityHitResult entityHit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
-            mc.player, eye, end, aabb, e -> !e.isSpectator() && e.isPickable(), maxRange * maxRange
-        );
-
-        String targetName = "";
-        if (entityHit != null && entityHit.getEntity() != null) {
-            distance = eye.distanceTo(entityHit.getLocation());
-            targetName = entityHit.getEntity().getDisplayName().getString().toUpperCase();
-        }
-
-        int bracketSize = 16;
-        int bracketColor = 0xCC00FF88;
-
-        // Tactical reticle brackets
-        g.hLine(cx - bracketSize, cx - bracketSize + 5, cy - bracketSize, bracketColor);
-        g.vLine(cx - bracketSize, cy - bracketSize, cy - bracketSize + 5, bracketColor);
-
-        g.hLine(cx + bracketSize - 5, cx + bracketSize, cy - bracketSize, bracketColor);
-        g.vLine(cx + bracketSize, cy - bracketSize, cy - bracketSize + 5, bracketColor);
-
-        g.hLine(cx - bracketSize, cx - bracketSize + 5, cy + bracketSize, bracketColor);
-        g.vLine(cx - bracketSize, cy + bracketSize - 5, cy + bracketSize, bracketColor);
-
-        g.hLine(cx + bracketSize - 5, cx + bracketSize, cy + bracketSize, bracketColor);
-        g.vLine(cx + bracketSize, cy + bracketSize - 5, cy + bracketSize, bracketColor);
-
-        // Zoom and Range telemetry
-        String zoomStr = String.format(java.util.Locale.ROOT, "[ %.1fx ]", currentZoomFactor);
-        String distStr = (distance >= maxRange) ? "> 128m" : String.format(java.util.Locale.ROOT, "%.1fm", distance);
-
-        g.drawString(mc.font, zoomStr, cx - mc.font.width(zoomStr) / 2, cy - bracketSize - 11, bracketColor, true);
-        g.drawString(mc.font, distStr, cx - mc.font.width(distStr) / 2, cy + bracketSize + 4, 0xFFFFFFFF, true);
-
-        if (!targetName.isEmpty()) {
-            String tag = "< " + targetName + " >";
-            g.drawString(mc.font, tag, cx - mc.font.width(tag) / 2, cy + bracketSize + 14, 0xFFFF4444, true);
         }
     }
 
