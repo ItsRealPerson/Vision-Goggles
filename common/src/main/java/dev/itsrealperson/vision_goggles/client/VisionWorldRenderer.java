@@ -136,11 +136,6 @@ public class VisionWorldRenderer {
             hasSpawnSecurity = modular.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY);
         }
 
-        while (ModKeyMappings.toggleSpawnSecurityKey.consumeClick()) {
-            if (hasSpawnSecurity) {
-                toggleSpawnSecurity(mc);
-            }
-        }
 
         if (!isThermal && (!hasSpawnSecurity || !spawnSecurityEnabled)) return;
 

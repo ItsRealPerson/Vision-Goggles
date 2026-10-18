@@ -12,31 +12,10 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
-    public static final KeyMapping switchModeKey = new KeyMapping(
-            "key.vision_goggles.switch",
-            InputConstants.Type.KEYSYM,
-            InputConstants.KEY_M,
-            "key.categories.vision_goggles"
-    );
-
     public static final KeyMapping zoomKey = new KeyMapping(
             "key.vision_goggles.zoom",
             InputConstants.Type.KEYSYM,
             InputConstants.KEY_V,
-            "key.categories.vision_goggles"
-    );
-
-    public static final KeyMapping toggleSpawnSecurityKey = new KeyMapping(
-            "key.vision_goggles.toggle_spawn_security",
-            InputConstants.Type.KEYSYM,
-            InputConstants.KEY_O,
-            "key.categories.vision_goggles"
-    );
-
-    public static final KeyMapping switchSonarModeKey = new KeyMapping(
-            "key.vision_goggles.switch_sonar",
-            InputConstants.Type.KEYSYM,
-            InputConstants.KEY_P,
             "key.categories.vision_goggles"
     );
 
@@ -57,10 +36,7 @@ public class ModKeyMappings {
     public static void init() {
         try {
             KeyMappingRegistry.register(toggleGrayscaleKey);
-            KeyMappingRegistry.register(switchModeKey);
             KeyMappingRegistry.register(zoomKey);
-            KeyMappingRegistry.register(toggleSpawnSecurityKey);
-            KeyMappingRegistry.register(switchSonarModeKey);
             KeyMappingRegistry.register(toggleFlashlightKey);
             KeyMappingRegistry.register(cycleFlashlightModeKey);
         } catch (Exception e) {
