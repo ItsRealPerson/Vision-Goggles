@@ -82,14 +82,14 @@ public class VisionGoggleModel<T extends LivingEntity> extends HumanoidModel<T> 
                 .texOffs(76, 75).addBox(1.9625F, -0.7112F, -2.4819F, 2.0F, 2.0F, 5.0F, new CubeDeformation(-0.3F)),
                 PartPose.offsetAndRotation(0.0F, tY, tZ, 0.088F, -0.1304F, -0.0115F));
 
-        // Mounts
-        visor.addOrReplaceChild("mount_lower", CubeListBuilder.create()
+        // Mounts (Anchored to helmet shroud on head_bone)
+        head_bone.addOrReplaceChild("mount_lower", CubeListBuilder.create()
                 .texOffs(54, 58).addBox(-1.0F, -1.3472F, -3.4137F, 2.0F, 2.0F, 4.0F, new CubeDeformation(-0.6F)),
-                PartPose.offsetAndRotation(0.0F, -4.7342F, 1.9708F, 1.0036F, 0.0F, 0.0F));
+                PartPose.offsetAndRotation(0.0F, -7.0697F, -5.7386F, 1.0036F, 0.0F, 0.0F));
 
-        visor.addOrReplaceChild("mount_upper", CubeListBuilder.create()
+        head_bone.addOrReplaceChild("mount_upper", CubeListBuilder.create()
                 .texOffs(62, 49).addBox(-2.0F, -1.5F, -2.0F, 4.0F, 3.0F, 3.0F, new CubeDeformation(-0.6F)),
-                PartPose.offsetAndRotation(0.0F, -5.3645F, 2.7094F, 0.2618F, 0.0F, 0.0F));
+                PartPose.offsetAndRotation(0.0F, -7.7000F, -5.0000F, 0.2618F, 0.0F, 0.0F));
 
         return LayerDefinition.create(meshdefinition, 128, 128);
     }

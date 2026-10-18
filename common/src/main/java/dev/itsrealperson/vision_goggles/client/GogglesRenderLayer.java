@@ -96,14 +96,20 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
             }
         }
 
-        // Maintain pristine visor alignment (lenses toggle glow via RenderType.eyes when active)
+        // Dynamic Wilcox mount pose: Flipped down over eyes when active, flipped up onto helmet brow when inactive
         try {
             net.minecraft.client.model.geom.ModelPart visor = this.model.head_bone.getChild("visor");
-            visor.xRot = 0.0F;
             visor.yRot = 0.0F;
             visor.zRot = 0.0F;
-            visor.y = -2.3355F;
-            visor.z = -7.7094F;
+            if (isActive) {
+                visor.xRot = 0.0F;
+                visor.y = -2.3355F;
+                visor.z = -7.7094F;
+            } else {
+                visor.xRot = -1.10F; // ~ -63 degrees upward
+                visor.y = -3.5F;
+                visor.z = -6.2F;
+            }
         } catch (Exception ignored) {}
 
         ResourceLocation baseTex = NVG_TEXTURE;

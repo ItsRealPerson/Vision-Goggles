@@ -11,7 +11,9 @@ import dev.itsrealperson.vision_goggles.network.NetworkManager;
 import dev.itsrealperson.vision_goggles.network.SelectVisionModePacket;
 import dev.itsrealperson.vision_goggles.network.ToggleFlashlightPacket;
 import dev.itsrealperson.vision_goggles.registry.ModSounds;
+import dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Minecraft;
@@ -50,6 +52,16 @@ public class TacticalRadialScreen extends Screen {
         super(Component.literal("Menú Radial Táctico"));
     }
 
+    public static boolean hasFlashlightAvailable(net.minecraft.world.entity.player.Player player) {
+        if (player == null) return false;
+        if (!TacticalFlashlightItem.getAnyHeldFlashlight(player).isEmpty()) return true;
+        ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
+        if (!helmet.isEmpty() && helmet.getItem() instanceof ModularGogglesItem modular) {
+            return modular.getUtilityModules(helmet).contains(ModuleType.FLASHLIGHT);
+        }
+        return false;
+    }
+
     @Override
     protected void init() {
         super.init();
@@ -71,52 +83,52 @@ public class TacticalRadialScreen extends Screen {
             }
         }
 
-        boolean hasNVG = hasMode(modes, VisionMode.NIGHT_VISION);
-        boolean hasThermal = hasMode(modes, VisionMode.THERMAL);
-        boolean hasBio = hasMode(modes, VisionMode.BIOMETRIC);
-        boolean hasHydro = hasMode(modes, VisionMode.HYDRO);
-
-        // 0: NVG
-        options.add(new RadialOption("NVG", "Visión Nocturna", 0xFF00FF55, hasNVG, () -> {
-            NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.NIGHT_VISION.getId()));
-        }));
-
-        // 1: THERMAL
-        options.add(new RadialOption("THERMAL", "Visor Térmico", 0xFFFF5533, hasThermal, () -> {
-            NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.THERMAL.getId()));
-        }));
-
-        // 2: BIOMETRIC
-        options.add(new RadialOption("BIOMÉTRICO", "Radar Vital", 0xFFFFAA00, hasBio, () -> {
-            NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.BIOMETRIC.getId()));
-        }));
-
-        // 3: HYDRO
-        options.add(new RadialOption("HYDRO", "Visión Subacuática", 0xFF00CCFF, hasHydro, () -> {
-            NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.HYDRO.getId()));
-        }));
-
-        // 4: FLASHLIGHT
-        options.add(new RadialOption("LINTERNA", "Alternar Luz", 0xFFFFFF88, true, () -> {
-            NetworkManager.INSTANCE.sendToServer(new ToggleFlashlightPacket());
-        }));
-
-        // 5: RECARGA
-        options.add(new RadialOption("BATERÍA", "Recarga Rápida", 0xFF55FF55, true, () -> {
-            NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
-        }));
-
-        // 6: STANDBY / OFF
-        options.add(new RadialOption("STANDBY", "Apagar / Levantar", 0xFFAAAAAA, hasHelmet, () -> {
-            NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
-        }));
-    }
-
-    private boolean hasMode(List<VisionMode> modes, VisionMode target) {
+        // Add ONLY vision modes that are actually installed and supported
         for (VisionMode m : modes) {
-            if (m == target) return true;
+            if (m == VisionMode.NIGHT_VISION) {
+                options.add(new RadialOption("NVG", "Visión Nocturna", 0xFF00FF55, true, () -> {
+                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.NIGHT_VISION.getId()));
+                }));
+            } else if (m == VisionMode.THERMAL) {
+                options.add(new RadialOption("THERMAL", "Visor Térmico", 0xFFFF5533, true, () -> {
+                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.THERMAL.getId()));
+                }));
+            } else if (m == VisionMode.BIOMETRIC) {
+                options.add(new RadialOption("BIOMÉTRICO", "Radar Vital", 0xFFFFAA00, true, () -> {
+                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.BIOMETRIC.getId()));
+                }));
+            } else if (m == VisionMode.HYDRO) {
+                options.add(new RadialOption("HYDRO", "Visión Subacuática", 0xFF00CCFF, true, () -> {
+                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.HYDRO.getId()));
+                }));
+            }
         }
-        return false;
+
+        // STANDBY / OFF (Only when wearing goggles)
+        if (hasHelmet) {
+            options.add(new RadialOption("STANDBY", "Apagar / Levantar", 0xFFAAAAAA, true, () -> {
+                NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
+            }));
+        }
+
+        // FLASHLIGHT (Only when player actually has a flashlight or flashlight module)
+        if (hasFlashlightAvailable(mc.player)) {
+            options.add(new RadialOption("LINTERNA", "Alternar Luz", 0xFFFFFF88, true, () -> {
+                NetworkManager.INSTANCE.sendToServer(new ToggleFlashlightPacket());
+            }));
+        }
+
+        // RECARGA (When player has rechargeable goggles or flashlight)
+        boolean hasRechargeable = hasHelmet || hasFlashlightAvailable(mc.player);
+        if (hasRechargeable) {
+            options.add(new RadialOption("BATERÍA", "Recarga Rápida", 0xFF55FF55, true, () -> {
+                NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
+            }));
+        }
+
+        if (options.isEmpty()) {
+            options.add(new RadialOption("SIN EQUIPO", "No hay funciones disponibles", 0xFF888888, false, () -> {}));
+        }
     }
 
     @Override

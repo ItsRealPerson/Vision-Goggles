@@ -97,5 +97,6 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLinterna: §fHaz Focalizado",
   "message.vision_goggles.flashlight_mode.wide": "§eLinterna: §fHaz Amplio (Flood)",
   "message.vision_goggles.flashlight_mode.close": "§eLinterna: §fRáfaga Corta (Burst)",
-  "message.vision_goggles.fully_charged": "§e¡El dispositivo ya está completamente cargado!"
+  "message.vision_goggles.fully_charged": "§e¡El dispositivo ya está completamente cargado!",
+  "key.vision_goggles.recharge": "Recarga Rápida de Batería"
 }
