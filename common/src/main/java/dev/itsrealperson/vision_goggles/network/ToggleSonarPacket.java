@@ -31,7 +31,7 @@ public class ToggleSonarPacket {
                     nbt.putInt(ModConstants.TAG_SONAR_MODE, currentMode);
                     player.inventoryMenu.broadcastChanges();
                     
-                    String modeName = currentMode == 0 ? "Todos" : (currentMode == 1 ? "Jugadores" : "No-Muertos");
+                    Component modeName = Component.translatable("message.vision_goggles.sonar_filter." + (currentMode == 0 ? "all" : (currentMode == 1 ? "players" : "undead")));
                     player.displayClientMessage(Component.translatable("message.vision_goggles.sonar_mode", modeName), true);
                 }
             }

@@ -38,7 +38,7 @@ public class InstallationScriptItem extends Item {
     }
 
     public static String getScriptName(ItemStack stack) {
-        if (!hasScript(stack)) return "Script sin configurar";
+        if (!hasScript(stack)) return Component.translatable("item.vision_goggles.installation_script.unconfigured").getString();
         if (stack.getTag().contains(ModConstants.TAG_SCRIPT_NAME)) {
             return stack.getTag().getString(ModConstants.TAG_SCRIPT_NAME);
         }
@@ -58,12 +58,12 @@ public class InstallationScriptItem extends Item {
         if (hasScript(stack)) {
             String name = getScriptName(stack);
             String id = getScriptId(stack);
-            tooltipComponents.add(Component.literal("§6Firmware: §f" + name));
-            tooltipComponents.add(Component.literal("§7ID Script: §a" + id));
-            tooltipComponents.add(Component.literal("§8Combina con un Módulo Programable para grabarlo.").withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.script_firmware", name));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.script_id", id));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.script_combine").withStyle(ChatFormatting.DARK_GRAY));
         } else {
             tooltipComponents.add(Component.translatable("tooltip.vision_goggles.empty_script").withStyle(ChatFormatting.GRAY));
-            tooltipComponents.add(Component.literal("§8Usa /vg givescript <id> para configurar.").withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.script_give_help").withStyle(ChatFormatting.DARK_GRAY));
         }
         super.appendHoverText(stack, level, tooltipComponents, isAdvanced);
     }

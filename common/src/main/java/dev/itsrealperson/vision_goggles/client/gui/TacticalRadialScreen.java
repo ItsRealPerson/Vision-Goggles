@@ -69,7 +69,7 @@ public class TacticalRadialScreen extends Screen {
     private static final double GAP_RADIANS = Math.toRadians(3.0);
 
     public TacticalRadialScreen() {
-        super(Component.literal("Menú Radial Táctico"));
+        super(Component.translatable("gui.vision_goggles.radial.title"));
     }
 
     public static boolean hasFlashlightAvailable(net.minecraft.world.entity.player.Player player) {
@@ -106,22 +106,26 @@ public class TacticalRadialScreen extends Screen {
         // Modos de visión instalados
         for (VisionMode m : modes) {
             if (m == VisionMode.NIGHT_VISION) {
-                options.add(new RadialOption("NVG", "Visión Nocturna", 0xFF00FF55,
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.nvg").getString(),
+                        Component.translatable("gui.vision_goggles.radial.nvg.desc").getString(), 0xFF00FF55,
                         ModItems.NVG_MODULE.get().getDefaultInstance(), true, () -> {
                     NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.NIGHT_VISION.getId()));
                 }));
             } else if (m == VisionMode.THERMAL) {
-                options.add(new RadialOption("THERMAL", "Visor Térmico", 0xFFFF5533,
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.thermal").getString(),
+                        Component.translatable("gui.vision_goggles.radial.thermal.desc").getString(), 0xFFFF5533,
                         ModItems.THERMAL_MODULE.get().getDefaultInstance(), true, () -> {
                     NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.THERMAL.getId()));
                 }));
             } else if (m == VisionMode.BIOMETRIC) {
-                options.add(new RadialOption("BIOMÉTRICO", "Radar Vital", 0xFFFFAA00,
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.bio").getString(),
+                        Component.translatable("gui.vision_goggles.radial.bio.desc").getString(), 0xFFFFAA00,
                         ModItems.BIO_MODULE.get().getDefaultInstance(), true, () -> {
                     NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.BIOMETRIC.getId()));
                 }));
             } else if (m == VisionMode.HYDRO) {
-                options.add(new RadialOption("HYDRO", "Visión Acuática", 0xFF00CCFF,
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.hydro").getString(),
+                        Component.translatable("gui.vision_goggles.radial.hydro.desc").getString(), 0xFF00CCFF,
                         ModItems.HYDRO_MODULE.get().getDefaultInstance(), true, () -> {
                     NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.HYDRO.getId()));
                 }));
@@ -131,14 +135,16 @@ public class TacticalRadialScreen extends Screen {
         // Opciones de Gafas Equipadas
         if (hasHelmet) {
             // Se usa el ítem modular limpio de registro para evitar que el casco 3D se vea oscuro
-            options.add(new RadialOption("STANDBY", "Apagar / Levantar", 0xFFAAAAAA,
+            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.standby").getString(),
+                    Component.translatable("gui.vision_goggles.radial.standby.desc").getString(), 0xFFAAAAAA,
                     ModItems.MODULAR_GOGGLES.get().getDefaultInstance(), true, () -> {
                 NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
             }));
 
             if (goggles.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY)) {
                 boolean enabled = dev.itsrealperson.vision_goggles.client.VisionWorldRenderer.isSpawnSecurityEnabled();
-                options.add(new RadialOption("SEGURIDAD", enabled ? "Radar Spawn ON" : "Radar Spawn OFF", 0xFFFF9900,
+                String secDesc = Component.translatable(enabled ? "gui.vision_goggles.radial.security.on" : "gui.vision_goggles.radial.security.off").getString();
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.security").getString(), secDesc, 0xFFFF9900,
                         ModItems.SPAWN_SECURITY_MODULE.get().getDefaultInstance(), true, () -> {
                     dev.itsrealperson.vision_goggles.client.VisionWorldRenderer.toggleSpawnSecurity(mc);
                 }));
@@ -147,8 +153,8 @@ public class TacticalRadialScreen extends Screen {
             if (goggles.hasModule(helmet, ModConstants.ID_SONAR)) {
                 CompoundTag nbt = helmet.getTag();
                 int currentMode = (nbt != null && nbt.contains(ModConstants.TAG_SONAR_MODE)) ? nbt.getInt(ModConstants.TAG_SONAR_MODE) : 0;
-                String modeName = currentMode == 0 ? "Todos" : (currentMode == 1 ? "Jugadores" : "No-Muertos");
-                options.add(new RadialOption("SONAR", "Filtro: " + modeName, 0xFF00EEEE,
+                String modeDesc = Component.translatable("gui.vision_goggles.radial.sonar." + (currentMode == 0 ? "all" : (currentMode == 1 ? "players" : "undead"))).getString();
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.sonar").getString(), modeDesc, 0xFF00EEEE,
                         ModItems.SONAR_MODULE.get().getDefaultInstance(), true, () -> {
                     NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
                 }));
@@ -156,7 +162,8 @@ public class TacticalRadialScreen extends Screen {
 
             if (goggles.hasModule(helmet, ModConstants.ID_ZOOM)) {
                 boolean locked = dev.itsrealperson.vision_goggles.client.VisionRenderer.isZoomLocked();
-                options.add(new RadialOption("ZOOM", locked ? "Fijado ON" : "Aumento 2.5x", 0xFF55FFFF,
+                String zoomDesc = Component.translatable(locked ? "gui.vision_goggles.radial.zoom.locked" : "gui.vision_goggles.radial.zoom.desc").getString();
+                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.zoom").getString(), zoomDesc, 0xFF55FFFF,
                         ModItems.ZOOM_MODULE.get().getDefaultInstance(), true, () -> {
                     dev.itsrealperson.vision_goggles.client.VisionRenderer.toggleZoomLock(mc);
                 }));
@@ -165,7 +172,8 @@ public class TacticalRadialScreen extends Screen {
 
         // Linterna táctica (solo si está disponible)
         if (hasFlashlightAvailable(mc.player)) {
-            options.add(new RadialOption("LINTERNA", "Alternar Haz", 0xFFFFFF88,
+            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.flashlight").getString(),
+                    Component.translatable("gui.vision_goggles.radial.flashlight.desc").getString(), 0xFFFFFF88,
                     ModItems.TACTICAL_FLASHLIGHT.get().getDefaultInstance(), true, () -> {
                 NetworkManager.INSTANCE.sendToServer(new ToggleFlashlightPacket());
             }));
@@ -174,14 +182,16 @@ public class TacticalRadialScreen extends Screen {
         // Recarga rápida de batería
         boolean hasRechargeable = hasHelmet || hasFlashlightAvailable(mc.player);
         if (hasRechargeable) {
-            options.add(new RadialOption("BATERÍA", "Recarga Rápida", 0xFF55FF55,
+            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.battery").getString(),
+                    Component.translatable("gui.vision_goggles.radial.battery.desc").getString(), 0xFF55FF55,
                     ModItems.NVG_BATTERY.get().getDefaultInstance(), true, () -> {
                 NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
             }));
         }
 
         if (options.isEmpty()) {
-            options.add(new RadialOption("SIN EQUIPO", "Sin módulos disponibles", 0xFF888888,
+            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.no_gear").getString(),
+                    Component.translatable("gui.vision_goggles.radial.no_gear.desc").getString(), 0xFF888888,
                     ItemStack.EMPTY, false, () -> {}));
         }
     }
@@ -264,7 +274,7 @@ public class TacticalRadialScreen extends Screen {
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x66000000, 0x88000000);
 
         // 2. Encabezado de telemetría militar Alpha
-        guiGraphics.drawString(this.font, "§7[VG TACTICAL DIAL // §6BUILD 2.0.0-ALPHA§7]", 12, 12, 0xFFAAAAAA, false);
+        guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.radial.header").getString(), 12, 12, 0xFFAAAAAA, false);
 
         // 3. Detección polar de la rebanada bajo el ratón
         double dx = mouseX - cx;
@@ -436,7 +446,8 @@ public class TacticalRadialScreen extends Screen {
             guiGraphics.hLine((int) (cx - Math.max(titleW, subW) / 2 - 4), (int) (cx + Math.max(titleW, subW) / 2 + 4), (int) (cy + 13), sel.color);
         } else {
             guiGraphics.drawString(this.font, "VG-OS // v2.0-ALPHA", (int) (cx - this.font.width("VG-OS // v2.0-ALPHA") / 2.0f), (int) (cy - 10), 0xFF00EEEE, true);
-            guiGraphics.drawString(this.font, "SISTEMA LISTO", (int) (cx - this.font.width("SISTEMA LISTO") / 2.0f), (int) (cy + 2), 0xFF668899, false);
+            String readyText = Component.translatable("gui.vision_goggles.radial.ready").getString();
+            guiGraphics.drawString(this.font, readyText, (int) (cx - this.font.width(readyText) / 2.0f), (int) (cy + 2), 0xFF668899, false);
         }
     }
 

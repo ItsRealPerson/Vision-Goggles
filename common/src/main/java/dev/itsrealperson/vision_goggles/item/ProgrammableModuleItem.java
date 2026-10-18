@@ -28,7 +28,7 @@ public class ProgrammableModuleItem extends Item {
     }
 
     public static String getProgrammedName(ItemStack stack) {
-        if (!isProgrammed(stack)) return "Módulo Programable (Virgen)";
+        if (!isProgrammed(stack)) return Component.translatable("item.vision_goggles.programmable_module.blank").getString();
         if (stack.getTag().contains(ModConstants.TAG_SCRIPT_NAME)) {
             return stack.getTag().getString(ModConstants.TAG_SCRIPT_NAME);
         }
@@ -58,12 +58,12 @@ public class ProgrammableModuleItem extends Item {
         if (isProgrammed(stack)) {
             String name = getProgrammedName(stack);
             String id = getProgrammedId(stack);
-            tooltipComponents.add(Component.literal("§bMódulo Programado: §a" + name));
-            tooltipComponents.add(Component.literal("§7Firmware: §e" + id));
-            tooltipComponents.add(Component.literal("§8Instálalo en tus gafas en la Estación de Modificación.").withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.prog_programmed", name));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.prog_firmware", id));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.prog_install").withStyle(ChatFormatting.DARK_GRAY));
         } else {
-            tooltipComponents.add(Component.literal("§7Hardware virgen en blanco.").withStyle(ChatFormatting.GRAY));
-            tooltipComponents.add(Component.literal("§8Combina con un Script de Instalación para programarlo.").withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.prog_blank").withStyle(ChatFormatting.GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.vision_goggles.prog_burn_hint").withStyle(ChatFormatting.DARK_GRAY));
         }
         super.appendHoverText(stack, level, tooltipComponents, isAdvanced);
     }

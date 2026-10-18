@@ -9,6 +9,7 @@ import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.util.ModConfig;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
@@ -29,17 +30,19 @@ public class BatteryPacket {
             RechargeTargetInfo target = BatteryItem.resolveTarget(player);
             if (!target.canCharge()) {
                 if (target.type != TargetType.NONE) {
-                    String targetName = (target.type == TargetType.FLASHLIGHT) ? "Linterna Táctica" : "Gafas de Visión";
-                    player.displayClientMessage(net.minecraft.network.chat.Component.literal("§e[i] " + targetName + " ya está al 100%"), true);
+                    Component targetName = (target.type == TargetType.FLASHLIGHT)
+                            ? Component.translatable("item.vision_goggles.tactical_flashlight")
+                            : Component.translatable("item.vision_goggles.modular_goggles");
+                    player.displayClientMessage(Component.translatable("message.vision_goggles.target_full", targetName), true);
                 } else {
-                    player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[!] No tienes equipo recargable equipado"), true);
+                    player.displayClientMessage(Component.translatable("message.vision_goggles.no_rechargeable"), true);
                 }
                 return;
             }
 
             ItemStack batteryStack = findBattery(player);
             if (batteryStack.isEmpty()) {
-                player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[!] No tienes baterías en el inventario"), true);
+                player.displayClientMessage(Component.translatable("message.vision_goggles.no_batteries"), true);
                 player.level().playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.4f, 0.6f);
                 return;
             }
@@ -55,11 +58,13 @@ public class BatteryPacket {
                 target.stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, news);
             }
 
-            String targetName = (target.type == TargetType.FLASHLIGHT) ? "Linterna Táctica" : "Gafas de Visión";
+            Component targetName = (target.type == TargetType.FLASHLIGHT)
+                    ? Component.translatable("item.vision_goggles.tactical_flashlight")
+                    : Component.translatable("item.vision_goggles.modular_goggles");
             int pct = (int) Math.round((news / target.max) * 100.0);
             player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.8f, 1.3f);
             player.level().playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.6f, 1.4f);
-            player.displayClientMessage(net.minecraft.network.chat.Component.literal("§a[+] Batería Recargada: " + targetName + " (" + pct + "%)"), true);
+            player.displayClientMessage(Component.translatable("message.vision_goggles.recharged_named", targetName, pct), true);
             player.containerMenu.broadcastChanges();
         });
     }

@@ -39,7 +39,7 @@ public class VisionRenderer {
     public static void toggleZoomLock(Minecraft mc) {
         zoomLocked = !zoomLocked;
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("§b[Zoom]: §f" + (zoomLocked ? "§aFijado (2.5x)" : "§cDesactivado")), true);
+            mc.player.displayClientMessage(Component.translatable(zoomLocked ? "message.vision_goggles.zoom_locked" : "message.vision_goggles.zoom_unlocked"), true);
             mc.getSoundManager().play(SimpleSoundInstance.forUI(zoomLocked ? ModSounds.VISOR_ON.get() : ModSounds.VISOR_OFF.get(), 1.5F));
         }
     }
