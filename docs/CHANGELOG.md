@@ -70,7 +70,16 @@
   - **Lua Script Flashing & Firmware Installation Recipes**: Exposed the flashing pipeline in JEI: `InstallationScriptItem` + blank `ProgrammableModuleItem` $\rightarrow$ programmed module, plus installing the programmed script module into modular goggles.
   - **Interactive Recipe Click Area & Catalyst**: Registered `ModBlocks.MODIFICATION_STATION` as the official JEI category catalyst and bound the workbench GUI progress arrow (`x=98, y=36, 16x14`) in `ModificationStationScreen` so clicking it in-game instantly opens the JEI recipe catalog.
   - **Zero-Crash Optional Runtime (`modCompileOnly`)**: Wired with `mezz.jei:jei-1.20.1-*-api:15.20.0.106` across `common`, `forge`, and `fabric`. If a player launches without JEI installed, the mod runs with zero overhead and zero missing class exceptions.
-  - **12-Language Translations**: Synchronized localized description tooltips (`jei.vision_goggles.install_module`, `jei.vision_goggles.flash_firmware`, `jei.vision_goggles.install_script_module`) across all 12 supported languages.
+  - **Comprehensive Visual Redesign of 6 TEMS Intermediate Items (Vanilla+ 16x16)**:
+  - Completely redesigned all 6 physical manufacturing components to establish authentic tactical, mechanical, and electronic identity matching Minecraft vanilla aesthetics and Argon art standards:
+    - `optical_lens`: 12x12 centered circular collimator objective with threaded brass bezel (`#D4AF37`), sapphire anti-reflective glass, and diagonal specular shine.
+    - `tactical_frame`: Front-facing tactical goggle chassis with dual hollow hexagonal eye-ports, anatomical bridge, Wilcox brow mount, and ballistic straps with steel buckles.
+    - `flashlight_body`: Robust 4-5px thick cylindrical aluminum body with diamond knurling grip, steel pocket clip, threaded brass neck, and burgundy tactical tailcap switch.
+    - `tactical_processor`: 12x12 square DSP chip with dark slate ceramic package (`#2D333D`), gold Pin 1 index notch, nickel-plated IHS heat spreader, and cyan/cobalt silicon die matrix.
+    - `thermal_core`: Cryogenic FLIR microbolometer pod with hermetic gold casing, dual copper heat dissipation fins, germanium crimson lens, and incandescent focal core.
+    - `lifesign_sensor`: 12x14 biometric telemetry module with top bio-impedance contacts, coral red pulse LED, and high-contrast OLED screen showing an active ECG vital trace.
+  - Multi-loader compiled and cleanly packaged into production JARs for Forge (`vision-goggles-forge-2.0.0.jar`) and Fabric (`vision-goggles-fabric-2.0.0.jar`).
+
 
 
 
