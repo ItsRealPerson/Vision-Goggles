@@ -41,6 +41,9 @@ public class CycleFlashlightModePacket {
                         FlashlightMode next = FlashlightMode.byId(currentId).next();
                         goggles.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next.id);
 
+                        player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_MODE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 1.0f + next.id * 0.1f);
+                        player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.flashlight_mode." + next.name), true);
+
                         dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
                             player.serverLevel().players(),
                             new SyncFlashlightPacket(player.getId(), isOn, next.id)
@@ -55,8 +58,10 @@ public class CycleFlashlightModePacket {
                 if (!flashlight.isEmpty() && flashlight.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
                     int currentId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(flashlight);
                     int next = (currentId + 1) % 3;
+                    FlashlightMode nextMode = FlashlightMode.byId(next);
                     flashlight.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, next);
-                    player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.4f, 1.2f + next * 0.15f);
+                    player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_MODE.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 1.0f + next * 0.1f);
+                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.flashlight_mode." + nextMode.name), true);
                     cycled = true;
                 }
             }

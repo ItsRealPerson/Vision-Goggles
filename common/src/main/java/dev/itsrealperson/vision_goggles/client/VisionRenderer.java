@@ -133,12 +133,14 @@ public class VisionRenderer {
         while (ModKeyMappings.toggleFlashlightKey.consumeClick()) {
             if (dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
                 NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleFlashlightPacket());
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.FLASHLIGHT_SWITCH.get(), 1.0F));
             }
         }
         
         while (ModKeyMappings.cycleFlashlightModeKey.consumeClick()) {
             if (dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
                 NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.CycleFlashlightModePacket());
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.FLASHLIGHT_MODE.get(), 1.0F));
             }
         }
 

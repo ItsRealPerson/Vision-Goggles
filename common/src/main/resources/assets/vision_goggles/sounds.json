@@ -2,5 +2,7 @@
   "visor_on":  { "sounds": [ { "name": "vision_goggles:visor_on",  "stream": false } ] },
   "visor_off": { "sounds": [ { "name": "vision_goggles:visor_off", "stream": false } ] },
   "blip": { "sounds": [ { "name": "vision_goggles:blip", "stream": false } ] },
-  "sonar": { "sounds": [ { "name": "vision_goggles:sonar", "stream": false } ] }
+  "sonar": { "sounds": [ { "name": "vision_goggles:sonar", "stream": false } ] },
+  "flashlight_switch": { "sounds": [ { "name": "vision_goggles:flashlight_switch", "stream": false } ] },
+  "flashlight_mode": { "sounds": [ { "name": "vision_goggles:flashlight_mode", "stream": false } ] }
 }
