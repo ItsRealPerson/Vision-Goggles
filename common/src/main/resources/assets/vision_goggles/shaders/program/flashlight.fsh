@@ -40,15 +40,19 @@ void main() {
     float spillPower = 0.08;
     
     if (FlashlightMode > 2.5) {
-        // 3: STROBE MODE (Tactical 13Hz disorienting pulse)
-        hotspotRadius = 0.12;
-        spillRadius = 0.45;
-        cutoffRadius = 0.60;
-        hotspotPower = 0.65;
-        spillPower = 0.15;
-        float strobePulse = step(0.5, fract(time * 0.65));
-        hotspotPower *= strobePulse;
-        spillPower *= strobePulse;
+        // 3: STROBE MODE (Ergonomic Tactical CQB Strobe — 9.5 Hz with ambient base fill)
+        hotspotRadius = 0.14;
+        spillRadius = 0.48;
+        cutoffRadius = 0.64;
+        
+        // Base fill (35% continuous illumination) avoids total blackout / eye strain
+        // Over-voltage burst pulse (65% at ~9.5 Hz) for authentic tactical deterrence
+        float cycle = fract(time * 0.48);
+        float pulse = smoothstep(0.0, 0.12, cycle) * (1.0 - smoothstep(0.35, 0.75, cycle));
+        float strobeMultiplier = 0.35 + 0.65 * pulse;
+        
+        hotspotPower = 0.60 * strobeMultiplier;
+        spillPower = 0.16 * strobeMultiplier;
     } else if (FlashlightMode > 1.5) {
         // 2: CLOSE / FLOOD MODE (Wide room-clearing wall of light)
         hotspotRadius = 0.26;
