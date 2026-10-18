@@ -1,13 +1,14 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " E ",
     " C ",
+    "ACA",
     " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
-    "C": { "item": "minecraft:compass" }
+    "C": { "item": "minecraft:copper_ingot" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:environment_module" }
 }

@@ -1,13 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " E ",
     " D ",
+    "QGQ",
     " E "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
-    "D": { "item": "minecraft:daylight_detector" }
+    "D": { "item": "minecraft:daylight_detector" },
+    "Q": { "item": "minecraft:quartz" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "E": { "item": "vision_goggles:electrical_parts" }
   },
   "result": { "item": "vision_goggles:solar_module" }
 }

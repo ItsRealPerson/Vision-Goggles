@@ -2,14 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "pattern": [
     " R ",
-    "ECE",
+    "EQE",
     " G "
   ],
   "key": {
-    "E": { "item": "vision_goggles:electrical_parts" },
-    "C": { "item": "minecraft:copper_ingot" },
     "R": { "item": "minecraft:redstone" },
-    "G": { "item": "minecraft:gold_nugget" }
+    "E": { "item": "vision_goggles:electrical_parts" },
+    "Q": { "item": "minecraft:quartz" },
+    "G": { "item": "minecraft:gold_ingot" }
   },
   "result": { "item": "vision_goggles:programmable_module" }
 }
