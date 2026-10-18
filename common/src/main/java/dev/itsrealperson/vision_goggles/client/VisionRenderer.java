@@ -129,17 +129,6 @@ public class VisionRenderer {
         boolean hasSonar = hasHelmet && goggles.hasModule(helmet, ModConstants.ID_SONAR);
         boolean hasZoom = hasHelmet && goggles.hasModule(helmet, ModConstants.ID_ZOOM);
 
-        while (ModKeyMappings.switchModeKey.consumeClick()) {
-            if (hasHelmet) {
-                NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(true));
-            }
-        }
-
-        while (ModKeyMappings.switchSonarModeKey.consumeClick()) {
-            if (hasSonar) {
-                NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
-            }
-        }
         
         while (ModKeyMappings.toggleFlashlightKey.consumeClick()) {
             if (dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
