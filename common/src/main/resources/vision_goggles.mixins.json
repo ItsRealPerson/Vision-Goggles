@@ -12,6 +12,7 @@
     "client.MixinMinecraft",
     "client.MixinMouseHandler",
     "client.GameRendererAccessor",
+    "client.KeyMappingAccessor",
     "client.PostChainAccessor",
     "lighting.ShaderInstanceMixin",
     "sodium.SodiumChunkUniformMixin",

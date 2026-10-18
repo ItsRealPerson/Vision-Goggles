@@ -2,6 +2,7 @@ package dev.itsrealperson.vision_goggles.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.itsrealperson.vision_goggles.client.ModKeyMappings;
+import dev.itsrealperson.vision_goggles.mixin.client.KeyMappingAccessor;
 import dev.itsrealperson.vision_goggles.item.BatteryItem;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
@@ -123,13 +124,47 @@ public class TacticalRadialScreen extends Screen {
         return false;
     }
 
+    private int openTicks = 0;
+    private boolean executed = false;
+
+    private boolean isKeyPhysicallyDown() {
+        if (minecraft == null) return false;
+        long window = minecraft.getWindow().getWindow();
+        com.mojang.blaze3d.platform.InputConstants.Key key = ((KeyMappingAccessor) ModKeyMappings.toggleGrayscaleKey).vision_goggles$getKey();
+        if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
+            return com.mojang.blaze3d.platform.InputConstants.isKeyDown(window, key.getValue());
+        } else if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
+            return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, key.getValue()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        }
+        return false;
+    }
+
     @Override
     public void tick() {
         super.tick();
-        // If 'N' key is released, execute selection and close menu!
-        if (!ModKeyMappings.toggleGrayscaleKey.isDown()) {
+        openTicks++;
+        // When user releases the physical key after holding it, execute and close
+        if (openTicks > 3 && !isKeyPhysicallyDown()) {
             executeAndClose();
         }
+    }
+
+    @Override
+    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (ModKeyMappings.toggleGrayscaleKey.matches(keyCode, scanCode)) {
+            executeAndClose();
+            return true;
+        }
+        return super.keyReleased(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -142,6 +177,8 @@ public class TacticalRadialScreen extends Screen {
     }
 
     private void executeAndClose() {
+        if (executed) return;
+        executed = true;
         if (selectedIndex >= 0 && selectedIndex < options.size()) {
             RadialOption opt = options.get(selectedIndex);
             if (opt.enabled) {

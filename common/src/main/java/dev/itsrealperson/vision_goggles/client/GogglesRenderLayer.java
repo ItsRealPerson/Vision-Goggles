@@ -96,20 +96,14 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
             }
         }
 
-        // Mechanical flip-up / flip-down animation posing
+        // Maintain pristine visor alignment (lenses toggle glow via RenderType.eyes when active)
         try {
             net.minecraft.client.model.geom.ModelPart visor = this.model.head_bone.getChild("visor");
-            if (isActive) {
-                // Deployed over eyes
-                visor.xRot = 0.0F;
-                visor.y = -2.3355F;
-                visor.z = -7.7094F;
-            } else {
-                // Flipped up securely resting against the forehead / helmet
-                visor.xRot = -1.45F;
-                visor.y = -4.2F;
-                visor.z = -5.5F;
-            }
+            visor.xRot = 0.0F;
+            visor.yRot = 0.0F;
+            visor.zRot = 0.0F;
+            visor.y = -2.3355F;
+            visor.z = -7.7094F;
         } catch (Exception ignored) {}
 
         ResourceLocation baseTex = NVG_TEXTURE;
