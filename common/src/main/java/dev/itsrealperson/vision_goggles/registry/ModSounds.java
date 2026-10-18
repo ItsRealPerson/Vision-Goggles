@@ -22,6 +22,12 @@ public class ModSounds {
     public static final RegistrySupplier<SoundEvent> SONAR = SOUNDS.register("sonar",
             () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(Vision_goggles.MOD_ID, "sonar")));
 
+    public static final RegistrySupplier<SoundEvent> FLASHLIGHT_SWITCH = SOUNDS.register("flashlight_switch",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(Vision_goggles.MOD_ID, "flashlight_switch")));
+
+    public static final RegistrySupplier<SoundEvent> FLASHLIGHT_MODE = SOUNDS.register("flashlight_mode",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(Vision_goggles.MOD_ID, "flashlight_mode")));
+
     public static void register() {
         SOUNDS.register();
     }

@@ -32,15 +32,24 @@ public class ToggleFlashlightPacket {
             if (!helmet.isEmpty() && helmet.getItem() instanceof ModularGogglesItem modular) {
                 List<ModuleType> utils = modular.getUtilityModules(helmet);
                 if (utils.contains(ModuleType.FLASHLIGHT)) {
-                    boolean isActive = helmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
+                    float currentBattery = helmet.getOrCreateTag().contains(ModConstants.TAG_BATTERY) ? helmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY) : (float) modular.getBatteryCapacity(helmet);
+                    if (currentBattery <= 0) {
+                        player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.4f, 0.5f);
+                        player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.vision_goggles.low_battery").withStyle(net.minecraft.ChatFormatting.RED), true);
+                        return;
+                    }
+
+                    boolean wasActive = helmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
+                    boolean newActive = !wasActive;
                     int modeId = helmet.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
-                    helmet.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, !isActive);
-                    player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, isActive ? 0.8f : 1.2f);
-                    
+                    helmet.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, newActive);
+
+                    player.level().playSound(null, player.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_SWITCH.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.7f, newActive ? 1.0f : 0.85f);
+
                     // Sync the new state to all tracking clients (includes mode)
                     dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
                         player.serverLevel().players(),
-                        new SyncFlashlightPacket(player.getId(), !isActive, modeId)
+                        new SyncFlashlightPacket(player.getId(), newActive, modeId)
                     );
                     toggled = true;
                 }

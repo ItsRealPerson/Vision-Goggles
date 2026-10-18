@@ -45,8 +45,13 @@ public class SyncFlashlightPacket {
             if (entity instanceof Player targetPlayer) {
                 ItemStack goggles = PlatformMethods.getEquippedHelmet(targetPlayer);
                 if (!goggles.isEmpty()) {
+                    boolean wasActive = goggles.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
                     goggles.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, isActive);
                     goggles.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, modeId);
+
+                    if (targetPlayer != localPlayer && wasActive != isActive) {
+                        localPlayer.level().playSound(localPlayer, targetPlayer.blockPosition(), dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_SWITCH.get(), net.minecraft.sounds.SoundSource.PLAYERS, 0.7f, isActive ? 1.0f : 0.85f);
+                    }
                 }
             }
         });

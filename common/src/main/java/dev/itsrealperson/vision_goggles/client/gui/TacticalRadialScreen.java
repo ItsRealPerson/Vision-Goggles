@@ -176,6 +176,9 @@ public class TacticalRadialScreen extends Screen {
                     Component.translatable("gui.vision_goggles.radial.flashlight.desc").getString(), 0xFFFFFF88,
                     ModItems.TACTICAL_FLASHLIGHT.get().getDefaultInstance(), true, () -> {
                 NetworkManager.INSTANCE.sendToServer(new ToggleFlashlightPacket());
+                if (mc != null) {
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.FLASHLIGHT_SWITCH.get(), 1.0F));
+                }
             }));
         }
 

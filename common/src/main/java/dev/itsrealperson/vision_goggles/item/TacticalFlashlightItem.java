@@ -86,7 +86,7 @@ public class TacticalFlashlightItem extends Item {
             int currentMode = getMode(stack);
             int nextMode = (currentMode + 1) % 3;
             stack.getOrCreateTag().putInt(ModConstants.TAG_FLASHLIGHT_MODE, nextMode);
-            level.playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.4f, 1.2f + nextMode * 0.15f);
+            level.playSound(null, player.blockPosition(), ModSounds.FLASHLIGHT_MODE.get(), SoundSource.PLAYERS, 0.6f, 1.0f + nextMode * 0.1f);
 
             if (level.isClientSide) {
                 FlashlightMode fMode = FlashlightMode.byId(nextMode);
@@ -113,7 +113,7 @@ public class TacticalFlashlightItem extends Item {
 
         boolean active = !stack.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
         stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, active);
-        player.level().playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.5f, active ? 1.0f : 0.7f);
+        player.level().playSound(null, player.blockPosition(), ModSounds.FLASHLIGHT_SWITCH.get(), SoundSource.PLAYERS, 0.7f, active ? 1.0f : 0.85f);
     }
 
     @Override
