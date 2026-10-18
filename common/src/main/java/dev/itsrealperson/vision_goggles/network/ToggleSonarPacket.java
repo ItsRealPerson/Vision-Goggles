@@ -24,11 +24,12 @@ public class ToggleSonarPacket {
         context.queue(() -> {
             if (context.getPlayer() instanceof ServerPlayer player) {
                 ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-                if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
+                if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem vgItem && vgItem.hasModule(helmet, ModConstants.ID_SONAR)) {
                     CompoundTag nbt = helmet.getOrCreateTag();
                     int currentMode = nbt.getInt(ModConstants.TAG_SONAR_MODE); // 0=Todos, 1=Jugadores, 2=No-Muertos
                     currentMode = (currentMode + 1) % 3;
                     nbt.putInt(ModConstants.TAG_SONAR_MODE, currentMode);
+                    player.inventoryMenu.broadcastChanges();
                     
                     String modeName = currentMode == 0 ? "Todos" : (currentMode == 1 ? "Jugadores" : "No-Muertos");
                     player.displayClientMessage(Component.translatable("message.vision_goggles.sonar_mode", modeName), true);

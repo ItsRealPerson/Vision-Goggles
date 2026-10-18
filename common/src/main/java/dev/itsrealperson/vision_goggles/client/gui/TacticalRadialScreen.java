@@ -20,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -109,6 +110,30 @@ public class TacticalRadialScreen extends Screen {
             options.add(new RadialOption("STANDBY", "Apagar / Levantar", 0xFFAAAAAA, true, () -> {
                 NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
             }));
+
+            // Utility Modules: ONLY added if installed on the goggles!
+            if (goggles.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY)) {
+                boolean enabled = dev.itsrealperson.vision_goggles.client.VisionWorldRenderer.isSpawnSecurityEnabled();
+                options.add(new RadialOption("SEGURIDAD", enabled ? "Radar Spawn ON" : "Radar Spawn OFF", 0xFFFF9900, true, () -> {
+                    dev.itsrealperson.vision_goggles.client.VisionWorldRenderer.toggleSpawnSecurity(mc);
+                }));
+            }
+
+            if (goggles.hasModule(helmet, ModConstants.ID_SONAR)) {
+                CompoundTag nbt = helmet.getTag();
+                int currentMode = (nbt != null && nbt.contains(ModConstants.TAG_SONAR_MODE)) ? nbt.getInt(ModConstants.TAG_SONAR_MODE) : 0;
+                String modeName = currentMode == 0 ? "Todos" : (currentMode == 1 ? "Jugadores" : "No-Muertos");
+                options.add(new RadialOption("SONAR", "Filtro: " + modeName, 0xFF00EEEE, true, () -> {
+                    NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
+                }));
+            }
+
+            if (goggles.hasModule(helmet, ModConstants.ID_ZOOM)) {
+                boolean locked = dev.itsrealperson.vision_goggles.client.VisionRenderer.isZoomLocked();
+                options.add(new RadialOption("ZOOM", locked ? "Fijado ON" : "Aumento 2.5x", 0xFF55FFFF, true, () -> {
+                    dev.itsrealperson.vision_goggles.client.VisionRenderer.toggleZoomLock(mc);
+                }));
+            }
         }
 
         // FLASHLIGHT (Only when player actually has a flashlight or flashlight module)
@@ -238,12 +263,13 @@ public class TacticalRadialScreen extends Screen {
         }
 
         // Draw tactical circular brackets & slices
-        float radius = 78.0f;
+        float radius = count > 5 ? 86.0f : 78.0f;
         double sliceAngleRad = Math.toRadians(360.0 / count);
 
-        // Center hub circle
-        int hubColor = 0xAA0E1418;
-        guiGraphics.fill(centerX - 24, centerY - 24, centerX + 24, centerY + 24, hubColor);
+        // Center hub telemetry background
+        int hubHalfW = Math.max(30, (selectedIndex >= 0 ? this.font.width(options.get(selectedIndex).subtitle) / 2 + 8 : 30));
+        guiGraphics.fill(centerX - hubHalfW, centerY - 14, centerX + hubHalfW, centerY + 14, 0xDD0E1418);
+        guiGraphics.renderOutline(centerX - hubHalfW, centerY - 14, hubHalfW * 2, 28, 0x55335544);
 
         // Draw slices
         for (int i = 0; i < count; i++) {
@@ -255,7 +281,7 @@ public class TacticalRadialScreen extends Screen {
             int optX = (int) (centerX + Math.cos(centerAngle) * radius);
             int optY = (int) (centerY + Math.sin(centerAngle) * radius);
 
-            int btnW = 54;
+            int btnW = count > 6 ? 48 : 54;
             int btnH = 22;
             int x1 = optX - btnW / 2;
             int y1 = optY - btnH / 2;

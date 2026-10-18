@@ -30,6 +30,8 @@
 - **Fast Battery Recharge Overhaul**: Upgraded `BatteryPacket` to search the player's full inventory (main inventory, hotbar, and offhand) instead of only hand items. Added rich action bar feedback (`§a[+] Batería Recargada: ... (XX%)`, `§c[!] No tienes baterías`, `§e[i] Ya está al 100%`) with mechanical battery reload audio (`ARMOR_EQUIP_IRON` + `BLIP`). Registered key `B` (`rechargeKey`) in `ModKeyMappings` with full translation support across 12 languages.
 - **Flashlight Equipment Action Guard**: Added `hasFlashlightAvailable` checks in `VisionRenderer` and packets (`ToggleFlashlightPacket`, `CycleFlashlightModePacket`) to completely block audio, state toggles, and networking if the player does not have a flashlight equipped or held.
 - **Dynamic Wilcox Flip-Up Posing**: Anchored Wilcox mount pieces (`mount_lower`, `mount_upper`) to `head_bone` so the shroud stays permanently bolted to the helmet. Visor rotates up smoothly onto the helmet brow (`xRot = -1.10F` ~ -63°) with dark lenses when powered off, and flips down over the eyes with emissive glowing lenses when turned on.
-
-
-
+- **Dynamic Radial Menu Integration for Utility Modules**: Exposed `SPAWN_SECURITY` (Radar de Spawn), `SONAR` (Pulso Acústico), and `ZOOM` (Aumento Óptico) directly onto the Tactical Radial Menu (`N`). They only appear on the wheel if physically installed on the equipped goggles.
+- **Physical Key Guards & Telemetry**: Keys `O` (Spawn Security) and `P` (Sonar) now strictly verify whether the module is physically installed on the goggles before triggering client toggles or sending network packets, providing action bar feedback (`§6[Radar de Spawn]`, `message.vision_goggles.sonar_mode`) and tactile audio feedback (`VISOR_ON`/`VISOR_OFF`).
+- **Server-Side Sonar Packet Guard**: `ToggleSonarPacket` validates on the server that the helmet actually contains the Sonar module and forces `player.inventoryMenu.broadcastChanges()` for instantaneous client-side NBT state synchronization.
+- **Tactical Zoom Lock**: Added Zoom Lock toggle option in the radial menu (`2.5x` magnification) while preserving analog continuous scroll-zoom when holding `V`.
+- **Dynamic Radial Spacing & Framed Hub**: Enhanced `TacticalRadialScreen` with dynamic radius expansion (`86px` when options > 5) and adaptive center hub telemetry framing for seamless tactical readability.
