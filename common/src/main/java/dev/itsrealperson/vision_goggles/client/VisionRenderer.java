@@ -14,6 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 
@@ -33,6 +34,15 @@ public class VisionRenderer {
     private static boolean lastWasUnderwater = false;
 
     private static boolean zoomActive = false;
+    private static boolean zoomLocked = false;
+    public static boolean isZoomLocked() { return zoomLocked; }
+    public static void toggleZoomLock(Minecraft mc) {
+        zoomLocked = !zoomLocked;
+        if (mc.player != null) {
+            mc.player.displayClientMessage(Component.literal("§b[Zoom]: §f" + (zoomLocked ? "§aFijado (2.5x)" : "§cDesactivado")), true);
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(zoomLocked ? ModSounds.VISOR_ON.get() : ModSounds.VISOR_OFF.get(), 1.5F));
+        }
+    }
     private static float targetZoomFactor = 1.0f; // 1.0x to 8.0x
     private static float currentZoomFactor = 1.0f; // Smooth lerped magnification
     private static float currentZoom = 1.0f; // FOV multiplier = 1.0f / currentZoomFactor
@@ -113,12 +123,22 @@ public class VisionRenderer {
             }
         }
 
+        ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
+        boolean hasHelmet = !helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem;
+        VisionGogglesItem goggles = hasHelmet ? (VisionGogglesItem) helmet.getItem() : null;
+        boolean hasSonar = hasHelmet && goggles.hasModule(helmet, ModConstants.ID_SONAR);
+        boolean hasZoom = hasHelmet && goggles.hasModule(helmet, ModConstants.ID_ZOOM);
+
         while (ModKeyMappings.switchModeKey.consumeClick()) {
-            NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(true));
+            if (hasHelmet) {
+                NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(true));
+            }
         }
 
         while (ModKeyMappings.switchSonarModeKey.consumeClick()) {
-            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
+            if (hasSonar) {
+                NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
+            }
         }
         
         while (ModKeyMappings.toggleFlashlightKey.consumeClick()) {
@@ -134,17 +154,15 @@ public class VisionRenderer {
         }
 
         while (ModKeyMappings.rechargeKey.consumeClick()) {
-            NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.BatteryPacket());
+            if (hasHelmet || dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player)) {
+                NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.BatteryPacket());
+            }
         }
 
-        ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
-        boolean hasHelmet = !helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem;
-        
         if (hasHelmet) {
             CompoundTag nbt = helmet.getOrCreateTag();
             boolean isServerActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
             
-            VisionGogglesItem goggles = (VisionGogglesItem) helmet.getItem();
             int nbtModeId = nbt.contains(ModConstants.TAG_MODE) ? nbt.getInt(ModConstants.TAG_MODE) : -1;
             
             // If mode ID is invalid (-1) or not found, try to get default from goggles, 
@@ -173,15 +191,6 @@ public class VisionRenderer {
             visionModeActive = isServerActive && currentVisionMode != null;
             visorActive = isServerActive;
 
-            // Zoom & Utility Logic
-            boolean hasZoom = false;
-            boolean hasSonar = false;
-            if (goggles instanceof ModularGogglesItem modular) {
-                java.util.List<ModuleType> utils = modular.getUtilityModules(helmet);
-                hasZoom = utils.contains(ModuleType.ZOOM);
-                hasSonar = utils.contains(ModuleType.SONAR);
-            }
-
             // Shader Lifecycle Management
             boolean shaderNeeded = (currentVisionMode != null);
 
@@ -202,6 +211,7 @@ public class VisionRenderer {
                 } else {
                     grayscaleEnabled = false;
                     lastModeId = -1;
+                    zoomLocked = false;
                     VisionShaderManager.disableShader(mc);
                     mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
                     mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.85F));
@@ -259,10 +269,10 @@ public class VisionRenderer {
                 }
             }
 
-            if (isServerActive && hasZoom && ModKeyMappings.zoomKey.isDown()) {
+            if (isServerActive && hasZoom && (ModKeyMappings.zoomKey.isDown() || zoomLocked)) {
                 zoomActive = true;
                 if (targetZoomFactor < 1.2f) {
-                    targetZoomFactor = 2.0f; // Default starting magnification
+                    targetZoomFactor = 2.5f; // Default starting magnification
                 }
             } else {
                 zoomActive = false;
@@ -303,6 +313,9 @@ public class VisionRenderer {
             currentVisionMode = null;
             visionModeActive = false;
             visorActive = false;
+            zoomLocked = false;
+            zoomActive = false;
+            targetZoomFactor = 1.0f;
 
             ItemStack heldFlashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(mc.player);
             boolean isHandheldActive = !heldFlashlight.isEmpty();

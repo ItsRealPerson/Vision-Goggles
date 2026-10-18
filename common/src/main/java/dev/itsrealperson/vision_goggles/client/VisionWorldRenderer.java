@@ -29,6 +29,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
+import dev.itsrealperson.vision_goggles.registry.ModSounds;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
 
 public class VisionWorldRenderer {
     private static final ResourceLocation WHITE = new ResourceLocation("minecraft", "textures/misc/white.png");
@@ -36,6 +39,18 @@ public class VisionWorldRenderer {
     private static final List<BlockPos> SPAWN_BLOCKS = new ArrayList<>();
     private static int scanTick = 0;
     private static boolean spawnSecurityEnabled = true;
+
+    public static boolean isSpawnSecurityEnabled() {
+        return spawnSecurityEnabled;
+    }
+
+    public static void toggleSpawnSecurity(Minecraft mc) {
+        spawnSecurityEnabled = !spawnSecurityEnabled;
+        if (mc.player != null) {
+            mc.player.displayClientMessage(Component.literal("§6[Radar de Spawn]: §f" + (spawnSecurityEnabled ? "§aActivado" : "§cDesactivado")), true);
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(spawnSecurityEnabled ? ModSounds.VISOR_ON.get() : ModSounds.VISOR_OFF.get(), 1.4F));
+        }
+    }
 
     private static final List<DebugBox> debugBoxes = new ArrayList<>();
 
@@ -123,7 +138,7 @@ public class VisionWorldRenderer {
 
         while (ModKeyMappings.toggleSpawnSecurityKey.consumeClick()) {
             if (hasSpawnSecurity) {
-                spawnSecurityEnabled = !spawnSecurityEnabled;
+                toggleSpawnSecurity(mc);
             }
         }
 
