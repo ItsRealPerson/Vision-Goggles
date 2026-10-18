@@ -90,7 +90,7 @@ public class TacticalFlashlightItem extends Item {
 
             if (level.isClientSide) {
                 FlashlightMode fMode = FlashlightMode.byId(nextMode);
-                player.displayClientMessage(Component.translatable("message.vision_goggles.flashlight_mode", fMode.name()).withStyle(ChatFormatting.GOLD), true);
+                player.displayClientMessage(Component.translatable("message.vision_goggles.flashlight_mode." + fMode.name), true);
             }
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
         } else {
@@ -165,10 +165,11 @@ public class TacticalFlashlightItem extends Item {
         tooltipComponents.add(Component.translatable("tooltip.vision_goggles.state",
                 active ? Component.translatable("tooltip.vision_goggles.active").withStyle(ChatFormatting.GREEN)
                         : Component.translatable("tooltip.vision_goggles.inactive").withStyle(ChatFormatting.RED)));
-        tooltipComponents.add(Component.literal("Modo: " + mode.name()).withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.literal(String.format("Batería: %.1f%%", pct)).withStyle(ChatFormatting.YELLOW));
+        Component modeName = Component.translatable("message.vision_goggles.flashlight_mode." + mode.name);
+        tooltipComponents.add(Component.translatable("tooltip.vision_goggles.flashlight.mode", modeName).withStyle(ChatFormatting.GRAY));
+        tooltipComponents.add(Component.translatable("tooltip.vision_goggles.flashlight.battery", String.format("%.1f", pct)).withStyle(ChatFormatting.YELLOW));
         tooltipComponents.add(Component.literal(""));
-        tooltipComponents.add(Component.literal("Click derecho: Encender / Apagar").withStyle(ChatFormatting.DARK_GRAY));
-        tooltipComponents.add(Component.literal("Shift + Click derecho: Cambiar haz").withStyle(ChatFormatting.DARK_GRAY));
+        tooltipComponents.add(Component.translatable("tooltip.vision_goggles.flashlight.controls_toggle").withStyle(ChatFormatting.DARK_GRAY));
+        tooltipComponents.add(Component.translatable("tooltip.vision_goggles.flashlight.controls_cycle").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

@@ -47,7 +47,7 @@ public class VisionWorldRenderer {
     public static void toggleSpawnSecurity(Minecraft mc) {
         spawnSecurityEnabled = !spawnSecurityEnabled;
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("§6[Radar de Spawn]: §f" + (spawnSecurityEnabled ? "§aActivado" : "§cDesactivado")), true);
+            mc.player.displayClientMessage(Component.translatable(spawnSecurityEnabled ? "message.vision_goggles.spawn_security_on" : "message.vision_goggles.spawn_security_off"), true);
             mc.getSoundManager().play(SimpleSoundInstance.forUI(spawnSecurityEnabled ? ModSounds.VISOR_ON.get() : ModSounds.VISOR_OFF.get(), 1.4F));
         }
     }

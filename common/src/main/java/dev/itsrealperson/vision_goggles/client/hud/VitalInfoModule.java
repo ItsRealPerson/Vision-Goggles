@@ -92,7 +92,7 @@ public class VitalInfoModule implements IHudModule {
         if (goggles.isDamageableItem()) {
             float damagePct = (float) goggles.getDamageValue() / goggles.getMaxDamage();
             if (damagePct > 0.85f) { // Alerta al superar el 85% de daño
-                String warn = "!!! GOGGLES DAMAGE CRITICAL !!!";
+                String warn = Component.translatable("hud.vision_goggles.damage_critical").getString();
                 int x = (width / 2) - (mc.font.width(warn) / 2);
                 gui.drawString(mc.font, warn, x, 40, 0xFFFF0000, true);
             }

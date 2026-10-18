@@ -282,7 +282,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
             for (String customId : customModules) {
                 String name = tag != null && tag.contains("mod_name_" + customId) ? tag.getString("mod_name_" + customId) : customId;
                 if (ModConstants.ID_PROGRAMMABLE.equals(customId)) {
-                    name = "Módulo Programable (Virgen)";
+                    name = Component.translatable("item.vision_goggles.programmable_module.blank").getString();
                 }
                 tooltipComponents.add(Component.literal("- " + name).withStyle(ChatFormatting.GREEN));
             }
