@@ -63,6 +63,11 @@ public enum ModuleType {
                 if (current > 0) {
                     stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, Math.max(0, current - drain));
                 }
+
+                int modeId = stack.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                if (modeId == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
+                    FlashlightDeterrence.apply(player.serverLevel(), player, 24.0);
+                }
             }
         }
     };

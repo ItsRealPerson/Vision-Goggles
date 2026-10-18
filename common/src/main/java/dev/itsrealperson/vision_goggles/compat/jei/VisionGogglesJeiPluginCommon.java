@@ -115,6 +115,53 @@ public class VisionGogglesJeiPluginCommon {
             }
         }
 
+        // 4. Tactical Repair in Modification Station (no XP cost)
+        List<ItemStack> allGoggles = List.of(
+            new ItemStack(ModItems.NIGHT_VISION_GOGGLES.get()),
+            new ItemStack(ModItems.THERMAL_GOGGLES.get()),
+            new ItemStack(ModItems.HYDRO_GOGGLES.get()),
+            new ItemStack(ModItems.BIOMETRIC_GOGGLES.get()),
+            new ItemStack(ModItems.MODULAR_GOGGLES.get()),
+            new ItemStack(ModItems.PRO_MODULAR_GOGGLES.get())
+        );
+
+        for (ItemStack g : allGoggles) {
+            ItemStack damaged = g.copy();
+            damaged.setDamageValue((int)(damaged.getMaxDamage() * 0.75f));
+            ItemStack repairedFull = g.copy();
+            repairedFull.setDamageValue(0);
+
+            recipes.add(new ModificationStationJeiRecipe(
+                List.of(damaged),
+                List.of(new ItemStack(ModItems.TACTICAL_FRAME.get())),
+                repairedFull,
+                Component.translatable("jei.vision_goggles.overhaul_repair")
+            ));
+
+            ItemStack repairedPartial = g.copy();
+            repairedPartial.setDamageValue((int)(damaged.getMaxDamage() * 0.40f));
+            recipes.add(new ModificationStationJeiRecipe(
+                List.of(damaged),
+                List.of(new ItemStack(ModItems.ELECTRICAL_PARTS.get())),
+                repairedPartial,
+                Component.translatable("jei.vision_goggles.maintenance_repair")
+            ));
+        }
+
+        // 5. Module Extraction in Modification Station (Empty Slot 1 extracts module)
+        for (ModuleEntry mod : modules) {
+            ItemStack gWithMod = new ItemStack(ModItems.MODULAR_GOGGLES.get());
+            if (gWithMod.getItem() instanceof ModularGogglesItem modular) {
+                modular.installModule(gWithMod, mod.id());
+                recipes.add(new ModificationStationJeiRecipe(
+                    List.of(gWithMod),
+                    List.of(ItemStack.EMPTY),
+                    new ItemStack(mod.item()),
+                    Component.translatable("jei.vision_goggles.extract_module")
+                ));
+            }
+        }
+
         return recipes;
     }
 

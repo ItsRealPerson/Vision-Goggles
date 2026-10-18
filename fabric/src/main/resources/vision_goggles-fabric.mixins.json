@@ -6,7 +6,6 @@
   "mixins": [
   ],
   "client": [
-    "client.MixinFogRenderer"
   ],
   "injectors": {
     "defaultRequire": 1

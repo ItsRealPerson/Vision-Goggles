@@ -14,6 +14,7 @@
     "client.GameRendererAccessor",
     "client.KeyMappingAccessor",
     "client.PostChainAccessor",
+    "client.MixinFogRenderer",
     "lighting.ShaderInstanceMixin",
     "sodium.SodiumChunkUniformMixin",
     "sodium.SodiumShaderParserMixin"

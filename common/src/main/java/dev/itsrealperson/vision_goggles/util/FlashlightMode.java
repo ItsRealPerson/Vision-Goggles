@@ -25,7 +25,14 @@ public enum FlashlightMode {
             0.42f, 0.68f, // coneInner, coneOuter (very wide)
             18.0f,        // range (blocks)
             3.0f,         // brighter but short
-            0.45, 0.6f);  // very wide glare, low intensity at distance
+            0.45, 0.6f),  // very wide glare, low intensity at distance
+
+    // Tactical Strobe mode — 13 Hz disorienting rapid flash, high deterrence against hostiles
+    STROBE(3, "strobe",
+            0.78f, 0.90f, // coneInner, coneOuter (medium-tight focused burst)
+            30.0f,        // range (blocks)
+            3.6f,         // high peak lum
+            0.75, 2.8f);  // disorienting glare pulse
 
     public final int id;
     public final String name;
