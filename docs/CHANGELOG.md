@@ -24,4 +24,6 @@
 - **Chunk Viewer Module Removal**: Removed `chunk_viewer_module` completely from registries (`ModItems`, `ModTabs`), GUI slot filters (`ModificationStationBlockEntity`), world renderer (`VisionWorldRenderer`), recipes, and 12 language files. This eliminates the purple/black checkerboard missing texture in the creative menu.
 - **Item Sprite Centering**: Horizontally centered all 13 module sprites (`_v2.png`), battery item sprites, and tactical flashlight sprites in their 16x16 frames (shifting them +1px to +4px to balance left and right transparent padding).
 - **Argon Art Direction & 16x16 Texture Prototypes**: Consulted Gemini 4 Argon (`gemini-4-argon-high`) for a comprehensive pixel art overhaul. Generated 16 centered prototype textures in `docs/prototipos_texturas/` (12px visible width, exactly 2px left/right margin) for user review without modifying `installation_script` or `modification_station`.
+- **Argon Texture Suite Deployment**: Applied the 16x16 centered Argon prototype textures across all 13 module items (updating both `_v2.png` and base textures), `batteries_v2.png`, `batteries.png`, and `electrical_parts.png`. Preserved the 32x32 Blockbench UV layout for `tactical_flashlight.png` and left `installation_script` and `modification_station` untouched. Recompiled and packaged new JARs for Forge and Fabric.
+
 
