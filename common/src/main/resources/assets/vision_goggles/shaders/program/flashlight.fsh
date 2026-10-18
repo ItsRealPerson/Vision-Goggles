@@ -39,7 +39,17 @@ void main() {
     float hotspotPower = 0.52;
     float spillPower = 0.08;
     
-    if (FlashlightMode > 1.5) {
+    if (FlashlightMode > 2.5) {
+        // 3: STROBE MODE (Tactical 13Hz disorienting pulse)
+        hotspotRadius = 0.12;
+        spillRadius = 0.45;
+        cutoffRadius = 0.60;
+        hotspotPower = 0.65;
+        spillPower = 0.15;
+        float strobePulse = step(0.5, fract(time * 0.65));
+        hotspotPower *= strobePulse;
+        spillPower *= strobePulse;
+    } else if (FlashlightMode > 1.5) {
         // 2: CLOSE / FLOOD MODE (Wide room-clearing wall of light)
         hotspotRadius = 0.26;
         spillRadius = 0.70;

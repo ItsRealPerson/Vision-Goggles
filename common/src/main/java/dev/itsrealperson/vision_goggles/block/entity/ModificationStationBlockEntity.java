@@ -63,8 +63,24 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         ItemStack slot1 = this.items.get(1);
         ItemStack outputStack = this.items.get(2);
 
-        // Reset output if inputs are invalid
-        if (slot0.isEmpty() || slot1.isEmpty()) {
+        // Reset output if slot 0 is completely empty
+        if (slot0.isEmpty()) {
+            if (!outputStack.isEmpty()) {
+                this.items.set(2, ItemStack.EMPTY);
+            }
+            return;
+        }
+
+        // SCENARIO 0: Module Extraction / Dismantling (Goggles in Slot 0, Slot 1 is empty)
+        if (slot1.isEmpty()) {
+            if (slot0.getItem() instanceof ModularGogglesItem modular) {
+                String lastMod = modular.getLastInstalledModule(slot0);
+                if (lastMod != null) {
+                    ItemStack extracted = ModularGogglesItem.createModuleItemFromId(lastMod, slot0.getTag());
+                    this.items.set(2, extracted);
+                    return;
+                }
+            }
             if (!outputStack.isEmpty()) {
                 this.items.set(2, ItemStack.EMPTY);
             }
@@ -74,7 +90,33 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         // Only process if output is empty
         if (!outputStack.isEmpty()) return;
 
-        // SCENARIO 1: Flashing / Programming a Programmable Module (works in either slot!)
+        // SCENARIO 1: Tactical Durability Repair (Goggles + Tactical Frame or Electrical Parts)
+        ItemStack repairGoggles = ItemStack.EMPTY;
+        ItemStack repairMaterial = ItemStack.EMPTY;
+        if (slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
+            repairGoggles = slot0;
+            repairMaterial = slot1;
+        } else if (slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
+            repairGoggles = slot1;
+            repairMaterial = slot0;
+        }
+
+        if (!repairGoggles.isEmpty() && repairGoggles.isDamaged()) {
+            if (repairMaterial.getItem() == dev.itsrealperson.vision_goggles.registry.ModItems.TACTICAL_FRAME.get()) {
+                ItemStack repaired = repairGoggles.copy();
+                repaired.setDamageValue(0);
+                this.items.set(2, repaired);
+                return;
+            } else if (repairMaterial.getItem() == dev.itsrealperson.vision_goggles.registry.ModItems.ELECTRICAL_PARTS.get()) {
+                ItemStack repaired = repairGoggles.copy();
+                int repairAmt = Math.max(1, (int)(repaired.getMaxDamage() * 0.35f));
+                repaired.setDamageValue(Math.max(0, repaired.getDamageValue() - repairAmt));
+                this.items.set(2, repaired);
+                return;
+            }
+        }
+
+        // SCENARIO 2: Flashing / Programming a Programmable Module (works in either slot!)
         ItemStack chip = ItemStack.EMPTY;
         ItemStack script = ItemStack.EMPTY;
         if (slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem && 
@@ -97,7 +139,7 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             return;
         }
 
-        // SCENARIO 2: Installing Module into Modular Goggles (works in either slot!)
+        // SCENARIO 3: Installing Module into Modular Goggles (works in either slot!)
         ItemStack gogglesStack = ItemStack.EMPTY;
         ItemStack moduleStack = ItemStack.EMPTY;
 
@@ -211,11 +253,21 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         if (!result.isEmpty()) {
             // If the output was taken, consume inputs
             if (slot == 2) {
-                if (!(this.items.get(0).getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
-                    this.items.get(0).shrink(1);
-                }
-                if (!(this.items.get(1).getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
-                    this.items.get(1).shrink(1);
+                ItemStack slot0 = this.items.get(0);
+                ItemStack slot1 = this.items.get(1);
+                // Extracción de módulo: slot 1 vacío, remover módulo de las gafas en slot 0 sin destruir las gafas
+                if (slot1.isEmpty() && slot0.getItem() instanceof ModularGogglesItem modular) {
+                    String lastMod = modular.getLastInstalledModule(slot0);
+                    if (lastMod != null) {
+                        modular.removeModule(slot0, lastMod);
+                    }
+                } else {
+                    if (!(slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
+                        slot0.shrink(1);
+                    }
+                    if (!(slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.InstallationScriptItem)) {
+                        slot1.shrink(1);
+                    }
                 }
             }
             this.setChanged();

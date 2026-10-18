@@ -238,6 +238,76 @@ public class ModularGogglesItem extends VisionGogglesItem {
         nbt.put(ModConstants.TAG_MODULES, modules);
     }
 
+    public boolean removeModule(ItemStack stack, String moduleId) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            for (int i = 0; i < modules.size(); i++) {
+                if (modules.getString(i).equalsIgnoreCase(moduleId)) {
+                    modules.remove(i);
+                    tag.remove("mod_name_" + moduleId);
+                    tag.remove("mod_color_" + moduleId);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public String getLastInstalledModule(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            if (!modules.isEmpty()) {
+                return modules.getString(modules.size() - 1);
+            }
+        }
+        return null;
+    }
+
+    public static ItemStack createModuleItemFromId(String moduleId, @Nullable CompoundTag gogglesTag) {
+        if (moduleId == null || moduleId.isEmpty()) return ItemStack.EMPTY;
+
+        // 1. Vision Modes
+        VisionMode mode = VisionMode.byLocation(moduleId);
+        if (mode != null) {
+            net.minecraft.world.item.Item item = switch (mode) {
+                case NIGHT_VISION -> dev.itsrealperson.vision_goggles.registry.ModItems.NVG_MODULE.get();
+                case THERMAL -> dev.itsrealperson.vision_goggles.registry.ModItems.THERMAL_MODULE.get();
+                case HYDRO -> dev.itsrealperson.vision_goggles.registry.ModItems.HYDRO_MODULE.get();
+                case BIOMETRIC -> dev.itsrealperson.vision_goggles.registry.ModItems.BIO_MODULE.get();
+            };
+            return new ItemStack(item);
+        }
+
+        // 2. Utility Modules
+        ModuleType util = ModuleType.byId(moduleId);
+        if (util != null) {
+            net.minecraft.world.item.Item item = switch (util) {
+                case BATTERY_EXPANSION -> dev.itsrealperson.vision_goggles.registry.ModItems.BATTERY_EXPANSION_MODULE.get();
+                case ZOOM -> dev.itsrealperson.vision_goggles.registry.ModItems.ZOOM_MODULE.get();
+                case SOLAR -> dev.itsrealperson.vision_goggles.registry.ModItems.SOLAR_MODULE.get();
+                case SONAR -> dev.itsrealperson.vision_goggles.registry.ModItems.SONAR_MODULE.get();
+                case VITAL_INFO -> dev.itsrealperson.vision_goggles.registry.ModItems.VITAL_INFO_MODULE.get();
+                case ENVIRONMENT -> dev.itsrealperson.vision_goggles.registry.ModItems.ENVIRONMENT_MODULE.get();
+                case SPAWN_SECURITY -> dev.itsrealperson.vision_goggles.registry.ModItems.SPAWN_SECURITY_MODULE.get();
+                case FLASHLIGHT -> dev.itsrealperson.vision_goggles.registry.ModItems.FLASHLIGHT_MODULE.get();
+            };
+            return new ItemStack(item);
+        }
+
+        // 3. Programmable blank / generic
+        if (ModConstants.ID_PROGRAMMABLE.equalsIgnoreCase(moduleId)) {
+            return new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.PROGRAMMABLE_MODULE.get());
+        }
+
+        // 4. Custom Lua script module
+        ItemStack prog = new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.PROGRAMMABLE_MODULE.get());
+        String name = gogglesTag != null ? gogglesTag.getString("mod_name_" + moduleId) : null;
+        String color = gogglesTag != null ? gogglesTag.getString("mod_color_" + moduleId) : null;
+        return dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem.createProgrammed(prog, moduleId, name, color);
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
         // Battery Info

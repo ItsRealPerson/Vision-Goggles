@@ -131,6 +131,8 @@ public class TacticalFlashlightItem extends Item {
                     if (next <= 0) {
                         stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
                         level.playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.4f, 0.5f);
+                    } else if (getMode(stack) == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
+                        dev.itsrealperson.vision_goggles.util.FlashlightDeterrence.apply(level, player, 24.0);
                     }
                 }
             }

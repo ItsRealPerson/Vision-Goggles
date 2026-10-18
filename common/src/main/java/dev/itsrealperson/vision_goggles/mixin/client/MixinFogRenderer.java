@@ -1,4 +1,4 @@
-package dev.itsrealperson.vision_goggles.fabric.mixin.client;
+package dev.itsrealperson.vision_goggles.mixin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;

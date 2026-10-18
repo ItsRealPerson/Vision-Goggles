@@ -83,6 +83,9 @@ public class VisionRenderer {
         dev.architectury.event.events.common.EntityEvent.LIVING_HURT.register((entity, source, amount) -> {
             if (entity.level().isClientSide && entity == Minecraft.getInstance().player && visorActive) {
                 damageFlickerTimer = 10; 
+                if (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION) || source.is(net.minecraft.tags.DamageTypeTags.IS_LIGHTNING)) {
+                    VisionShaderManager.triggerFlash(1.8f);
+                }
             }
             return EventResult.pass();
         });

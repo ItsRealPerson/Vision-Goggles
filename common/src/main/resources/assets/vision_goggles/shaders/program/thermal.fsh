@@ -101,6 +101,7 @@ void main() {
     
     // Detect Living Entities (Tinted entity mask or high cyan/green relative to red)
     float cyanBias = min(baseColor.g, baseColor.b) - baseColor.r;
+    float coldSignal = 0.0;
 
     if (cyanBias > 0.5 && baseColor.r < 0.6) {
         heatSignal = 1.0;
@@ -109,19 +110,25 @@ void main() {
     else if (baseColor.r > 0.85 && baseColor.g > 0.85 && baseColor.b > 0.85) {
         heatSignal = 0.0;
     }
-    // Natural thermal sources (Lava, Fire, Magma)
-    else if (lum > 0.80 && baseColor.r > baseColor.b) {
-        heatSignal = (lum - 0.80) * 4.0;
+    // Natural thermal sources (Lava, Fire, Magma, Lit Furnaces, Campfires, Torches)
+    else if (baseColor.r > baseColor.b * 1.35 && baseColor.r > 0.35 && lum > 0.30) {
+        float chromaticHeat = (baseColor.r - baseColor.b * 1.35) * 1.8;
+        float lumHeat = clamp((lum - 0.30) * 1.5, 0.0, 1.0);
+        heatSignal = clamp(chromaticHeat * lumHeat * 2.2, 0.0, 1.0);
+    }
+    // Cryogenic cold sources: high blue dominance and moderate luminance (Ice, Packed Ice, Blue Ice, Powder Snow)
+    else if (baseColor.b > baseColor.r * 1.45 && baseColor.b > 0.35 && cyanBias < 0.35) {
+        coldSignal = clamp((baseColor.b - baseColor.r * 1.45) * 1.6, 0.0, 0.85);
     }
     
     // Thermal Ironbow calculation
     float baseTemp = lum * 0.35;
-    float finalTemp = clamp(baseTemp + clamp(heatSignal, 0.0, 1.0) * 0.70, 0.0, 1.0);
+    float finalTemp = clamp(baseTemp + clamp(heatSignal, 0.0, 1.0) * 0.75 - coldSignal * 0.50, 0.0, 1.0);
     vec3 visionColor = ironbow(finalTemp);
     
     // 1. Thermal Radiation Bleed / Heat Aura around hot targets
-    if (heatSignal > 0.4) {
-        vec3 heatBloom = vec3(1.0, 0.45, 0.05) * (heatSignal - 0.4) * 0.40;
+    if (heatSignal > 0.35) {
+        vec3 heatBloom = vec3(1.0, 0.45, 0.05) * (heatSignal - 0.35) * 0.40;
         visionColor += heatBloom;
     }
     

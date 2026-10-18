@@ -79,6 +79,26 @@
     - `thermal_core`: Cryogenic FLIR microbolometer pod with hermetic gold casing, dual copper heat dissipation fins, germanium crimson lens, and incandescent focal core.
     - `lifesign_sensor`: 12x14 biometric telemetry module with top bio-impedance contacts, coral red pulse LED, and high-contrast OLED screen showing an active ECG vital trace.
   - Multi-loader compiled and cleanly packaged into production JARs for Forge (`vision-goggles-forge-2.0.0.jar`) and Fabric (`vision-goggles-fabric-2.0.0.jar`).
+- **Suite de Mejoras Tácticas Integrales (Arquitectura Argon // Build 2.0.0-Alpha)**:
+  - **Óptica y Shaders Realistas (Activación de Uniforms Dormidos)**:
+    - **Conexión del Uniform `focus`**: Enlazado el factor de zoom dinámico (`VisionRenderer.getCurrentZoomFactor()`) con la variable `uniform float focus;` en `VisionShaderManager.java`. Esto activa automáticamente en GLSL la aberración cromática perimetral en NVG, la densificación de retículo mil-dot en Biométrico, y el pixelado digital térmico al superar 4x de magnificación.
+    - **Deslumbramiento Vectorial (Look-At Blinding)**: Reemplazada la comprobación estática por un cálculo vectorial dinámico. Mirar directamente hacia el sol (`sunDot > 0.60`) o a fuentes incandescentes a quemarropa (lava, fuego, fogatas a menos de 4 bloques) provoca ceguera fotónica real con sobrecarga del sensor.
+    - **Persistencia de Fósforo P43 (Burn-In Buffer)**: Simulación analógica de tubos intensificadores de imagen: al sufrir sobrecarga lumínica (`Glare > 0.35f`), el decaimiento se ralentiza gradualmente para imitar la retención de fósforo real.
+    - **Destello por Explosiones y Rayos**: Daños recibidos por detonaciones (`DamageTypeTags.IS_EXPLOSION`) o impactos de rayo (`DamageTypeTags.IS_LIGHTNING`) disparan un fogonazo de ceguera instantánea (`triggerFlash(1.8f)`).
+    - **Paridad de Niebla Hydro en Forge**: Trasladado `MixinFogRenderer` al paquete común (`vision_goggles.mixins.json`), eliminando la niebla densa de agua tanto en Fabric como en Forge.
+  - **Estación de Modificación 2.0 (Mantenimiento y Extracción)**:
+    - **Desensamblaje y Extracción de Módulos**: Ahora es posible extraer módulos instalados colocando las gafas en el Slot 0 con el Slot 1 vacío. El Slot 2 muestra el módulo instalado (incluyendo chips Lua grabados con sus scripts intactos). Al retirarlo, las gafas conservan su batería y sockets liberados sin destruirse.
+    - **Taller de Reparación de Campo**: Reparación de durabilidad sin costo de XP ni penalizaciones de yunque combinando las gafas dañadas con `tactical_frame` (reparación completa al 100%) o `electrical_parts` (mantenimiento de campo al +35%).
+    - **Catálogo JEI Actualizado**: Integradas las recetas de extracción de módulos y reparación táctica en la categoría de JEI de la Estación de Modificación.
+  - **Linterna Táctica Operativa (Modo Estroboscópico)**:
+    - **4.º Modo: `STROBE` (13 Hz)**: Añadido modo estroboscópico táctico en `FlashlightMode` y `flashlight.fsh`, modulando la intensidad a alta frecuencia disuasoria.
+    - **Efecto de Disuasión Táctica (`FlashlightDeterrence`)**: Enemigos hostiles que miren de frente al haz estroboscópico a menos de 24 bloques sufren desorientación (*Slowness I*) y los Creepers tienen su cuenta regresiva de detonación suprimida.
+  - **Firmas Térmicas Ambientales Ampliadas**:
+    - **Detección de Combustión**: En `thermal.fsh`, fuentes de calor activo como hornos, ahumadores encendidos, fogatas, magma y lava son detectadas por cromatismo cálido e intensidad lumínica, proyectando auras incandescentes blanco/naranja en la paleta Ironbow.
+    - **Sumideros Criogénicos**: Bloques de frío extremo (hielo, hielo compacto, hielo azul y nieve en polvo) absorben calor en el shader, renderizándose en índigo/negro profundo.
+  - **Realidad Aumentada Lua (`world.worldToScreen`)**:
+    - Implementada proyección matemática de cámara 3D a coordenadas 2D de pantalla (`worldToScreen(x, y, z)`) en `LuaWorldScanner.java`, permitiendo a los scripts crear retículas de seguimiento AR, waypoints y corchetes dinámicos sobre entidades en pantalla.
+    - Ampliado `wrapEntity` con coordenadas `eye_y`, `pitch` y `yaw`.
 
 
 

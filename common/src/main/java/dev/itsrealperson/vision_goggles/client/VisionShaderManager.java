@@ -37,6 +37,11 @@ public class VisionShaderManager {
     private static PostChain savedFlashlightChain = null;
     private static int currentFlashlightMode = 0;
     private static long startupTimestamp = 0L;
+    private static float flashGlare = 0.0f;
+
+    public static void triggerFlash(float intensity) {
+        flashGlare = Math.max(flashGlare, intensity);
+    }
 
     public static void update(VisionMode mode, float batteryPct, boolean flicker) {
         activeMode = mode;
@@ -102,6 +107,7 @@ public class VisionShaderManager {
         }
         activeShaderLocation = null;
         currentGlare = 0.0f;
+        flashGlare = 0.0f;
         currentInterference = 0.0f;
         startupTimestamp = 0L;
 
@@ -294,7 +300,7 @@ public class VisionShaderManager {
         if (activeMode == VisionMode.NIGHT_VISION && mc.player != null) {
             net.minecraft.core.BlockPos pos = mc.player.blockPosition().above();
             
-            // 1. Ceguera solar basada estrictamente en la HORA DEL DIA (ticks) y si esta AFUERA SIN TECHO:
+            // 1. Ceguera solar basada en la hora del día y vector de mirada hacia el sol:
             long dayTime = Math.abs(mc.level.getDayTime()) % 24000L;
             boolean underOpenSky = mc.level.canSeeSky(pos);
             
@@ -302,21 +308,27 @@ public class VisionShaderManager {
             if (underOpenSky && mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
                 // De noche (12500 a 23000 ticks, incluyendo 18000 medianoche): NADA de ceguera solar!
                 if (dayTime < 12500L || dayTime > 23000L) {
-                    // De dia al aire libre sin techo:
+                    // De día al aire libre sin techo:
                     if (dayTime >= 1500L && dayTime <= 10500L) {
-                        // Pleno dia (mediodia = 6000): ceguera maxima
-                        sunGlare = 1.0f;
+                        sunGlare = 0.75f;
                     } else if (dayTime < 1500L) {
-                        // Amanecer: sube suavemente de 0.0 a 1.0 (entre 23000 y 1500 ticks)
                         long dawnTicks = (dayTime > 23000L) ? (dayTime - 23000L) : (dayTime + 1000L);
                         float t = (float) dawnTicks / 2500.0f;
                         t = Math.max(0.0f, Math.min(1.0f, t));
-                        sunGlare = t * t * (3f - 2f * t); // smoothstep
+                        sunGlare = t * t * (3f - 2f * t) * 0.75f;
                     } else {
-                        // Atardecer: baja suavemente de 1.0 a 0.0 (entre 10500 y 12500 ticks)
                         float t = 1.0f - ((float) (dayTime - 10500L) / 2000.0f);
                         t = Math.max(0.0f, Math.min(1.0f, t));
-                        sunGlare = t * t * (3f - 2f * t); // smoothstep
+                        sunGlare = t * t * (3f - 2f * t) * 0.75f;
+                    }
+
+                    // Vectorial look-at solar blinding:
+                    float sunAngle = mc.level.getSunAngle(1.0f);
+                    net.minecraft.world.phys.Vec3 sunDir = new net.minecraft.world.phys.Vec3(-Math.sin(sunAngle), Math.cos(sunAngle), 0.0).normalize();
+                    double sunDot = mc.player.getViewVector(1.0f).dot(sunDir);
+                    if (sunDot > 0.60 && sunDir.y > -0.05) {
+                        float directFactor = (float) ((sunDot - 0.60) / 0.40);
+                        sunGlare = Math.max(sunGlare, 0.75f + directFactor * 1.25f);
                     }
                     
                     // Tormenta o lluvia reducen la ceguera por cobertura nubosa
@@ -328,14 +340,31 @@ public class VisionShaderManager {
                 }
             }
             
-            // 2. Luz de bloques (antorchas o lava pegadas a la cara):
+            // 2. Luz de bloques e incidencia directa de fuentes incandescentes a quemarropa:
             int blockLight = mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, pos);
             float blockGlare = 0.0f;
             if (blockLight > 12) {
                 blockGlare = (float) (blockLight - 12) / 3.0f * 0.4f;
             }
+            if (mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult bHit && bHit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                net.minecraft.world.level.block.state.BlockState hitState = mc.level.getBlockState(bHit.getBlockPos());
+                if (hitState.is(net.minecraft.world.level.block.Blocks.LAVA) || hitState.is(net.minecraft.world.level.block.Blocks.FIRE) ||
+                    hitState.is(net.minecraft.world.level.block.Blocks.SOUL_FIRE) || hitState.is(net.minecraft.world.level.block.Blocks.CAMPFIRE) ||
+                    hitState.is(net.minecraft.world.level.block.Blocks.SOUL_CAMPFIRE)) {
+                    double distSq = mc.player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(bHit.getBlockPos()));
+                    if (distSq < 16.0) {
+                        float prox = 1.0f - (float)(Math.sqrt(distSq) / 4.0);
+                        blockGlare = Math.max(blockGlare, prox * 0.95f);
+                    }
+                }
+            }
             
             targetGlare = Math.max(sunGlare, blockGlare);
+
+            if (flashGlare > 0.001f) {
+                targetGlare = Math.max(targetGlare, flashGlare);
+                flashGlare *= 0.88f;
+            }
 
 
 
@@ -402,10 +431,18 @@ public class VisionShaderManager {
             }
         }
 
-        // Fast rise (sensor overload), slow recovery (eyes re-adapt gradually)
-        float glareSpeed = (targetGlare > currentGlare) ? 0.08f : 0.018f;
+        // Fast rise (sensor overload), slow recovery (phosphor burn-in P43 tube simulation)
+        float glareSpeed;
+        if (targetGlare > currentGlare) {
+            glareSpeed = 0.12f; // Fast sensory shock
+        } else {
+            glareSpeed = (currentGlare > 0.35f) ? 0.010f : 0.022f; // Realistic phosphor persistence
+        }
         currentGlare += (targetGlare - currentGlare) * glareSpeed;
         if (Math.abs(currentGlare) < 0.001f) currentGlare = 0.0f;
+
+        float zoomFactor = dev.itsrealperson.vision_goggles.client.VisionRenderer.getCurrentZoomFactor();
+        float focus = Math.max(0.0f, Math.min(1.0f, (zoomFactor - 1.0f) / 7.0f));
 
         // Power-up sequence: Photonic capacitor spike, micro-strobe, and phosphor warm-up ramp
         float startupMultiplier = 1.0f;
@@ -439,6 +476,7 @@ public class VisionShaderManager {
             if (shader.getUniform("colorFilter") != null) shader.getUniform("colorFilter").set(rf, gf, bf);
             if (shader.getUniform("Interference") != null) shader.getUniform("Interference").set(interference);
             if (shader.getUniform("Glare") != null) shader.getUniform("Glare").set(currentGlare);
+            if (shader.getUniform("focus") != null) shader.getUniform("focus").set(focus);
             if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
             if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);
         }

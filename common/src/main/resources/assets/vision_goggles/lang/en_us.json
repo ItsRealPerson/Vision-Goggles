@@ -99,6 +99,7 @@
   "message.vision_goggles.flashlight_mode.focused": "§eFlashlight: §fFocused Beam",
   "message.vision_goggles.flashlight_mode.wide": "§eFlashlight: §fWide Flood",
   "message.vision_goggles.flashlight_mode.close": "§eFlashlight: §fClose Burst",
+  "message.vision_goggles.flashlight_mode.strobe": "§eFlashlight: §cTactical Strobe (13Hz)",
   "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
   "gui.vision_goggles.radial.title": "Tactical Radial Menu",
   "gui.vision_goggles.radial.header": "§7[VG TACTICAL DIAL // §6BUILD 2.0.0-ALPHA§7]",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Biometric Lifesign Sensor",
   "jei.vision_goggles.install_module": "Install Hardware Module",
   "jei.vision_goggles.flash_firmware": "Flash Script onto Programmable Module",
-  "jei.vision_goggles.install_script_module": "Install Programmed Script Module"
+  "jei.vision_goggles.install_script_module": "Install Programmed Script Module",
+  "jei.vision_goggles.overhaul_repair": "Overhaul Repair (100% Durability)",
+  "jei.vision_goggles.maintenance_repair": "Field Maintenance (+35% Durability)",
+  "jei.vision_goggles.extract_module": "Module Extraction / Dismantling"
 }

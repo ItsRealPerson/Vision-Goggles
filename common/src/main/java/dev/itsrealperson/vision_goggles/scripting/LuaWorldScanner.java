@@ -1,6 +1,7 @@
 package dev.itsrealperson.vision_goggles.scripting;
 
 import net.minecraft.client.Minecraft;
+import dev.itsrealperson.vision_goggles.mixin.client.GameRendererAccessor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -113,6 +114,62 @@ public class LuaWorldScanner {
                     return res;
                 }
                 return LuaValue.NIL;
+            }
+        });
+
+        world.set("worldToScreen", new org.luaj.vm2.lib.ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaValue argX, LuaValue argY, LuaValue argZ) {
+                if (!argX.isnumber() || !argY.isnumber() || !argZ.isnumber()) return LuaValue.NIL;
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player == null || mc.level == null) return LuaValue.NIL;
+
+                double x = argX.todouble();
+                double y = argY.todouble();
+                double z = argZ.todouble();
+
+                net.minecraft.client.Camera camera = mc.gameRenderer.getMainCamera();
+                Vec3 camPos = camera.getPosition();
+                double relX = x - camPos.x;
+                double relY = y - camPos.y;
+                double relZ = z - camPos.z;
+
+                org.joml.Vector3f pos = new org.joml.Vector3f((float) relX, (float) relY, (float) relZ);
+                org.joml.Quaternionf rot = new org.joml.Quaternionf(camera.rotation());
+                rot.conjugate().transform(pos);
+
+                float forward = -pos.z;
+                if (forward <= 0.05f) {
+                    LuaTable res = new LuaTable();
+                    res.set("x", LuaValue.valueOf(-1000));
+                    res.set("y", LuaValue.valueOf(-1000));
+                    res.set("visible", LuaValue.valueOf(false));
+                    res.set("distance", LuaValue.valueOf(Math.sqrt(relX * relX + relY * relY + relZ * relZ)));
+                    return res;
+                }
+
+                float fov = (float) Math.toRadians(((GameRendererAccessor) mc.gameRenderer).vision_goggles$getFov(camera, mc.getFrameTime(), true));
+                float halfHeight = (float) Math.tan(fov * 0.5f);
+                float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) mc.getWindow().getScreenHeight();
+                float halfWidth = halfHeight * aspectRatio;
+
+                float ndcX = pos.x / (forward * halfWidth);
+                float ndcY = pos.y / (forward * halfHeight);
+
+                float screenWidth = (float) mc.getWindow().getGuiScaledWidth();
+                float screenHeight = (float) mc.getWindow().getGuiScaledHeight();
+
+                float screenX = (ndcX + 1.0f) * 0.5f * screenWidth;
+                float screenY = (1.0f - ndcY) * 0.5f * screenHeight;
+
+                boolean onScreen = ndcX >= -1.05f && ndcX <= 1.05f && ndcY >= -1.05f && ndcY <= 1.05f;
+
+                LuaTable res = new LuaTable();
+                res.set("x", LuaValue.valueOf(screenX));
+                res.set("y", LuaValue.valueOf(screenY));
+                res.set("visible", LuaValue.valueOf(onScreen));
+                res.set("distance", LuaValue.valueOf(Math.sqrt(relX * relX + relY * relY + relZ * relZ)));
+                return res;
             }
         });
 
@@ -451,6 +508,9 @@ public class LuaWorldScanner {
         t.set("x", Math.round(living.getX() * 10.0) / 10.0);
         t.set("y", Math.round(living.getY() * 10.0) / 10.0);
         t.set("z", Math.round(living.getZ() * 10.0) / 10.0);
+        t.set("eye_y", Math.round(living.getEyeY() * 10.0) / 10.0);
+        t.set("pitch", Math.round(living.getXRot() * 10.0) / 10.0);
+        t.set("yaw", Math.round(living.getYRot() * 10.0) / 10.0);
         t.set("distance", roundedDist);
         t.set("is_hostile", LuaValue.valueOf(living instanceof net.minecraft.world.entity.monster.Enemy || living instanceof Monster));
         t.set("is_player", LuaValue.valueOf(living instanceof Player));

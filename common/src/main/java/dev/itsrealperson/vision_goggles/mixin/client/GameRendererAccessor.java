@@ -1,5 +1,6 @@
 package dev.itsrealperson.vision_goggles.mixin.client;
 
+import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
@@ -21,4 +22,7 @@ public interface GameRendererAccessor {
 
     @Accessor("postEffect")
     void vision_goggles$setPostEffect(@Nullable PostChain postChain);
+
+    @Invoker("getFov")
+    double vision_goggles$getFov(Camera camera, float partialTicks, boolean useFOVSetting);
 }
