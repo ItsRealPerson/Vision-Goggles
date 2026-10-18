@@ -15,6 +15,7 @@
     "client.KeyMappingAccessor",
     "client.PostChainAccessor",
     "client.MixinFogRenderer",
+    "client.MixinClientPacketListener",
     "lighting.ShaderInstanceMixin",
     "sodium.SodiumChunkUniformMixin",
     "sodium.SodiumShaderParserMixin"

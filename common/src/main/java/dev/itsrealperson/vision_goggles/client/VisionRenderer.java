@@ -79,20 +79,14 @@ public class VisionRenderer {
                 cleanup(mc);
             }
         });
-
-        dev.architectury.event.events.common.EntityEvent.LIVING_HURT.register((entity, source, amount) -> {
-            if (entity.level().isClientSide && entity == Minecraft.getInstance().player && visorActive) {
-                damageFlickerTimer = 10; 
-                if (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION) || source.is(net.minecraft.tags.DamageTypeTags.IS_LIGHTNING)) {
-                    VisionShaderManager.triggerFlash(1.8f);
-                }
-            }
-            return EventResult.pass();
-        });
     }
 
     public static void onClientTick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
+
+        if (mc.player.hurtTime == 9 && visorActive) {
+            damageFlickerTimer = 10;
+        }
 
         if (damageFlickerTimer > 0) {
             damageFlickerTimer--;

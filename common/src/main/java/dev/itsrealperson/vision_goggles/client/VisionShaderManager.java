@@ -305,30 +305,43 @@ public class VisionShaderManager {
             boolean underOpenSky = mc.level.canSeeSky(pos);
             
             float sunGlare = 0.0f;
-            if (underOpenSky && mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
+            if (mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
                 // De noche (12500 a 23000 ticks, incluyendo 18000 medianoche): NADA de ceguera solar!
                 if (dayTime < 12500L || dayTime > 23000L) {
-                    // De día al aire libre sin techo:
-                    if (dayTime >= 1500L && dayTime <= 10500L) {
-                        sunGlare = 0.75f;
-                    } else if (dayTime < 1500L) {
-                        long dawnTicks = (dayTime > 23000L) ? (dayTime - 23000L) : (dayTime + 1000L);
-                        float t = (float) dawnTicks / 2500.0f;
-                        t = Math.max(0.0f, Math.min(1.0f, t));
-                        sunGlare = t * t * (3f - 2f * t) * 0.75f;
-                    } else {
-                        float t = 1.0f - ((float) (dayTime - 10500L) / 2000.0f);
-                        t = Math.max(0.0f, Math.min(1.0f, t));
-                        sunGlare = t * t * (3f - 2f * t) * 0.75f;
+                    // 1. Deslumbramiento ambiental difuso al aire libre (luminancia general de cielo diurno)
+                    if (underOpenSky) {
+                        if (dayTime >= 1500L && dayTime <= 10500L) {
+                            sunGlare = 0.30f;
+                        } else if (dayTime < 1500L) {
+                            long dawnTicks = (dayTime > 23000L) ? (dayTime - 23000L) : (dayTime + 1000L);
+                            float t = (float) dawnTicks / 2500.0f;
+                            t = Math.max(0.0f, Math.min(1.0f, t));
+                            sunGlare = t * t * (3f - 2f * t) * 0.30f;
+                        } else {
+                            float t = 1.0f - ((float) (dayTime - 10500L) / 2000.0f);
+                            t = Math.max(0.0f, Math.min(1.0f, t));
+                            sunGlare = t * t * (3f - 2f * t) * 0.30f;
+                        }
                     }
 
-                    // Vectorial look-at solar blinding:
+                    // 2. Fogonazo directo por mirar al sol (CON OCLUSIÓN FÍSICA POR RAYCAST)
                     float sunAngle = mc.level.getSunAngle(1.0f);
                     net.minecraft.world.phys.Vec3 sunDir = new net.minecraft.world.phys.Vec3(-Math.sin(sunAngle), Math.cos(sunAngle), 0.0).normalize();
                     double sunDot = mc.player.getViewVector(1.0f).dot(sunDir);
-                    if (sunDot > 0.60 && sunDir.y > -0.05) {
-                        float directFactor = (float) ((sunDot - 0.60) / 0.40);
-                        sunGlare = Math.max(sunGlare, 0.75f + directFactor * 1.25f);
+                    
+                    // Solo si la mirada apunta al sol y el sol está sobre el horizonte
+                    if (sunDot > 0.65 && sunDir.y > 0.0) {
+                        net.minecraft.world.phys.Vec3 eyePos = mc.player.getEyePosition(1.0f);
+                        net.minecraft.world.phys.Vec3 sunRayEnd = eyePos.add(sunDir.scale(128.0));
+                        net.minecraft.world.phys.HitResult hit = mc.level.clip(new net.minecraft.world.level.ClipContext(
+                            eyePos, sunRayEnd, net.minecraft.world.level.ClipContext.Block.VISUAL, net.minecraft.world.level.ClipContext.Fluid.NONE, mc.player
+                        ));
+                        
+                        // Solo hay fogonazo si la línea de visión al sol está 100% despejada (sin bloques intermedios)
+                        if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+                            float directFactor = (float) ((sunDot - 0.65) / 0.35);
+                            sunGlare = Math.max(sunGlare, 0.70f + directFactor * 1.30f);
+                        }
                     }
                     
                     // Tormenta o lluvia reducen la ceguera por cobertura nubosa

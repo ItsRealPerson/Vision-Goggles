@@ -19,11 +19,17 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class TacticalFlashlightItem extends Item {
+public class TacticalFlashlightItem extends Item implements CustomReequipItem {
     public static final float MAX_BATTERY = 6000.0f;
 
     public TacticalFlashlightItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        if (slotChanged) return true;
+        return !ItemStack.isSameItem(oldStack, newStack);
     }
 
     public static boolean isActive(ItemStack stack) {

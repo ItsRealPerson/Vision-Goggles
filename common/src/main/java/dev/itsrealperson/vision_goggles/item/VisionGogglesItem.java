@@ -26,10 +26,16 @@ import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.util.GeckoLibUtil;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 
-public class VisionGogglesItem extends Item implements GeoItem {
+public class VisionGogglesItem extends Item implements GeoItem, CustomReequipItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final List<VisionMode> supportedModes;
     private final IntSupplier batteryCapacity;
+
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        if (slotChanged) return true;
+        return !ItemStack.isSameItem(oldStack, newStack);
+    }
 
     public VisionGogglesItem(IntSupplier batteryCapacity, VisionMode... modes) {
         super(new Item.Properties().stacksTo(1).durability(dev.itsrealperson.vision_goggles.util.ModConfig.getGogglesDurability()));

@@ -112,6 +112,26 @@
   - **Corrección de Ranuras y Salida en Estación de Modificación**:
     - Refactorizado `ModificationStationBlockEntity.updateResult()`: eliminada la guarda residual `if (!outputStack.isEmpty()) return;` que dejaba congelada la ranura de salida con el módulo de desmontaje.
     - Ahora, al insertar cualquier ítem en la Ranura 1, la salida se limpia y recalcula de forma inmediata, permitiendo instalar nuevos módulos, reparar gafas o colocar ítems sin conflicto con la mecánica de extracción.
+- **Oclusión Solar, Fogonazo de TNT y Ergonomía de Linterna (Build 2.0.0-Alpha.2 // Plan v20)**:
+  - **Oclusión Física del Sol por Raycast (`ClipContext.Block.VISUAL`)**:
+    - Implementado trazado de rayos óptico en `VisionShaderManager.java` desde los ojos del jugador hacia el sol a una distancia de 128 bloques.
+    - Si la línea de visión al sol está obstruida por bloques sólidos, techos, cuevas, muros o árboles (`HitResult.Type.BLOCK`), el fogonazo de ceguera solar directa se anula al 100%. Solo se produce deslumbramiento cuando el astro está en el campo visual libre y sin obstáculos.
+    - Calibrada la luminancia ambiental diurna difusa a un valor natural (`0.30f`), evitando sobrecargas extremas bajo cielo abierto.
+  - **Fogonazo Fotónico por Explosiones (TNT / Creepers / Rayos)**:
+    - Creado `MixinClientPacketListener.java` en `common` para capturar eventos de red de explosiones (`ClientboundExplodePacket`).
+    - Al detonar TNT, Creepers, cristales del End o bolas de fuego a menos de 40 bloques del jugador, se calcula la distancia y se detona un fogonazo reactivo en las gafas NVG (`VisionShaderManager.triggerFlash`) escalado con la proximidad.
+    - Detectada la caída de rayos (`EntityType.LIGHTNING_BOLT`) a menos de 64 bloques, activando el fogonazo correspondiente.
+    - Activado el parpadeo de daño (`damageFlicker`) en el cliente sincronizado con `mc.player.hurtTime == 9`.
+  - **Eliminación del Bobbing de la Mano al Usar Linterna (`CustomReequipItem`)**:
+    - Creada la interfaz `CustomReequipItem` implementada en `TacticalFlashlightItem` y `VisionGogglesItem`.
+    - En Forge, aprovecha el hook nativo `shouldCauseReequipAnimation(...)` devolviendo `false` cuando el ítem se mantiene en la misma ranura.
+    - En Fabric, se implementó `ItemInHandRendererMixin` para suprimir la animación de guardado/sacado ante modificaciones de tags NBT de batería y estado activo.
+    - La mano en primera persona se mantiene firme y fija al encender, apagar, cambiar de modo o agotar batería.
+  - **Remasterización Ergonómica del Modo Estroboscópico (`flashlight.fsh`)**:
+    - Implementada arquitectura de iluminación de simulación táctica: **Luz Base Ambiental + Pulsos de Sobretensión**.
+    - La linterna conserva un 35% de luz base continua para evitar cortes bruscos a oscuridad total y fatiga ocular / mareo.
+    - Pulsos dinámicos a ~9.5 Hz con caída suave y cono táctico intermedio, conservando la disuasión completa contra mobs (`FlashlightDeterrence`).
+
 
 
 
