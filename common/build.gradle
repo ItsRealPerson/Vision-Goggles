@@ -17,4 +17,7 @@ dependencies {
 
     // Lua Scripting Engine (Java 17 compatible, pure Java)
     implementation "org.luaj:luaj-jse:3.0.1"
+
+    // JEI Common API (Compile only, optional runtime)
+    modCompileOnly "mezz.jei:jei-${rootProject.minecraft_version}-common-api:${rootProject.jei_version}"
 }

@@ -64,6 +64,13 @@
       - `battery_expansion_module`: Heavy-duty dual battery bank encased with copper heat dissipation brackets and gold bridge contacts (`nvg_battery` x2 + `copper_ingot` x4 + `gold_ingot` + `electrical_parts` x2).
       - `programmable_module`: Microchip EEPROM package using quartz flash die + redstone I/O bus + gold contacts + `electrical_parts`.
   - **Complete Assets & 12-Language Translations**: Created 6 custom 16x16 pixel art textures matching vanilla and Argon palette aesthetics, item models, creative tab integration, and synchronized translations across all 12 supported languages (`en_us`, `en_gb`, `es_es`, `es_mx`, `es_ar`, `es_cl`, `de_de`, `fr_fr`, `it_it`, `pl_pl`, `pt_br`, `ru_ru`).
+- **Official JEI (Just Enough Items) Integration for Modification Station (Alpha 2.0.0)**:
+  - **Modification Station Recipe Category (`ModificationStationRecipeCategory`)**: Created a dedicated JEI recipe category rendering directly from the workbench GUI texture (`textures/gui/modification_station.png`, `96x28`), displaying the 3 interaction slots, operational `+` sign, and progression arrow `->`.
+  - **Dynamic NBT Output Preview**: Generated synthetic recipes for all 12 hardware modules across both `modular_goggles` (2 slots) and `pro_modular_goggles` (4 slots). The JEI recipe preview populates exact NBT tags (`modules: ["..."]`), triggering `ModularGogglesItem.appendHoverText()` so hovering over the output stack in JEI shows the live installed modules list, active abilities, and expanded battery capacity.
+  - **Lua Script Flashing & Firmware Installation Recipes**: Exposed the flashing pipeline in JEI: `InstallationScriptItem` + blank `ProgrammableModuleItem` $\rightarrow$ programmed module, plus installing the programmed script module into modular goggles.
+  - **Interactive Recipe Click Area & Catalyst**: Registered `ModBlocks.MODIFICATION_STATION` as the official JEI category catalyst and bound the workbench GUI progress arrow (`x=98, y=36, 16x14`) in `ModificationStationScreen` so clicking it in-game instantly opens the JEI recipe catalog.
+  - **Zero-Crash Optional Runtime (`modCompileOnly`)**: Wired with `mezz.jei:jei-1.20.1-*-api:15.20.0.106` across `common`, `forge`, and `fabric`. If a player launches without JEI installed, the mod runs with zero overhead and zero missing class exceptions.
+  - **12-Language Translations**: Synchronized localized description tooltips (`jei.vision_goggles.install_module`, `jei.vision_goggles.flash_firmware`, `jei.vision_goggles.install_script_module`) across all 12 supported languages.
 
 
 

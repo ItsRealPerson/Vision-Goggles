@@ -47,6 +47,9 @@ dependencies {
     implementation "org.luaj:luaj-jse:3.0.1"
     shadowBundle "org.luaj:luaj-jse:3.0.1"
 
+    // JEI Forge API (Compile only)
+    modCompileOnly "mezz.jei:jei-${rootProject.minecraft_version}-forge-api:${rootProject.jei_version}"
+
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
 }

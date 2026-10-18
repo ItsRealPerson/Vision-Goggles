@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Frezowany Korpus Latarki",
   "item.vision_goggles.tactical_processor": "Taktyczny Procesor DSP",
   "item.vision_goggles.thermal_core": "Rdzeń Czujnika Termicznego",
-  "item.vision_goggles.lifesign_sensor": "Biometryczny Czujnik Życia"
+  "item.vision_goggles.lifesign_sensor": "Biometryczny Czujnik Życia",
+  "jei.vision_goggles.install_module": "Zainstaluj moduł sprzętowy",
+  "jei.vision_goggles.flash_firmware": "Wgraj skrypt do programowalnego modułu",
+  "jei.vision_goggles.install_script_module": "Zainstaluj zaprogramowany moduł skryptu"
 }

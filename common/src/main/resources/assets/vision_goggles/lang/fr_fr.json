@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Corps Usiné de Lampe Torche",
   "item.vision_goggles.tactical_processor": "Processeur DSP Tactique",
   "item.vision_goggles.thermal_core": "Cœur de Capteur Thermique",
-  "item.vision_goggles.lifesign_sensor": "Capteur Biométrique de Signes Vitaux"
+  "item.vision_goggles.lifesign_sensor": "Capteur Biométrique de Signes Vitaux",
+  "jei.vision_goggles.install_module": "Installer le module matériel",
+  "jei.vision_goggles.flash_firmware": "Flasher le script sur le module programmable",
+  "jei.vision_goggles.install_script_module": "Installer le module avec script programmé"
 }

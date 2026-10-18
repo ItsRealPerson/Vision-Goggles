@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Machined Flashlight Body",
   "item.vision_goggles.tactical_processor": "Tactical DSP Processor",
   "item.vision_goggles.thermal_core": "Thermal Sensor Core",
-  "item.vision_goggles.lifesign_sensor": "Biometric Lifesign Sensor"
+  "item.vision_goggles.lifesign_sensor": "Biometric Lifesign Sensor",
+  "jei.vision_goggles.install_module": "Install Hardware Module",
+  "jei.vision_goggles.flash_firmware": "Flash Script onto Programmable Module",
+  "jei.vision_goggles.install_script_module": "Install Programmed Script Module"
 }

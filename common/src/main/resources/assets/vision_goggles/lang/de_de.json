@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Gefräster Taschenlampenkörper",
   "item.vision_goggles.tactical_processor": "Taktischer DSP-Prozessor",
   "item.vision_goggles.thermal_core": "Wärmesensorkern",
-  "item.vision_goggles.lifesign_sensor": "Biometrischer Lebenszeichensensor"
+  "item.vision_goggles.lifesign_sensor": "Biometrischer Lebenszeichensensor",
+  "jei.vision_goggles.install_module": "Hardware-Modul installieren",
+  "jei.vision_goggles.flash_firmware": "Skript auf programmierbares Modul flashen",
+  "jei.vision_goggles.install_script_module": "Programmiertes Skript-Modul installieren"
 }

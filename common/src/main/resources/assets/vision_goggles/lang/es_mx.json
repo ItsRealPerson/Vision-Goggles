@@ -165,5 +165,8 @@
   "item.vision_goggles.flashlight_body": "Cuerpo Mecanizado de Linterna",
   "item.vision_goggles.tactical_processor": "Procesador DSP Táctico",
   "item.vision_goggles.thermal_core": "Núcleo Sensor Térmico",
-  "item.vision_goggles.lifesign_sensor": "Sensor Biométrico de Signos Vitales"
+  "item.vision_goggles.lifesign_sensor": "Sensor Biométrico de Signos Vitales",
+  "jei.vision_goggles.install_module": "Instalar Módulo de Hardware",
+  "jei.vision_goggles.flash_firmware": "Grabar Script en Módulo Programable",
+  "jei.vision_goggles.install_script_module": "Instalar Módulo con Script Programado"
 }
