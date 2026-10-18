@@ -495,6 +495,9 @@ public class VisionShaderManager {
 
     private static boolean isHoldingLight(net.minecraft.world.item.ItemStack stack) {
         if (stack.isEmpty()) return false;
+        if (stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem) {
+            return dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.isActive(stack);
+        }
         String id = stack.getDescriptionId().toLowerCase();
         boolean isLight = id.contains("flashlight") || id.contains("linterna") || id.contains("torch")
                 || id.contains("lantern") || id.contains("glow") || id.contains("lamp");
