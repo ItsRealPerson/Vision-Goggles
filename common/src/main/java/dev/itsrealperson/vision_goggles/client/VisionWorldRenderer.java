@@ -116,11 +116,9 @@ public class VisionWorldRenderer {
 
         boolean isThermal = VisionRenderer.isVisionModeActive() && VisionRenderer.getCurrentVisionMode() == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL;
         boolean hasSpawnSecurity = false;
-        boolean hasChunkViewer = false;
 
         if (helmet.getItem() instanceof ModularGogglesItem modular) {
             hasSpawnSecurity = modular.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY);
-            hasChunkViewer = modular.hasModule(helmet, ModConstants.ID_CHUNK_VIEWER);
         }
 
         while (ModKeyMappings.toggleSpawnSecurityKey.consumeClick()) {
@@ -129,7 +127,7 @@ public class VisionWorldRenderer {
             }
         }
 
-        if (!isThermal && (!hasSpawnSecurity || !spawnSecurityEnabled) && !hasChunkViewer) return;
+        if (!isThermal && (!hasSpawnSecurity || !spawnSecurityEnabled)) return;
 
         if (scanTick++ % 20 == 0) {
             if (isThermal) updateHotBlocks(mc);
@@ -176,48 +174,6 @@ public class VisionWorldRenderer {
             tesselator.end();
         }
 
-
-
-        if (hasChunkViewer) {
-            RenderSystem.disableDepthTest();
-            builder.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
-            net.minecraft.world.level.ChunkPos center = mc.player.chunkPosition();
-            int rChunk = 1;
-            for (int cx = center.x - rChunk; cx <= center.x + rChunk; cx++) {
-                for (int cz = center.z - rChunk; cz <= center.z + rChunk; cz++) {
-                    if (mc.level.getChunkSource().hasChunk(cx, cz)) {
-                        float r = cx == center.x && cz == center.z ? 0.0f : 1.0f;
-                        float g = cx == center.x && cz == center.z ? 1.0f : 0.5f;
-                        float b = cx == center.x && cz == center.z ? 0.0f : 0.0f;
-                        
-                        float startX = (float)(cx * 16 - cameraPos.x);
-                        float startZ = (float)(cz * 16 - cameraPos.z);
-                        float endX = startX + 16;
-                        float endZ = startZ + 16;
-                        
-                        // Pilares verticales fijos desde el fondo del mundo hasta el cielo
-                        float minY = -64f - (float)cameraPos.y;
-                        float maxY = 320f - (float)cameraPos.y;
-                        
-                        renderLine(poseStack.last().pose(), builder, startX, minY, startZ, startX, maxY, startZ, r, g, b, 0.8f);
-                        renderLine(poseStack.last().pose(), builder, endX, minY, startZ, endX, maxY, startZ, r, g, b, 0.8f);
-                        renderLine(poseStack.last().pose(), builder, startX, minY, endZ, startX, maxY, endZ, r, g, b, 0.8f);
-                        renderLine(poseStack.last().pose(), builder, endX, minY, endZ, endX, maxY, endZ, r, g, b, 0.8f);
-                        
-                        // Anillos horizontales fijos cada 16 bloques (como F3+G)
-                        for (int hY = -64; hY <= 320; hY += 16) {
-                            float drawY = hY - (float)cameraPos.y;
-                            renderLine(poseStack.last().pose(), builder, startX, drawY, startZ, endX, drawY, startZ, r, g, b, 0.5f);
-                            renderLine(poseStack.last().pose(), builder, startX, drawY, endZ, endX, drawY, endZ, r, g, b, 0.5f);
-                            renderLine(poseStack.last().pose(), builder, startX, drawY, startZ, startX, drawY, endZ, r, g, b, 0.5f);
-                            renderLine(poseStack.last().pose(), builder, endX, drawY, startZ, endX, drawY, endZ, r, g, b, 0.5f);
-                        }
-                    }
-                }
-            }
-            tesselator.end();
-            RenderSystem.enableDepthTest();
-        }
 
         RenderSystem.enableCull();
         RenderSystem.disableBlend();

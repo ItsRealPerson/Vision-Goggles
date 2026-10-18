@@ -181,7 +181,6 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                 ModItems.VITAL_INFO_MODULE.get(), ModConstants.ID_VITAL_INFO,
                 ModItems.ENVIRONMENT_MODULE.get(), ModConstants.ID_ENVIRONMENT,
                 ModItems.SPAWN_SECURITY_MODULE.get(), ModConstants.ID_SPAWN_SECURITY,
-                ModItems.CHUNK_VIEWER_MODULE.get(), ModConstants.ID_CHUNK_VIEWER,
                 ModItems.FLASHLIGHT_MODULE.get(), ModConstants.ID_FLASHLIGHT
             );
         }

@@ -17,7 +17,6 @@
   "item.vision_goggles.solar_module": "Солнечный модуль",
   "item.vision_goggles.sonar_module": "Сонар",
   "item.vision_goggles.spawn_security_module": "Модуль безопасности спавна",
-  "item.vision_goggles.chunk_viewer_module": "Модуль просмотра чанков",
   "item.vision_goggles.flashlight_module": "Модуль фонаря",
   "block.vision_goggles.modification_station": "Станция модификации",
   "tooltip.vision_goggles.battery_info": "Энергия: %s / %s",

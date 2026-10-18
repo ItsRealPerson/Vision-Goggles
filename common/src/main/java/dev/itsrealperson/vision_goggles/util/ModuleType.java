@@ -53,7 +53,6 @@ public enum ModuleType {
     VITAL_INFO(ModConstants.ID_VITAL_INFO, ModConstants.MODULE_VITAL_INFO),
     ENVIRONMENT(ModConstants.ID_ENVIRONMENT, ModConstants.MODULE_ENVIRONMENT),
     SPAWN_SECURITY(ModConstants.ID_SPAWN_SECURITY, ModConstants.MODULE_SPAWN_SECURITY),
-    CHUNK_VIEWER(ModConstants.ID_CHUNK_VIEWER, ModConstants.MODULE_CHUNK_VIEWER),
     FLASHLIGHT(ModConstants.ID_FLASHLIGHT, ModConstants.MODULE_FLASHLIGHT) {
         @Override
         public void tickPower(ItemStack stack, ServerPlayer player) {

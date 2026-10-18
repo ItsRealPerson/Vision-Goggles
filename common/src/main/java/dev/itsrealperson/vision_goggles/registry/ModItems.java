@@ -75,9 +75,6 @@ public class ModItems {
     public static final RegistrySupplier<Item> ENVIRONMENT_MODULE = ITEMS.register("environment_module",
             () -> new Item(new Item.Properties().stacksTo(1)));
 
-    public static final RegistrySupplier<Item> CHUNK_VIEWER_MODULE = ITEMS.register("chunk_viewer_module",
-            () -> new Item(new Item.Properties().stacksTo(1)));
-
     public static final RegistrySupplier<Item> MODIFICATION_STATION = ITEMS.register("modification_station",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.MODIFICATION_STATION.get(), new Item.Properties()));
 
