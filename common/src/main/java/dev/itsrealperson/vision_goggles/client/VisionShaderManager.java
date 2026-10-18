@@ -36,6 +36,7 @@ public class VisionShaderManager {
 
     private static PostChain savedFlashlightChain = null;
     private static int currentFlashlightMode = 0;
+    private static long startupTimestamp = 0L;
 
     public static void update(VisionMode mode, float batteryPct, boolean flicker) {
         activeMode = mode;
@@ -71,6 +72,7 @@ public class VisionShaderManager {
             ((GameRendererAccessor) mc.gameRenderer).vision_goggles$setPostEffect(null);
 
             activeShaderLocation = loc;
+            startupTimestamp = System.currentTimeMillis();
         } catch (Exception e) {
             Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load shader: " + loc, e);
         }
@@ -87,6 +89,7 @@ public class VisionShaderManager {
             savedPostChain = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
             ((GameRendererAccessor) mc.gameRenderer).vision_goggles$setPostEffect(null);
             activeShaderLocation = loc;
+            startupTimestamp = System.currentTimeMillis();
         } catch (Exception e) {
             Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load custom shader: " + loc, e);
         }
@@ -100,6 +103,7 @@ public class VisionShaderManager {
         activeShaderLocation = null;
         currentGlare = 0.0f;
         currentInterference = 0.0f;
+        startupTimestamp = 0L;
 
         // Safety: also clear GameRenderer in case something else put a chain there
         try {
@@ -402,10 +406,31 @@ public class VisionShaderManager {
         currentGlare += (targetGlare - currentGlare) * glareSpeed;
         if (Math.abs(currentGlare) < 0.001f) currentGlare = 0.0f;
 
+        // Power-up sequence: Photonic capacitor spike, micro-strobe, and phosphor warm-up ramp
+        float startupMultiplier = 1.0f;
+        if (startupTimestamp > 0L) {
+            long elapsed = System.currentTimeMillis() - startupTimestamp;
+            if (elapsed < 650L) {
+                if (elapsed < 75L) {
+                    startupMultiplier = 1.85f; // Initial phosphor overcharge bloom
+                    currentGlare = Math.max(currentGlare, 0.40f);
+                } else if (elapsed < 165L) {
+                    startupMultiplier = 0.0f; // Strobe gap / blackout
+                } else if (elapsed < 230L) {
+                    startupMultiplier = 1.35f; // Warmup flicker pulse 1
+                } else if (elapsed < 280L) {
+                    startupMultiplier = 0.08f; // Micro dip
+                } else {
+                    float t = (elapsed - 280L) / 370.0f;
+                    startupMultiplier = 0.40f + 0.60f * t; // Smooth phosphor stabilization
+                }
+            }
+        }
+
         for (PostPass pass : passes) {
             var shader = pass.getEffect();
             if (shader.getUniform("battery") != null) {
-                float finalBatt = battery;
+                float finalBatt = battery * startupMultiplier;
                 if (damageFlicker && mc.level.random.nextFloat() > 0.5f) finalBatt = 0.0f;
                 shader.getUniform("battery").set(finalBatt);
             }
