@@ -61,11 +61,11 @@ public class TacticalRadialScreen extends Screen {
     private int openTicks = 0;
     private boolean executed = false;
 
-    // Dimensiones de diseño táctico militar
-    private static final float INNER_RADIUS = 38.0f;
-    private static final float OUTER_RADIUS = 96.0f;
-    private static final float ICON_RADIUS = 64.0f;
-    private static final float COMPASS_RING_RADIUS = 104.0f;
+    // Dimensiones calibradas para eliminar solapamientos y alojar sockets tácticos
+    private static final float INNER_RADIUS = 42.0f;
+    private static final float OUTER_RADIUS = 112.0f;
+    private static final float MID_RADIUS = (INNER_RADIUS + OUTER_RADIUS) / 2.0f; // 77.0f
+    private static final float COMPASS_RING_RADIUS = 120.0f;
     private static final double GAP_RADIANS = Math.toRadians(3.0);
 
     public TacticalRadialScreen() {
@@ -130,8 +130,9 @@ public class TacticalRadialScreen extends Screen {
 
         // Opciones de Gafas Equipadas
         if (hasHelmet) {
+            // Se usa el ítem modular limpio de registro para evitar que el casco 3D se vea oscuro
             options.add(new RadialOption("STANDBY", "Apagar / Levantar", 0xFFAAAAAA,
-                    helmet.copy(), true, () -> {
+                    ModItems.MODULAR_GOGGLES.get().getDefaultInstance(), true, () -> {
                 NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
             }));
 
@@ -259,10 +260,10 @@ public class TacticalRadialScreen extends Screen {
         float cy = this.height / 2.0f;
         int count = options.size();
 
-        // 1. Viñeta oscura sutil de fondo
+        // 1. Viñeta oscura de fondo
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x66000000, 0x88000000);
 
-        // 2. Encabezado militar de telemetría de versión Alpha
+        // 2. Encabezado de telemetría militar Alpha
         guiGraphics.drawString(this.font, "§7[VG TACTICAL DIAL // §6BUILD 2.0.0-ALPHA§7]", 12, 12, 0xFFAAAAAA, false);
 
         // 3. Detección polar de la rebanada bajo el ratón
@@ -316,7 +317,7 @@ public class TacticalRadialScreen extends Screen {
             double startAngle = midAngle - (sliceAngle / 2.0) + (GAP_RADIANS / 2.0);
             double endAngle = midAngle + (sliceAngle / 2.0) - (GAP_RADIANS / 2.0);
 
-            float rOut = isSel ? (OUTER_RADIUS + 3.0f) : OUTER_RADIUS;
+            float rOut = isSel ? (OUTER_RADIUS + 4.0f) : OUTER_RADIUS;
             float rIn = INNER_RADIUS;
 
             int colorInner;
@@ -343,6 +344,13 @@ public class TacticalRadialScreen extends Screen {
             // Borde interior fino
             int inRimColor = isSel ? (opt.color & 0x88FFFFFF) : 0x3322443B;
             drawDonutWedge(builder, matrix, cx, cy, rIn, rIn + 1.2f, startAngle, endAngle, inRimColor, inRimColor, 16);
+
+            // Sockets tácticos militares centrados para el icono
+            if (!opt.icon.isEmpty()) {
+                float wedgeCx = (float) (cx + Math.cos(midAngle) * MID_RADIUS);
+                float wedgeCy = (float) (cy + Math.sin(midAngle) * MID_RADIUS);
+                drawTacticalSocket(builder, matrix, wedgeCx, wedgeCy - 6.0f, isSel, opt.color, opt.enabled);
+            }
         }
 
         // B. Disco Central de Telemetría (Hub Interior)
@@ -359,7 +367,7 @@ public class TacticalRadialScreen extends Screen {
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
 
-        // 5. PASO 2: Renderizado de Iconos de Ítems dentro de cada cuña
+        // 5. PASO 2: Renderizado de Iconos dentro del Socket Táctico
         for (int i = 0; i < count; i++) {
             RadialOption opt = options.get(i);
             if (opt.icon.isEmpty()) continue;
@@ -367,12 +375,12 @@ public class TacticalRadialScreen extends Screen {
             boolean isSel = (i == selectedIndex);
             double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
 
-            float iconX = (float) (cx + Math.cos(midAngle) * ICON_RADIUS);
-            float iconY = (float) (cy + Math.sin(midAngle) * ICON_RADIUS);
+            float wedgeCx = (float) (cx + Math.cos(midAngle) * MID_RADIUS);
+            float wedgeCy = (float) (cy + Math.sin(midAngle) * MID_RADIUS);
 
             PoseStack pose = guiGraphics.pose();
             pose.pushPose();
-            pose.translate(iconX, iconY, 0);
+            pose.translate(wedgeCx, wedgeCy - 6.0f, 0);
             if (isSel) {
                 pose.scale(1.15f, 1.15f, 1.0f);
             }
@@ -380,24 +388,40 @@ public class TacticalRadialScreen extends Screen {
             pose.popPose();
         }
 
-        // 6. PASO 3: Restaurar estado para texto 2D
+        // 6. PASO 3: Restaurar estado para texto 2D (Stacking Cartesiano sin Colisiones)
         RenderSystem.disableDepthTest();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
-        // Títulos en cada cuña
+        float availableWidth = (float) (MID_RADIUS * sliceAngle - Math.toRadians(3.5) * MID_RADIUS);
+
         for (int i = 0; i < count; i++) {
             RadialOption opt = options.get(i);
             boolean isSel = (i == selectedIndex);
             double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
 
-            float labelRadius = OUTER_RADIUS - 13.0f;
-            float textX = (float) (cx + Math.cos(midAngle) * labelRadius);
-            float textY = (float) (cy + Math.sin(midAngle) * labelRadius);
+            float wedgeCx = (float) (cx + Math.cos(midAngle) * MID_RADIUS);
+            float wedgeCy = (float) (cy + Math.sin(midAngle) * MID_RADIUS);
 
             int textColor = !opt.enabled ? 0x66888888 : (isSel ? 0xFFFFFFFF : (opt.color & 0x00FFFFFF | 0xCC000000));
             int strW = this.font.width(opt.title);
-            guiGraphics.drawString(this.font, opt.title, (int) (textX - strW / 2.0f), (int) (textY - 4), textColor, false);
+
+            // Auto-escala dinámica para que títulos largos nunca se salgan de su cuña
+            float textScale = 1.0f;
+            if (strW > availableWidth && availableWidth > 15.0f) {
+                textScale = Math.max(0.70f, availableWidth / (float) strW);
+            }
+
+            if (textScale < 1.0f) {
+                PoseStack pose = guiGraphics.pose();
+                pose.pushPose();
+                pose.translate(wedgeCx, wedgeCy + 7.0f, 0);
+                pose.scale(textScale, textScale, 1.0f);
+                guiGraphics.drawString(this.font, opt.title, (int) (-strW / 2.0f), -4, textColor, false);
+                pose.popPose();
+            } else {
+                guiGraphics.drawString(this.font, opt.title, (int) (wedgeCx - strW / 2.0f), (int) (wedgeCy + 3.0f), textColor, false);
+            }
         }
 
         // Telemetría en el Hub Central
@@ -419,6 +443,51 @@ public class TacticalRadialScreen extends Screen {
     // =========================================================================
     // UTILIDADES DE RENDERIZADO TÁCTICO PURO BLAZE3D / JOML
     // =========================================================================
+
+    private static void drawTacticalSocket(BufferBuilder builder, Matrix4f matrix, float x, float y, boolean isSel, int accentColor, boolean enabled) {
+        float half = isSel ? 9.5f : 9.0f;
+        float x1 = x - half;
+        float y1 = y - half;
+        float x2 = x + half;
+        float y2 = y + half;
+
+        // Placa de cristal blindado / backplate
+        int backColor = !enabled ? 0x66080C10 : (isSel ? 0xDD0D1E24 : 0xAA070E14);
+        drawRect(builder, matrix, x1, y1, x2, y2, backColor);
+
+        if (isSel && enabled) {
+            int glowWash = (accentColor & 0x00FFFFFF) | 0x25000000;
+            drawRect(builder, matrix, x1 + 1, y1 + 1, x2 - 1, y2 - 1, glowWash);
+        }
+
+        // Bisel perimetral
+        int frameColor = !enabled ? 0x22444444 : (isSel ? (accentColor & 0x00FFFFFF | 0x77000000) : 0x33224438);
+        drawRect(builder, matrix, x1, y1, x2, y1 + 1.0f, frameColor);
+        drawRect(builder, matrix, x1, y2 - 1.0f, x2, y2, frameColor);
+        drawRect(builder, matrix, x1, y1 + 1.0f, x1 + 1.0f, y2 - 1.0f, frameColor);
+        drawRect(builder, matrix, x2 - 1.0f, y1 + 1.0f, x2, y2 - 1.0f, frameColor);
+
+        // Brackets tácticos de esquina estilo HUD militar
+        int bracketColor = !enabled ? 0x44555555 : (isSel ? accentColor : 0x8800EEEE);
+        float arm = isSel ? 3.5f : 3.0f;
+        float th = 1.0f;
+
+        // Esquina superior izquierda
+        drawRect(builder, matrix, x1, y1, x1 + arm, y1 + th, bracketColor);
+        drawRect(builder, matrix, x1, y1 + th, x1 + th, y1 + arm, bracketColor);
+
+        // Esquina superior derecha
+        drawRect(builder, matrix, x2 - arm, y1, x2, y1 + th, bracketColor);
+        drawRect(builder, matrix, x2 - th, y1 + th, x2, y1 + arm, bracketColor);
+
+        // Esquina inferior izquierda
+        drawRect(builder, matrix, x1, y2 - th, x1 + arm, y2, bracketColor);
+        drawRect(builder, matrix, x1, y2 - arm, x1 + th, y2 - th, bracketColor);
+
+        // Esquina inferior derecha
+        drawRect(builder, matrix, x2 - arm, y2 - th, x2, y2, bracketColor);
+        drawRect(builder, matrix, x2 - th, y2 - arm, x2, y2 - th, bracketColor);
+    }
 
     private static void drawDonutWedge(BufferBuilder builder, Matrix4f matrix, float cx, float cy,
                                        float inR, float outR, double startAngle, double endAngle,
