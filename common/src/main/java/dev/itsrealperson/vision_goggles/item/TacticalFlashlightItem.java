@@ -123,24 +123,29 @@ public class TacticalFlashlightItem extends Item implements CustomReequipItem {
         player.level().playSound(null, player.blockPosition(), ModSounds.FLASHLIGHT_SWITCH.get(), SoundSource.PLAYERS, 0.7f, active ? 1.0f : 0.85f);
     }
 
+    public static void tickBattery(ItemStack stack, Player player) {
+        if (isActive(stack)) {
+            float current = getBattery(stack);
+            float drain = ModConfig.getBatteryDrainMultiplier();
+            float next = Math.max(0, current - drain);
+            setBattery(stack, next);
+
+            if (next <= 0) {
+                stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
+                player.level().playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.4f, 0.5f);
+            }
+        }
+    }
+
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         if (!level.isClientSide && entity instanceof Player player) {
             boolean isHeld = player.getMainHandItem() == stack || player.getOffhandItem() == stack;
             boolean isEquipped = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedFlashlight(player) == stack;
-            if (isActive(stack)) {
-                if (isHeld || isEquipped) {
-                    float current = getBattery(stack);
-                    float drain = ModConfig.getBatteryDrainMultiplier();
-                    float next = Math.max(0, current - drain);
-                    setBattery(stack, next);
-
-                    if (next <= 0) {
-                        stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
-                        level.playSound(null, player.blockPosition(), ModSounds.BLIP.get(), SoundSource.PLAYERS, 0.4f, 0.5f);
-                    } else if (getMode(stack) == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
-                        dev.itsrealperson.vision_goggles.util.FlashlightDeterrence.apply(level, player, 24.0);
-                    }
+            if (isHeld && !isEquipped && isActive(stack)) {
+                tickBattery(stack, player);
+                if (isActive(stack) && getMode(stack) == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
+                    dev.itsrealperson.vision_goggles.util.FlashlightDeterrence.apply(level, player, 24.0);
                 }
             }
         }

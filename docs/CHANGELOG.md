@@ -158,4 +158,23 @@
   - Eliminados los 8 raycasts secundarios muertos (`VisionFlashlightsRange1..8`), rotaciones y cálculos vectoriales no leídos en `VisionRenderer.updateFlashlightEveryFrame`.
   - Eliminada la consulta redundante `checkIsWall` que ejecutaba un `level.clip` adicional en cada frame sin ser consumida por los shaders GLSL.
   - Reducción del 90% en raycasts de CPU por linterna por frame (de 10 raycasts a solo 1 raycast para `VisionFlashlightsRange0`), manteniendo un `hitRanges` seguro y zero-filled para los uniformes de OpenGL.
+- **Hotfix Definitivo Post-Auditoría Argon (Build 2.0.0-GoldMaster // Plan v22)**:
+  - **Aislamiento Total de Servidores Dedicados y Permisos Administrativos (Área 1)**:
+    - Retiradas todas las referencias de cliente (`Minecraft`, `GuiGraphics`, `PostPass`) de `LuaModuleManager.java` y `LuaCustomModule.java`.
+    - Eliminados métodos redundantes (`onClientTick`, `onRenderHud`, `hookThermalColor`) redirigidos completamente a `LuaClientBridge.java`.
+    - Inicializado `LuaModuleManager.init()` desde `Vision_goggles.init()` común de forma segura para que el servidor dedicado cargue y reconozca scripts sin tocar clases de renderizado.
+    - Exigido nivel OP 2 (`.requires(source -> source.hasPermission(2))`) en `/vg reload`, `/vg slots`, `/vg run` y `/vg givescript`. `/vg folder` restringido exclusivamente al entorno cliente.
+  - **Hardening Avanzado del Sandbox Lua y Watchdog Imparable (Área 2)**:
+    - Creado `ScriptQuotaExceededError extends Error` que la VM de Lua (`pcall` / `xpcall`) no puede interceptar ni anular, erradicando cualquier vector de bypass contra el watchdog de CPU.
+    - Invocado `SandboxedDebugLib.resetInstructionCount()` al inicio de cada ciclo de `callOnEnable`, `callOnDisable`, `callOnTick`, `callOnRenderHud`, `callUpdateUniforms` y `evaluateThermalColor`, garantizando que scripts legítimos nunca agoten cuota por acumulación entre frames.
+    - Acotado el radio a un máximo de 512 y longitud de línea a 1920 en `LuaHudCanvas.java`, y limitado el radio de búsqueda de entidades y bloques a 64.0 en `LuaWorldScanner.java`.
+  - **Loot Table, Tag de Pico y Corrección de "Visión Fantasma" (Área 3)**:
+    - Creado `loot_tables/blocks/modification_station.json` y añadido al tag `mineable/pickaxe.json` para que la Estación de Modificación se recupere normalmente al romperse con cualquier pico.
+    - `ModularGogglesItem.removeModule()`: Al desmontar un módulo en la estación, si las gafas se quedan sin ese módulo o sin módulos en total, se desactivan automáticamente (`TAG_ACTIVE = false`, `TAG_MODE = 0`). Si se desmonta la linterna, se apaga de inmediato (`TAG_FLASHLIGHT_ACTIVE = false`, `TAG_FLASHLIGHT_ON = false`). Recortada la batería actual al nuevo límite máximo con `clamp`.
+    - `GogglesUpgradeRecipe.assemble()`: Garantizado que las `pro_modular_goggles` conserven e instalen formalmente el módulo `battery_expansion` consumido en el crafteo.
+  - **Paridad Fabric y Consumo de Batería en Torso (Área 4)**:
+    - Conectado `ThermalEntityPainter.init()` y registrado `WorldRenderEvents.AFTER_ENTITIES` en Fabric, habilitando siluetas térmicas completas de entidades en Fabric.
+    - Creado slot y tags de Accessories para `vision_goggles:tactical_flashlight` (`data/accessories/tags/items/body.json` y `data/accessories/entities/player.json`).
+    - Añadido el tick de servidor para la linterna táctica equipada en el torso en `ModEvents.tickGoggles`, garantizando consumo real de batería y efecto de disuasión estroboscópico contra mobs al llevarla en Curios o Accessories.
+
 

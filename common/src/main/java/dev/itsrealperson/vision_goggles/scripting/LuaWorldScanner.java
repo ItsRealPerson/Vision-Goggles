@@ -24,9 +24,12 @@ import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.TwoArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import java.util.Collection;
 import java.util.List;
 
+@Environment(EnvType.CLIENT)
 public class LuaWorldScanner {
 
     public static void register(Globals globals) {
@@ -36,6 +39,7 @@ public class LuaWorldScanner {
             @Override
             public LuaValue call(LuaValue arg) {
                 double range = arg.isnumber() ? arg.todouble() : 30.0;
+                range = Math.min(64.0, Math.max(1.0, range));
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null || mc.level == null) return LuaValue.NIL;
 
@@ -61,6 +65,7 @@ public class LuaWorldScanner {
             @Override
             public LuaValue call(LuaValue arg) {
                 double radius = arg.isnumber() ? arg.todouble() : 16.0;
+                radius = Math.min(64.0, Math.max(1.0, radius));
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null || mc.level == null) return LuaValue.NIL;
 
@@ -87,6 +92,7 @@ public class LuaWorldScanner {
             @Override
             public LuaValue call(LuaValue arg) {
                 double range = arg.isnumber() ? arg.todouble() : 10.0;
+                range = Math.min(64.0, Math.max(1.0, range));
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null || mc.level == null) return LuaValue.NIL;
 

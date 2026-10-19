@@ -238,15 +238,67 @@ public class ModularGogglesItem extends VisionGogglesItem {
         nbt.put(ModConstants.TAG_MODULES, modules);
     }
 
+    public List<String> getModules(ItemStack stack) {
+        List<String> list = new ArrayList<>();
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+            for (int i = 0; i < modules.size(); i++) {
+                list.add(modules.getString(i));
+            }
+        }
+        return list;
+    }
+
+    public int getMaxBattery(ItemStack stack) {
+        return getBatteryCapacity(stack);
+    }
+
     public boolean removeModule(ItemStack stack, String moduleId) {
         CompoundTag tag = stack.getTag();
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             for (int i = 0; i < modules.size(); i++) {
-                if (modules.getString(i).equalsIgnoreCase(moduleId)) {
+                String modEntry = modules.getString(i);
+                if (modEntry.equalsIgnoreCase(moduleId) ||
+                    (modEntry.contains(":") && modEntry.split(":")[1].equalsIgnoreCase(moduleId)) ||
+                    (moduleId.contains(":") && moduleId.split(":")[1].equalsIgnoreCase(modEntry))) {
                     modules.remove(i);
                     tag.remove("mod_name_" + moduleId);
                     tag.remove("mod_color_" + moduleId);
+
+                    // 1. If removed module matches currently active TAG_MODE or if getModules(goggles).isEmpty(), turn off goggles
+                    VisionMode removedMode = VisionMode.byLocation(moduleId);
+                    if (removedMode == null) {
+                        String lower = moduleId.toLowerCase();
+                        if (lower.contains("night_vision") || lower.contains("nvg")) removedMode = VisionMode.NIGHT_VISION;
+                        else if (lower.contains("thermal")) removedMode = VisionMode.THERMAL;
+                        else if (lower.contains("hydro")) removedMode = VisionMode.HYDRO;
+                        else if (lower.contains("biometric") || lower.contains("bio")) removedMode = VisionMode.BIOMETRIC;
+                    }
+
+                    int currentModeId = tag.getInt(ModConstants.TAG_MODE);
+                    if (getModules(stack).isEmpty() || (removedMode != null && removedMode.getId() == currentModeId)) {
+                        tag.putBoolean(ModConstants.TAG_ACTIVE, false);
+                        tag.putInt(ModConstants.TAG_MODE, 0);
+                    }
+
+                    // 2. If moduleId equals or contains "flashlight", set TAG_FLASHLIGHT_ACTIVE = false and TAG_FLASHLIGHT_ON = false
+                    if (moduleId.equalsIgnoreCase("flashlight") || moduleId.toLowerCase().contains("flashlight")) {
+                        tag.putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
+                        tag.putBoolean(ModConstants.TAG_FLASHLIGHT_ON, false);
+                        tag.putBoolean("is_on", false);
+                    }
+
+                    // 3. Clamp TAG_BATTERY so battery <= getMaxBattery(goggles)
+                    if (tag.contains(ModConstants.TAG_BATTERY)) {
+                        float currentBatt = tag.getFloat(ModConstants.TAG_BATTERY);
+                        float maxBatt = (float) getMaxBattery(stack);
+                        if (currentBatt > maxBatt) {
+                            tag.putFloat(ModConstants.TAG_BATTERY, maxBatt);
+                        }
+                    }
+
                     return true;
                 }
             }

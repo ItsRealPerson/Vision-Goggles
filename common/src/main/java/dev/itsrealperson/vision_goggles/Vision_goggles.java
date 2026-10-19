@@ -30,5 +30,6 @@ public final class Vision_goggles {
         ModSounds.register();
         NetworkManager.register();
         ModEvents.init();
+        dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.init();
     }
 }

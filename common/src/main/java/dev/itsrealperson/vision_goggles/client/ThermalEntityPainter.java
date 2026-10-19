@@ -305,7 +305,7 @@ public class ThermalEntityPainter {
         float tintG = TINT_G;
         float tintB = TINT_B;
         float tintA = TINT_A;
-        Integer luaColor = dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.hookThermalColor("general", false);
+        Integer luaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
         if (luaColor != null) {
             tintA = ((luaColor >> 24) & 0xFF) / 255.0f;
             tintR = ((luaColor >> 16) & 0xFF) / 255.0f;

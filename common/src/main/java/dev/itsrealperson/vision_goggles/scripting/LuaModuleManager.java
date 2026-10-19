@@ -2,8 +2,6 @@ package dev.itsrealperson.vision_goggles.scripting;
 
 import dev.architectury.platform.Platform;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
@@ -121,41 +119,6 @@ public class LuaModuleManager {
             activeVisionModeModule = module;
             if (activeVisionModeModule != null) activeVisionModeModule.callOnEnable();
         }
-    }
-
-    public static void onClientTick(Minecraft mc, float batteryPct) {
-        boolean visorActive = dev.itsrealperson.vision_goggles.client.VisionRenderer.isVisorActive();
-        for (LuaCustomModule mod : LOADED_MODULES.values()) {
-            boolean shouldRun = visorActive && mod.canRun(mc);
-            mod.updateActiveState(shouldRun);
-            if (shouldRun) {
-                mod.callOnTick(batteryPct);
-            }
-        }
-    }
-
-    public static void onRenderHud(GuiGraphics g, float partialTick) {
-        if (!dev.itsrealperson.vision_goggles.client.VisionRenderer.isVisorActive()) {
-            return;
-        }
-        Minecraft mc = Minecraft.getInstance();
-        for (LuaCustomModule mod : LOADED_MODULES.values()) {
-            if (mod.canRun(mc)) {
-                mod.callOnRenderHud();
-            }
-        }
-        LuaHudCanvas.render(g, partialTick);
-    }
-
-    public static Integer hookThermalColor(String entityType, boolean isHostile) {
-        Minecraft mc = Minecraft.getInstance();
-        for (LuaCustomModule mod : LOADED_MODULES.values()) {
-            if (mod.canRun(mc)) {
-                Integer color = mod.evaluateThermalColor(entityType, isHostile);
-                if (color != null) return color;
-            }
-        }
-        return null;
     }
 
     public static void reload() {

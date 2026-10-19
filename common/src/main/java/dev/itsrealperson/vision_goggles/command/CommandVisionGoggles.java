@@ -28,6 +28,7 @@ public class CommandVisionGoggles {
                 .executes(context -> openGui(context.getSource()))
             )
             .then(Commands.literal("reload")
+                .requires(source -> source.hasPermission(2))
                 .executes(context -> {
                     LuaModuleManager.reload();
                     context.getSource().sendSuccess(() -> Component.literal("§a[Vision Goggles] Módulos Lua recargados con éxito."), false);
@@ -50,6 +51,10 @@ public class CommandVisionGoggles {
             )
             .then(Commands.literal("folder")
                 .executes(context -> {
+                    if (Platform.getEnv() != net.fabricmc.api.EnvType.CLIENT) {
+                        context.getSource().sendFailure(Component.literal("§c[Vision Goggles] Este comando solo puede abrir carpetas en el cliente local."));
+                        return 0;
+                    }
                     try {
                         Path dir = Platform.getConfigFolder().resolve("vision_goggles").resolve("modules");
                         Util.getPlatform().openFile(dir.toFile());
@@ -61,6 +66,7 @@ public class CommandVisionGoggles {
                 })
             )
             .then(Commands.literal("slots")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("modular")
                     .executes(ctx -> {
                         int current = dev.itsrealperson.vision_goggles.item.ModularGogglesItem.getCustomModularMax();
@@ -101,6 +107,7 @@ public class CommandVisionGoggles {
                 )
             )
             .then(Commands.literal("run")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("code", StringArgumentType.greedyString())
                     .executes(context -> {
                         String code = StringArgumentType.getString(context, "code");
@@ -111,6 +118,7 @@ public class CommandVisionGoggles {
                 )
             )
             .then(Commands.literal("givescript")
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("id", StringArgumentType.word())
                     .suggests((ctx, builder) -> {
                         for (LuaCustomModule mod : LuaModuleManager.getLoadedModules()) {

@@ -21,6 +21,7 @@ public class ModConstants {
     public static final String MODULE_CHUNK_VIEWER = "CHUNK_VIEWER";
     public static final String MODULE_FLASHLIGHT = "FLASHLIGHT";
     public static final String TAG_FLASHLIGHT_ACTIVE = "flashlight_active";
+    public static final String TAG_FLASHLIGHT_ON = "flashlight_on";
     public static final String TAG_FLASHLIGHT_MODE = "flashlight_mode"; // int: FlashlightMode.id
 
 

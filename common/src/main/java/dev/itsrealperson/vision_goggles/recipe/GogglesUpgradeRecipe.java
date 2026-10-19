@@ -2,7 +2,12 @@ package dev.itsrealperson.vision_goggles.recipe;
 
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.registry.ModRecipes;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -23,6 +28,14 @@ public class GogglesUpgradeRecipe extends ShapedRecipe {
                     result.setTag(stack.getTag().copy());
                 }
                 break;
+            }
+        }
+        if (result.getItem() instanceof ModularGogglesItem modularItem) {
+            if (!modularItem.hasBatteryExpansion(result)) {
+                CompoundTag tag = result.getOrCreateTag();
+                ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+                modules.add(StringTag.valueOf(ModConstants.ID_BATTERY_EXPANSION));
+                tag.put(ModConstants.TAG_MODULES, modules);
             }
         }
         return result;

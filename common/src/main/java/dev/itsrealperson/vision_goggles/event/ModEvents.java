@@ -18,10 +18,12 @@ import dev.architectury.event.events.common.InteractionEvent;
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.event.events.common.TickEvent;
 
+import dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.network.BatteryPacket;
 import dev.itsrealperson.vision_goggles.network.ConfigSyncPacket;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
+import dev.itsrealperson.vision_goggles.util.FlashlightDeterrence;
 
 public class ModEvents {
 
@@ -115,6 +117,12 @@ public class ModEvents {
             gogglesItem.serverTick(helmet, player);
         } else {
             VisionGogglesItem.cleanUpEffect(player);
+        }
+
+        ItemStack flashlight = PlatformMethods.getEquippedFlashlight(player);
+        if (!flashlight.isEmpty() && flashlight.getItem() instanceof TacticalFlashlightItem && TacticalFlashlightItem.isActive(flashlight)) {
+            TacticalFlashlightItem.tickBattery(flashlight, player);
+            FlashlightDeterrence.apply(player.level(), player, flashlight);
         }
     }
 }

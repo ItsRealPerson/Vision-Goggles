@@ -498,8 +498,8 @@ public class VisionShaderManager {
 
         // Call Lua uniforms hook for active modules
         for (dev.itsrealperson.vision_goggles.scripting.LuaCustomModule mod : dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.getLoadedModules()) {
-            if (mod.canRun(mc)) {
-                mod.callUpdateUniforms(passes);
+            if (dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.canModuleRun(mod)) {
+                dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.updateUniforms(mod, passes);
             }
         }
     }

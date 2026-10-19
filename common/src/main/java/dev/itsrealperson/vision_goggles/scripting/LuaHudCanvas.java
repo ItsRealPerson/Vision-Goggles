@@ -149,7 +149,7 @@ public class LuaHudCanvas {
                     int dy = y2 - y1;
                     float len = (float) Math.sqrt(dx * dx + dy * dy);
                     if (len < 1) return;
-                    int steps = (int) Math.ceil(len);
+                    int steps = Math.min(1920, (int) Math.ceil(len));
                     for (int i = 0; i <= steps; i++) {
                         float t = i / (float) steps;
                         int px = Math.round(x1 + dx * t);
@@ -167,11 +167,12 @@ public class LuaHudCanvas {
             public Varargs invoke(Varargs args) {
                 final int cx = args.checkint(1);
                 final int cy = args.checkint(2);
-                final int radius = args.checkint(3);
+                int r = args.checkint(3);
+                final int radius = Math.min(512, Math.max(1, r));
                 final int color = parseColor(args.optjstring(4, "#FFFFFF"));
 
                 queueCommand((g, mc) -> {
-                    int segments = Math.max(16, radius * 2);
+                    int segments = Math.min(1024, Math.max(16, radius * 2));
                     double step = 2.0 * Math.PI / segments;
                     for (int i = 0; i < segments; i++) {
                         double angle = i * step;
@@ -190,7 +191,8 @@ public class LuaHudCanvas {
             public Varargs invoke(Varargs args) {
                 final int cx = args.checkint(1);
                 final int cy = args.checkint(2);
-                final int radius = args.checkint(3);
+                int r = args.checkint(3);
+                final int radius = Math.min(512, Math.max(1, r));
                 final int color = parseColor(args.optjstring(4, "#FFFFFF"));
 
                 queueCommand((g, mc) -> {
@@ -242,17 +244,6 @@ public class LuaHudCanvas {
     }
 
     public static int parseColor(String hex) {
-        if (hex == null || hex.isEmpty()) return 0xFFFFFFFF;
-        try {
-            if (hex.startsWith("#")) {
-                hex = hex.substring(1);
-            }
-            if (hex.length() == 6) {
-                return (int) (0xFF000000L | Long.parseLong(hex, 16));
-            } else if (hex.length() == 8) {
-                return (int) Long.parseLong(hex, 16);
-            }
-        } catch (Exception ignored) {}
-        return 0xFFFFFFFF;
+        return LuaCustomModule.parseColor(hex);
     }
 }

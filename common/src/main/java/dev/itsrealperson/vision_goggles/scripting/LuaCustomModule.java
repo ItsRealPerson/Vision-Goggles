@@ -91,20 +91,6 @@ public class LuaCustomModule {
         }
     }
 
-    public boolean canRun(net.minecraft.client.Minecraft mc) {
-        // Must be wearing goggles AND goggles must be turned on with battery
-        if (!dev.itsrealperson.vision_goggles.client.VisionRenderer.isVisorActive()) {
-            return false;
-        }
-        if (mc.player == null) return false;
-        net.minecraft.world.item.ItemStack goggles = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(mc.player);
-        if (goggles.isEmpty() || !(goggles.getItem() instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular)) {
-            // Las gafas básicas fijas (Térmicas, NVG, Hydro, Bio) NUNCA ejecutan módulos/scripts de Lua
-            return false;
-        }
-        return isHardwareInstalled(goggles, modular);
-    }
-
     public boolean isHardwareInstalled(net.minecraft.world.item.ItemStack goggles, dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular) {
         // 1. Debe tener físicamente instalado el chip de este script en las gafas modulares!
         String myId = (id != null) ? id.getPath() : null;
@@ -136,49 +122,69 @@ public class LuaCustomModule {
     public String getRequiredModule() { return requiredModule; }
 
     public void callOnEnable() {
+        SandboxedDebugLib.resetInstructionCount();
         if (onEnable != null) {
-            try { onEnable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Exception ignored) {}
+            try { onEnable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Throwable ignored) {}
         }
     }
 
     public void callOnDisable() {
+        SandboxedDebugLib.resetInstructionCount();
         if (onDisable != null) {
-            try { onDisable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Exception ignored) {}
+            try { onDisable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Throwable ignored) {}
         }
     }
 
     public void callOnTick(float batteryPct) {
+        SandboxedDebugLib.resetInstructionCount();
         if (onTick != null) {
-            try { onTick.call(LuaScriptEngine.getGlobals().get("player"), LuaValue.valueOf(batteryPct)); } catch (Exception ignored) {}
+            try { onTick.call(LuaScriptEngine.getGlobals().get("player"), LuaValue.valueOf(batteryPct)); } catch (Throwable ignored) {}
         }
     }
 
     public void callOnRenderHud() {
+        SandboxedDebugLib.resetInstructionCount();
         if (onRenderHud != null) {
-            try { onRenderHud.call(LuaScriptEngine.getGlobals().get("hud")); } catch (Exception ignored) {}
+            try { onRenderHud.call(LuaScriptEngine.getGlobals().get("hud")); } catch (Throwable ignored) {}
         }
     }
 
-    public void callUpdateUniforms(java.util.List<net.minecraft.client.renderer.PostPass> passes) {
-        if (onUpdateUniforms != null && passes != null) {
+    public void callUpdateUniforms(LuaTable uniforms) {
+        SandboxedDebugLib.resetInstructionCount();
+        if (onUpdateUniforms != null && uniforms != null) {
             try {
-                LuaTable bridge = LuaUniformBridge.createBridge(passes);
-                onUpdateUniforms.call(LuaScriptEngine.getGlobals().get("player"), bridge);
-            } catch (Exception ignored) {}
+                onUpdateUniforms.call(LuaScriptEngine.getGlobals().get("player"), uniforms);
+            } catch (Throwable ignored) {}
         }
     }
 
     public Integer evaluateThermalColor(String entityType, boolean isHostile) {
+        SandboxedDebugLib.resetInstructionCount();
         if (onThermalColor != null) {
             try {
                 LuaValue result = onThermalColor.call(LuaValue.valueOf(entityType), LuaValue.valueOf(isHostile));
                 if (result.isstring()) {
-                    return LuaHudCanvas.parseColor(result.tojstring());
+                    return parseColor(result.tojstring());
                 } else if (result.isnumber()) {
                     return result.toint();
                 }
-            } catch (Exception ignored) {}
+            } catch (Throwable ignored) {}
         }
         return null;
+    }
+
+    public static int parseColor(String hex) {
+        if (hex == null || hex.isEmpty()) return 0xFFFFFFFF;
+        try {
+            if (hex.startsWith("#")) {
+                hex = hex.substring(1);
+            }
+            if (hex.length() == 6) {
+                return (int) (0xFF000000L | Long.parseLong(hex, 16));
+            } else if (hex.length() == 8) {
+                return (int) Long.parseLong(hex, 16);
+            }
+        } catch (Exception ignored) {}
+        return 0xFFFFFFFF;
     }
 }

@@ -80,7 +80,8 @@ public class LuaClientBridge {
 
     public static void updateUniforms(LuaCustomModule mod, List<PostPass> passes) {
         if (passes != null) {
-            mod.callUpdateUniforms(passes);
+            LuaTable bridge = LuaUniformBridge.createBridge(passes);
+            mod.callUpdateUniforms(bridge);
         }
     }
 }
