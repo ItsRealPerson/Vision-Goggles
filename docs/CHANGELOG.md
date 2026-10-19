@@ -176,5 +176,6 @@
     - Conectado `ThermalEntityPainter.init()` y registrado `WorldRenderEvents.AFTER_ENTITIES` en Fabric, habilitando siluetas térmicas completas de entidades en Fabric.
     - Creado slot y tags de Accessories para `vision_goggles:tactical_flashlight` (`data/accessories/tags/items/body.json` y `data/accessories/entities/player.json`).
     - Añadido el tick de servidor para la linterna táctica equipada en el torso en `ModEvents.tickGoggles`, garantizando consumo real de batería y efecto de disuasión estroboscópico contra mobs al llevarla en Curios o Accessories.
-
-
+- **Auditoría Técnica Profunda Post-Plan v22 (`docs/auditorias/analisis_argon_v22.md`)**:
+  - Verificada la resolución de los bloqueadores de servidor dedicado (`LuaModuleManager`/`LuaCustomModule` limpios y permisos OP nivel 2 en `/vg`), hardening de Lua (`resetInstructionCount` por callback, `ScriptQuotaExceededError extends Error` inmune a `pcall`, cotas geométricas en `LuaHudCanvas`/`LuaWorldScanner`), supervivencia (`modification_station.json` loot table, `mineable/pickaxe.json`, preservación de `battery_expansion` en `GogglesUpgradeRecipe`) y reducción del 90% de raycasts por frame en `VisionRenderer`.
+  - Documentados los 4 hallazgos puntuales restantes para el cierre definitivo en Fabric y Lua (`processResources` para expandir `${version}` en `fabric/build.gradle`, inicialización perezosa de `ThermalEntityPainter` en Fabric, eliminación de `fabric/src/main/resources/data/accessories/entities/player.json` que sobrescribe al de `common`, y `catch (Throwable)` + `resetInstructionCount()` en `LuaModuleManager.loadModuleFile()`), otorgando una calificación global de **7.9 / 10** (**8.5 / 10 en Forge** y **6.2 / 10 en Fabric**).
