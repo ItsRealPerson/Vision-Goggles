@@ -114,15 +114,15 @@ public class FlashlightUniforms {
         isLocalArray[currentCount]   = isLocal ? 1.0f : 0.0f;
         isWallArray[currentCount]   = isWall ? 1.0f : 0.0f;
 
-        range0Array[currentCount] = ranges[0];
-        range1Array[currentCount] = ranges[1];
-        range2Array[currentCount] = ranges[2];
-        range3Array[currentCount] = ranges[3];
-        range4Array[currentCount] = ranges[4];
-        range5Array[currentCount] = (ranges.length >= 9) ? ranges[5] : ranges[0];
-        range6Array[currentCount] = (ranges.length >= 9) ? ranges[6] : ranges[0];
-        range7Array[currentCount] = (ranges.length >= 9) ? ranges[7] : ranges[0];
-        range8Array[currentCount] = (ranges.length >= 9) ? ranges[8] : ranges[0];
+        range0Array[currentCount] = (ranges.length > 0) ? ranges[0] : mode.range;
+        range1Array[currentCount] = (ranges.length > 1) ? ranges[1] : 0.0f;
+        range2Array[currentCount] = (ranges.length > 2) ? ranges[2] : 0.0f;
+        range3Array[currentCount] = (ranges.length > 3) ? ranges[3] : 0.0f;
+        range4Array[currentCount] = (ranges.length > 4) ? ranges[4] : 0.0f;
+        range5Array[currentCount] = (ranges.length > 5) ? ranges[5] : 0.0f;
+        range6Array[currentCount] = (ranges.length > 6) ? ranges[6] : 0.0f;
+        range7Array[currentCount] = (ranges.length > 7) ? ranges[7] : 0.0f;
+        range8Array[currentCount] = (ranges.length > 8) ? ranges[8] : 0.0f;
 
         currentCount++;
     }
