@@ -1,8 +1,10 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
+import dev.itsrealperson.vision_goggles.util.FlashlightMode;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
+import net.fabricmc.api.EnvType;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -37,7 +39,19 @@ public class SyncFlashlightPacket {
     }
 
     public void handle(java.util.function.Supplier<NetworkManager.PacketContext> contextSupplier) {
-        contextSupplier.get().queue(() -> {
+        NetworkManager.PacketContext context = contextSupplier.get();
+        // Server validation: Clients can only synchronize their own flashlight, and modeId must be valid
+        if (context.getEnv() != EnvType.CLIENT) {
+            Player sender = context.getPlayer();
+            if (sender == null || sender.getId() != this.entityId) {
+                return;
+            }
+            if (this.modeId < 0 || this.modeId >= FlashlightMode.values().length) {
+                return;
+            }
+        }
+
+        context.queue(() -> {
             Player localPlayer = contextSupplier.get().getPlayer();
             if (localPlayer == null || localPlayer.level() == null) return;
 

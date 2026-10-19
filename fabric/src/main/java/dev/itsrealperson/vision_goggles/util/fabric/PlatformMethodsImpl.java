@@ -66,6 +66,11 @@ public class PlatformMethodsImpl {
                 }
             }
         }
+        
+        ItemStack head = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+        if (head.getItem() instanceof VisionGogglesItem) {
+            return head;
+        }
         return ItemStack.EMPTY;
     }
 

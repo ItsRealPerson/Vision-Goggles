@@ -210,7 +210,8 @@ public class VisionShaderManager {
 
         try {
             float time = (float) mc.level.getGameTime() + mc.getFrameTime();
-            float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) mc.getWindow().getScreenHeight();
+            int screenHeight = Math.max(1, mc.getWindow().getScreenHeight());
+            float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) screenHeight;
 
             List<PostPass> passes = ((PostChainAccessor) savedFlashlightChain).vision_goggles$getPasses();
             for (PostPass pass : passes) {
@@ -251,7 +252,8 @@ public class VisionShaderManager {
         List<PostPass> passes = ((PostChainAccessor) effect).vision_goggles$getPasses();
         float time = (float) mc.level.getGameTime() + mc.getFrameTime();
         float battery = currentBatteryPct;
-        float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) mc.getWindow().getScreenHeight();
+        int screenHeight = Math.max(1, mc.getWindow().getScreenHeight());
+        float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) screenHeight;
 
         int theme = ModConfig.getNvgColorTheme();
         float rf = 0.05f, gf = 1.0f, bf = 0.05f;

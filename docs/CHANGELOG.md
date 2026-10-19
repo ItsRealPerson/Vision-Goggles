@@ -131,6 +131,27 @@
     - Implementada arquitectura de iluminación de simulación táctica: **Luz Base Ambiental + Pulsos de Sobretensión**.
     - La linterna conserva un 35% de luz base continua para evitar cortes bruscos a oscuridad total y fatiga ocular / mareo.
     - Pulsos dinámicos a ~9.5 Hz con caída suave y cono táctico intermedio, conservando la disuasión completa contra mobs (`FlashlightDeterrence`).
+- **Pulido Integral Pre-Lanzamiento y Estabilización Universal (Build 2.0.0-ReleaseCandidate // Plan v21)**:
+  - **Estabilidad Total en Servidores Dedicados Multijugador (Zero-Crash Headless)**:
+    - Desacoplado el cargador de pantallas de cliente en `OpenLuaScreenPacket.java` delegando en `ClientGuiHelper.java` únicamente bajo entornos de cliente (`EnvType.CLIENT`).
+    - Aislado el registro de pantallas de configuración de Forge (`ConfigScreenHandler`) en `Vision_gogglesForgeClient.java` protegido contra la carga de clases en entornos de servidor dedicado.
+    - Desacoplado el motor Lua de clases de renderizado (`LuaClientBridge.java`), permitiendo la ejecución segura de comandos y lógica de servidor sin referencias a `Minecraft.getInstance()`.
+  - **Eliminación Definitiva de Exploits de Duplicación en Supervivencia**:
+    - `ModificationStationBlock.onRemove`: Al destruir la estación de modificación, se vacía y anula el slot 2 (previsualización de resultado interactivo) antes de soltar el contenido al mundo con `Containers.dropContents`. Solo se sueltan los ítems reales de las ranuras 0 y 1.
+    - `ModificationStationBlockEntity`: Ocultado el slot 2 de la interfaz `WorldlyContainer` (`getSlotsForFace` solo expone ranuras 0 y 1) y configurado `canTakeItemThroughFace(2) = false`. Las tolvas y conductos de automatización ya no pueden extraer resultados sin consumir ingredientes.
+    - `ModificationStationMenu`: Validación atómica en shift-click (`quickMoveStack`) vaciando el slot antes de ejecutar `onTake`.
+  - **Sandbox Estricto y Watchdog de CPU en Motor Lua**:
+    - Implementado `SandboxedDebugLib.java` con límite de 100.000 instrucciones por llamada, protegiendo al juego de congelamientos por bucles infinitos (`while true do`).
+    - Eliminadas librerías peligrosas de `globals`: `luajava` (acceso a JVM/Runtime), `io`, `package`, `loadfile` y `dofile`.
+    - Sanetizado el módulo `os`, restringiéndolo exclusivamente a llamadas seguras de reloj y tiempo (`clock`, `time`, `difftime`, `date`).
+    - Limitada la cola gráfica de `LuaHudCanvas.java` a un máximo de 500 comandos por frame para evitar sobrecargas de memoria o DoS visual.
+  - **Paridad y Correcciones Críticas en Fabric**:
+    - En `fabric/PlatformMethodsImpl.java`, implementado fallback a `player.getItemBySlot(EquipmentSlot.HEAD)` si no hay accesorios Curios/Accessories equipados, permitiendo el uso normal de las gafas en el slot vanilla de casco.
+    - Activado `FabricLayerRegistry.init()` en `Vision_gogglesFabricClient.java`, registrando las capas de renderizado 3D de las gafas y siluetas térmicas en Fabric.
+  - **Corrección de Relación de Aspecto y Rendimiento Gráfico**:
+    - Integrado el uniform `AspectRatio` y corrección de coordenadas UV en `nvg.fsh`, `thermal.fsh`, `hydro.fsh`, `hydro_dry.fsh` y `bio.fsh`. Los visores y retículas mantienen forma circular perfecta en pantallas panorámicas 16:9 y ultra-panorámicas 21:9.
+    - Optimizado el radio y la frecuencia del escáner de bloques de spawn en `VisionWorldRenderer.java`, eliminando el análisis masivo de 274.625 bloques en el hilo principal de renderizado.
+
 
 
 

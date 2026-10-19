@@ -8,6 +8,7 @@ uniform float time;
 uniform float battery;
 uniform float focus;
 uniform float u_DSPActive;
+uniform float AspectRatio;
 
 float hashNoise(vec2 p, float t) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -16,7 +17,7 @@ float hashNoise(vec2 p, float t) {
 }
 
 float drawBracketReticle(vec2 uv, float f, float t) {
-    vec2 p = abs(uv - vec2(0.5, 0.5));
+    vec2 p = vec2(abs(uv.x - 0.5) * AspectRatio, abs(uv.y - 0.5));
     
     // 1. Center Crosshair (Fine mil-dot cross)
     float cross = 0.0;
@@ -48,8 +49,13 @@ float drawBracketReticle(vec2 uv, float f, float t) {
     if (lDistY < thick && p.x > 0.02 && p.x < 0.045) {
         ladder = 1.0 - smoothstep(0.0, thick, lDistY) * 0.75;
     }
+
+    // 4. Circular Tactical Targeting Rings (aspect-ratio corrected circular ring)
+    float ringRadius = mix(0.045, 0.022, f);
+    float ringDist = abs(length(p) - ringRadius);
+    float ring = (1.0 - smoothstep(0.0, thick * 1.5, ringDist)) * 0.85;
     
-    return max(cross, max(brackets, ladder));
+    return max(cross, max(brackets, max(ladder, ring)));
 }
 
 void main() {
@@ -106,9 +112,9 @@ void main() {
 
     vec3 finalColor = techColor + scanline + scanBar;
 
-    // Tactical HMD Vignette
-    vec2 distVec = uv - vec2(0.5, 0.5);
-    float dist = length(distVec);
+    // Tactical HMD Vignette with Aspect Ratio correction
+    vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
+    float dist = length(aspectVec);
     float vignette = 1.0 - smoothstep(0.42 - focus * 0.1, 0.82 - focus * 0.2, dist);
     finalColor *= vignette;
 

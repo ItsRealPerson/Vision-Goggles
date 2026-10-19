@@ -81,8 +81,27 @@ public class ModificationStationBlock extends BaseEntityBlock {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof ModificationStationBlockEntity) {
-                net.minecraft.world.Containers.dropContents(level, pos, (ModificationStationBlockEntity) blockEntity);
+            if (blockEntity instanceof ModificationStationBlockEntity station) {
+                // Clear slot 2 (result preview) to prevent duplication on block break
+                station.getItem(2).setCount(0);
+                station.setItem(2, net.minecraft.world.item.ItemStack.EMPTY);
+
+                // Only drop slot 0 (goggles) and slot 1 (module/item)
+                net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> drops = net.minecraft.core.NonNullList.create();
+                if (!station.getItem(0).isEmpty()) {
+                    drops.add(station.getItem(0).copy());
+                }
+                if (!station.getItem(1).isEmpty()) {
+                    drops.add(station.getItem(1).copy());
+                }
+                net.minecraft.world.Containers.dropContents(level, pos, drops);
+
+                // Clear input slots so block entity is empty
+                station.setItem(0, net.minecraft.world.item.ItemStack.EMPTY);
+                station.setItem(1, net.minecraft.world.item.ItemStack.EMPTY);
+                station.getItem(2).setCount(0);
+                station.setItem(2, net.minecraft.world.item.ItemStack.EMPTY);
+
                 level.updateNeighbourForOutputSignal(pos, this);
             }
             super.onRemove(state, level, pos, newState, isMoving);

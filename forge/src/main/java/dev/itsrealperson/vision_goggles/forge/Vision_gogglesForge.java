@@ -27,13 +27,8 @@ public final class Vision_gogglesForge {
         modEventBus.addListener(this::clientSetup);
         modEventBus.addListener(this::enqueueIMC);
         
-        // Register Cloth Config Screen for Forge
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory factory = new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> {
-                return dev.itsrealperson.vision_goggles.client.ModConfigGui.createConfigScreen(parent);
-            });
-            net.minecraftforge.fml.ModLoadingContext.get().registerExtensionPoint(net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class, () -> factory);
-        }
+        // Register Cloth Config Screen for Forge safely on client only
+        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> Vision_gogglesForgeClient.registerConfigScreen());
 
         // Run our common setup.
         Vision_goggles.init();

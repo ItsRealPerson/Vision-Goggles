@@ -313,10 +313,10 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         ContainerHelper.saveAllItems(tag, items);
     }
 
-    // WorldlyContainer methods (simplification for now)
+    // WorldlyContainer methods
     @Override
     public int[] getSlotsForFace(net.minecraft.core.Direction side) {
-        return new int[]{0, 1, 2};
+        return new int[]{0, 1};
     }
 
     @Override
@@ -326,6 +326,9 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
     @Override
     public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction dir) {
-        return slot == 2;
+        if (slot == 2) {
+            return false;
+        }
+        return true;
     }
 }

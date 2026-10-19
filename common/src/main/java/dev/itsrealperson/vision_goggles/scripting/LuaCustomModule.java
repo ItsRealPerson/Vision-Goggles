@@ -102,7 +102,10 @@ public class LuaCustomModule {
             // Las gafas básicas fijas (Térmicas, NVG, Hydro, Bio) NUNCA ejecutan módulos/scripts de Lua
             return false;
         }
+        return isHardwareInstalled(goggles, modular);
+    }
 
+    public boolean isHardwareInstalled(net.minecraft.world.item.ItemStack goggles, dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular) {
         // 1. Debe tener físicamente instalado el chip de este script en las gafas modulares!
         String myId = (id != null) ? id.getPath() : null;
         boolean hasChipInstalled = false;
