@@ -61,7 +61,17 @@ public enum ModuleType {
                 float drain = baseDrain * ModConfig.getBatteryDrainMultiplier();
                 float current = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
                 if (current > 0) {
-                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, Math.max(0, current - drain));
+                    float next = Math.max(0, current - drain);
+                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, next);
+                    if (next <= 0) {
+                        stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
+                        stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ON, false);
+                        stack.getOrCreateTag().putBoolean("is_on", false);
+                    }
+                } else {
+                    stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
+                    stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ON, false);
+                    stack.getOrCreateTag().putBoolean("is_on", false);
                 }
 
                 int modeId = stack.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);

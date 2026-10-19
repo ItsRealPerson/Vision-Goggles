@@ -57,6 +57,7 @@ public class SodiumFlashlightUniforms {
         });
 
         if (locs[LOC_COUNT]     != -1) GL20.glUniform1i(locs[LOC_COUNT], FlashlightUniforms.currentCount);
+        if (FlashlightUniforms.currentCount == 0) return; // Fast path: skip uploading arrays when no flashlights are active
         if (locs[LOC_POS]       != -1) GL20.glUniform3fv(locs[LOC_POS], FlashlightUniforms.posArray);
         if (locs[LOC_DIR]       != -1) GL20.glUniform3fv(locs[LOC_DIR], FlashlightUniforms.dirArray);
         if (locs[LOC_COL]       != -1) GL20.glUniform3fv(locs[LOC_COL], FlashlightUniforms.colArray);

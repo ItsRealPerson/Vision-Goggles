@@ -12,6 +12,9 @@ import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 
 public class PlatformMethodsImpl {
     public static boolean equipInSlot(Player player, ItemStack stack) {
+        if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem)) {
+            return false;
+        }
         AtomicBoolean success = new AtomicBoolean(false);
         CuriosApi.getCuriosHelper().getCuriosHandler(player).ifPresent(handler -> {
             String[] possibleSlots = {"eyes", "eyewear"};

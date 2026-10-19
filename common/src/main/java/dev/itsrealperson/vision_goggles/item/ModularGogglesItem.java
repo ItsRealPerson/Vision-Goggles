@@ -280,7 +280,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
                     int currentModeId = tag.getInt(ModConstants.TAG_MODE);
                     if (getModules(stack).isEmpty() || (removedMode != null && removedMode.getId() == currentModeId)) {
                         tag.putBoolean(ModConstants.TAG_ACTIVE, false);
-                        tag.putInt(ModConstants.TAG_MODE, 0);
+                        tag.putInt(ModConstants.TAG_MODE, -1);
                     }
 
                     // 2. If moduleId equals or contains "flashlight", set TAG_FLASHLIGHT_ACTIVE = false and TAG_FLASHLIGHT_ON = false

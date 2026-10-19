@@ -133,6 +133,11 @@ public class FlashlightUniforms {
         int prog = shader.getId();
 
         int locCount     = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightCount");
+        if (locCount != -1) {
+            org.lwjgl.opengl.GL20.glUniform1i(locCount, currentCount);
+        }
+        if (currentCount == 0) return; // Fast path: skip uploading arrays when no flashlights are active
+
         int locPos       = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsPos");
         int locDir       = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsDir");
         int locUp        = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsUp");
