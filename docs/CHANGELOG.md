@@ -151,10 +151,6 @@
   - **Corrección de Relación de Aspecto y Rendimiento Gráfico**:
     - Integrado el uniform `AspectRatio` y corrección de coordenadas UV en `nvg.fsh`, `thermal.fsh`, `hydro.fsh`, `hydro_dry.fsh` y `bio.fsh`. Los visores y retículas mantienen forma circular perfecta en pantallas panorámicas 16:9 y ultra-panorámicas 21:9.
     - Optimizado el radio y la frecuencia del escáner de bloques de spawn en `VisionWorldRenderer.java`, eliminando el análisis masivo de 274.625 bloques en el hilo principal de renderizado.
-
-
-
-
-
-
-
+- **Auditoría Técnica Profunda Post-Plan v21 (`docs/auditorias/analisis_argon.md`)**:
+  - Realizada auditoría estática y de flujo línea por línea en 5 áreas críticas (Seguridad en Servidores Dedicados, Sandbox Lua, Supervivencia y Duplicación, Paridad Fabric/Forge, y Shaders/Rendimiento).
+  - Documentados los hallazgos residuales P0/P1/P2 tras el Plan v21 (métodos cliente aún presentes en `LuaModuleManager`/`LuaCustomModule`, falta de permisos OP en `/vg`, bypass `pcall` y falta de `resetInstructionCount()` por frame en `SandboxedDebugLib`, ausencia de Loot Table para `modification_station`, exploit de modo de visión al extraer módulos, ausencia de `ThermalEntityPainter` y slot `body` de Accessories en Fabric, y raycasts muertos en shaders de linterna) con calificación global de **6.4 / 10** y checklist para el Hotfix v22.
