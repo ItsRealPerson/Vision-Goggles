@@ -76,6 +76,7 @@ public class ModificationStationMenu extends AbstractContainerMenu {
                     return ItemStack.EMPTY;
                 }
                 slot.onQuickCraft(itemstack1, itemstack);
+                slot.set(ItemStack.EMPTY);
                 slot.onTake(player, itemstack);
                 return itemstack;
             } else if (index < 3) { // From Station Inputs to Player

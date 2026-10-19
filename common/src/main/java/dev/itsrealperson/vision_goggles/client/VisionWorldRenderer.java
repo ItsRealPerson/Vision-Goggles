@@ -37,7 +37,12 @@ public class VisionWorldRenderer {
     private static final ResourceLocation WHITE = new ResourceLocation("minecraft", "textures/misc/white.png");
     private static final List<BlockPos> HOT_BLOCKS = new ArrayList<>();
     private static final List<BlockPos> SPAWN_BLOCKS = new ArrayList<>();
-    private static int scanTick = 0;
+    private static final List<BlockPos> PENDING_SPAWN_BLOCKS = new ArrayList<>();
+    private static final int RADIUS_SPAWN_XZ = 24;
+    private static final int RADIUS_SPAWN_Y = 8;
+    private static int currentSpawnY = -RADIUS_SPAWN_Y;
+    private static BlockPos spawnCenter = null;
+    private static int hotBlocksTick = 0;
     private static boolean spawnSecurityEnabled = true;
 
     public static boolean isSpawnSecurityEnabled() {
@@ -139,11 +144,6 @@ public class VisionWorldRenderer {
 
         if (!isThermal && (!hasSpawnSecurity || !spawnSecurityEnabled)) return;
 
-        if (scanTick++ % 20 == 0) {
-            if (isThermal) updateHotBlocks(mc);
-            if (hasSpawnSecurity && spawnSecurityEnabled) updateSpawnBlocks(mc);
-        }
-
         Vec3 cameraPos = camera.getPosition();
 
         RenderSystem.enableBlend();
@@ -184,43 +184,148 @@ public class VisionWorldRenderer {
             tesselator.end();
         }
 
-
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
     }
 
-    private static void updateHotBlocks(Minecraft mc) {
-        HOT_BLOCKS.clear();
-        BlockPos p = mc.player.blockPosition();
-        int r = 12;
-        for (int x = -r; x <= r; x++) {
-            for (int y = -r; y <= r; y++) {
+    /**
+     * Ticked once per client tick (20 TPS) from VisionRenderer.onClientTick.
+     * Slices the spawn danger scan across ticks to avoid micro-stutters on the render thread.
+     */
+    public static void clientTick(Minecraft mc) {
+        if (mc.player == null || mc.level == null) return;
+
+        ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
+        boolean hasHelmet = !helmet.isEmpty();
+        boolean isThermal = VisionRenderer.isVisionModeActive() && VisionRenderer.getCurrentVisionMode() == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL;
+        boolean hasSpawnSecurity = false;
+
+        if (hasHelmet && helmet.getItem() instanceof ModularGogglesItem modular) {
+            hasSpawnSecurity = modular.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY);
+        }
+
+        // Spawn security check: sliced across ticks (tactical 24x8x24 radius)
+        if (hasSpawnSecurity && spawnSecurityEnabled) {
+            BlockPos playerPos = mc.player.blockPosition();
+            if (spawnCenter == null || playerPos.distSqr(spawnCenter) > 64.0) {
+                spawnCenter = playerPos;
+                currentSpawnY = -RADIUS_SPAWN_Y;
+                PENDING_SPAWN_BLOCKS.clear();
+            }
+
+            int endY = Math.min(RADIUS_SPAWN_Y, currentSpawnY + 2);
+            scanSpawnSlice(mc, spawnCenter, currentSpawnY, endY);
+            currentSpawnY += 3;
+
+            if (currentSpawnY > RADIUS_SPAWN_Y) {
+                SPAWN_BLOCKS.clear();
+                SPAWN_BLOCKS.addAll(PENDING_SPAWN_BLOCKS);
+                PENDING_SPAWN_BLOCKS.clear();
+                currentSpawnY = -RADIUS_SPAWN_Y;
+                spawnCenter = mc.player.blockPosition();
+            }
+        } else {
+            if (!SPAWN_BLOCKS.isEmpty()) SPAWN_BLOCKS.clear();
+            if (!PENDING_SPAWN_BLOCKS.isEmpty()) PENDING_SPAWN_BLOCKS.clear();
+            currentSpawnY = -RADIUS_SPAWN_Y;
+            spawnCenter = null;
+        }
+
+        // Thermal hot blocks: update once per second (every 20 ticks)
+        if (isThermal) {
+            if (hotBlocksTick++ % 20 == 0) {
+                updateHotBlocks(mc);
+            }
+        } else {
+            if (!HOT_BLOCKS.isEmpty()) HOT_BLOCKS.clear();
+            hotBlocksTick = 0;
+        }
+    }
+
+    private static void scanSpawnSlice(Minecraft mc, BlockPos center, int startY, int endY) {
+        int cx = center.getX();
+        int cy = center.getY();
+        int cz = center.getZ();
+        int r = RADIUS_SPAWN_XZ;
+        int rSq = r * r;
+        BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos abovePos = new BlockPos.MutableBlockPos();
+
+        for (int y = startY; y <= endY; y++) {
+            int worldY = cy + y;
+            if (worldY < mc.level.getMinBuildHeight() || worldY >= mc.level.getMaxBuildHeight() - 1) continue;
+
+            for (int x = -r; x <= r; x++) {
                 for (int z = -r; z <= r; z++) {
-                    BlockPos pos = p.offset(x, y, z);
-                    BlockState s = mc.level.getBlockState(pos);
-                    if (s.is(Blocks.LAVA) || s.is(Blocks.MAGMA_BLOCK) || s.is(Blocks.FIRE) || s.is(Blocks.SOUL_FIRE)) {
-                        HOT_BLOCKS.add(pos);
+                    if (x * x + z * z <= rSq) {
+                        mutPos.set(cx + x, worldY, cz + z);
+                        BlockState state = mc.level.getBlockState(mutPos);
+                        if (state.isRedstoneConductor(mc.level, mutPos) && state.isSolidRender(mc.level, mutPos)) {
+                            abovePos.set(cx + x, worldY + 1, cz + z);
+                            BlockState stateAbove = mc.level.getBlockState(abovePos);
+                            if (stateAbove.getFluidState().isEmpty() && stateAbove.getCollisionShape(mc.level, abovePos).isEmpty()) {
+                                if (mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, abovePos) == 0) {
+                                    PENDING_SPAWN_BLOCKS.add(abovePos.immutable());
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    private static void updateSpawnBlocks(Minecraft mc) {
-        SPAWN_BLOCKS.clear();
+    public static void updateHotBlocks(Minecraft mc) {
+        HOT_BLOCKS.clear();
+        if (mc.player == null || mc.level == null) return;
         BlockPos p = mc.player.blockPosition();
-        int r = 32;
+        int r = 12;
+        int rSq = r * r;
+        int px = p.getX(), py = p.getY(), pz = p.getZ();
+        BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();
+
         for (int x = -r; x <= r; x++) {
             for (int y = -r; y <= r; y++) {
+                int worldY = py + y;
+                if (worldY < mc.level.getMinBuildHeight() || worldY >= mc.level.getMaxBuildHeight()) continue;
                 for (int z = -r; z <= r; z++) {
-                    BlockPos pos = p.offset(x, y, z);
-                    BlockState state = mc.level.getBlockState(pos);
-                    if (state.isRedstoneConductor(mc.level, pos) && state.isSolidRender(mc.level, pos)) {
-                        BlockPos above = pos.above();
-                        BlockState stateAbove = mc.level.getBlockState(above);
-                        if (stateAbove.getCollisionShape(mc.level, above).isEmpty()) {
-                            if (mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, above) == 0) {
-                                SPAWN_BLOCKS.add(above);
+                    if (x * x + y * y + z * z <= rSq) {
+                        mutPos.set(px + x, worldY, pz + z);
+                        BlockState s = mc.level.getBlockState(mutPos);
+                        if (s.is(Blocks.LAVA) || s.is(Blocks.MAGMA_BLOCK) || s.is(Blocks.FIRE) || s.is(Blocks.SOUL_FIRE)) {
+                            HOT_BLOCKS.add(mutPos.immutable());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void updateSpawnBlocks(Minecraft mc) {
+        SPAWN_BLOCKS.clear();
+        if (mc.player == null || mc.level == null) return;
+        BlockPos p = mc.player.blockPosition();
+        int cx = p.getX(), cy = p.getY(), cz = p.getZ();
+        int r = RADIUS_SPAWN_XZ;
+        int rSq = r * r;
+        BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos abovePos = new BlockPos.MutableBlockPos();
+
+        for (int y = -RADIUS_SPAWN_Y; y <= RADIUS_SPAWN_Y; y++) {
+            int worldY = cy + y;
+            if (worldY < mc.level.getMinBuildHeight() || worldY >= mc.level.getMaxBuildHeight() - 1) continue;
+            for (int x = -r; x <= r; x++) {
+                for (int z = -r; z <= r; z++) {
+                    if (x * x + z * z <= rSq) {
+                        mutPos.set(cx + x, worldY, cz + z);
+                        BlockState state = mc.level.getBlockState(mutPos);
+                        if (state.isRedstoneConductor(mc.level, mutPos) && state.isSolidRender(mc.level, mutPos)) {
+                            abovePos.set(cx + x, worldY + 1, cz + z);
+                            BlockState stateAbove = mc.level.getBlockState(abovePos);
+                            if (stateAbove.getFluidState().isEmpty() && stateAbove.getCollisionShape(mc.level, abovePos).isEmpty()) {
+                                if (mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, abovePos) == 0) {
+                                    SPAWN_BLOCKS.add(abovePos.immutable());
+                                }
                             }
                         }
                     }

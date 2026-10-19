@@ -15,6 +15,7 @@ public final class Vision_gogglesFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ModClient.init();
+        FabricLayerRegistry.init();
         VisionGogglesGeoRenderer renderer = new VisionGogglesGeoRenderer();
         net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry.DynamicItemRenderer wrapped = (stack, mode, matrices, vertexConsumers, light, overlay) -> {
             renderer.renderByItem(stack, mode, matrices, vertexConsumers, light, overlay);
@@ -24,6 +25,7 @@ public final class Vision_gogglesFabricClient implements ClientModInitializer {
         BuiltinItemRendererRegistry.INSTANCE.register(ModItems.HYDRO_GOGGLES.get(), wrapped);
         BuiltinItemRendererRegistry.INSTANCE.register(ModItems.BIOMETRIC_GOGGLES.get(), wrapped);
         BuiltinItemRendererRegistry.INSTANCE.register(ModItems.MODULAR_GOGGLES.get(), wrapped);
-        BuiltinItemRendererRegistry.INSTANCE.register(ModItems.PRO_MODULAR_GOGGLES.get(), wrapped);    }
+        BuiltinItemRendererRegistry.INSTANCE.register(ModItems.PRO_MODULAR_GOGGLES.get(), wrapped);
+    }
 }
 

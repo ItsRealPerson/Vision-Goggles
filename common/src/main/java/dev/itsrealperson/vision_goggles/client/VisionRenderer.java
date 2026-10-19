@@ -323,6 +323,7 @@ public class VisionRenderer {
         }
 
         dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.onClientTick(mc, currentBatteryPct);
+        VisionWorldRenderer.clientTick(mc);
     }
 
     private static class ActiveFlashlightSource {

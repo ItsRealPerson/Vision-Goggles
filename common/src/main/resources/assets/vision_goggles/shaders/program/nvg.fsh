@@ -10,6 +10,7 @@ uniform vec3 colorFilter;
 uniform float focus;
 uniform float Glare;
 uniform float u_DSPActive;
+uniform float AspectRatio;
 
 float hashNoise(vec2 p, float t) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -20,10 +21,11 @@ float hashNoise(vec2 p, float t) {
 void main() {
     vec2 uv = texCoord;
     
-    // Ojo de Pez
+    // Ojo de Pez & Optical distance with Aspect Ratio correction
     vec2 center = vec2(0.5, 0.5);
+    vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
+    float dist = length(aspectVec);
     vec2 distVec = uv - center;
-    float dist = length(distVec);
     uv = center + distVec * (dist * dist * 0.45 + 0.82);
 
     // Zoom-dependent distortions

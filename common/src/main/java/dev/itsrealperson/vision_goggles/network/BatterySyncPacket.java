@@ -1,6 +1,7 @@
 package dev.itsrealperson.vision_goggles.network;
 
 import dev.architectury.networking.NetworkManager;
+import net.fabricmc.api.EnvType;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
@@ -28,6 +29,10 @@ public class BatterySyncPacket {
 
     public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
         NetworkManager.PacketContext context = contextSupplier.get();
+        // Server-authoritative: Battery levels are computed on the server. Reject client packets!
+        if (context.getEnv() != EnvType.CLIENT) {
+            return;
+        }
         context.queue(() -> {
             Player player = context.getPlayer();
             if (player == null) return;

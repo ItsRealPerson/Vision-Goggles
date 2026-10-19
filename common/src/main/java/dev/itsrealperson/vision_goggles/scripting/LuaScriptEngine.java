@@ -1,8 +1,11 @@
 package dev.itsrealperson.vision_goggles.scripting;
 
+import dev.architectury.platform.Platform;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
+import net.fabricmc.api.EnvType;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaError;
+import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
@@ -16,13 +19,35 @@ public class LuaScriptEngine {
         try {
             globals = JsePlatform.standardGlobals();
 
+            // Enforce instruction count hook (100,000 instructions limit per execution)
+            SandboxedDebugLib debugLib = new SandboxedDebugLib();
+            globals.load(debugLib);
+
+            // Sanitize globals: nullify dangerous tables and functions
+            globals.set("luajava", LuaValue.NIL);
+            globals.set("package", LuaValue.NIL);
+            globals.set("io", LuaValue.NIL);
+            globals.set("loadfile", LuaValue.NIL);
+            globals.set("dofile", LuaValue.NIL);
+            globals.set("debug", LuaValue.NIL);
+
+            // Sanitize 'os' table: retain only safe clock/time functions
+            LuaValue os = globals.get("os");
+            if (os.istable()) {
+                LuaTable safeOs = new LuaTable();
+                safeOs.set("clock", os.get("clock"));
+                safeOs.set("time", os.get("time"));
+                safeOs.set("difftime", os.get("difftime"));
+                safeOs.set("date", os.get("date"));
+                globals.set("os", safeOs);
+            }
+
             // Register global utility functions
             globals.set("getTime", new ZeroArgFunction() {
                 @Override
                 public LuaValue call() {
-                    net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-                    if (mc.level != null) {
-                        return LuaValue.valueOf((double) mc.level.getGameTime() + (double) mc.getFrameTime());
+                    if (Platform.getEnv() == EnvType.CLIENT) {
+                        return LuaValue.valueOf(dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.getClientTime());
                     }
                     return LuaValue.valueOf(System.currentTimeMillis() / 1000.0);
                 }
@@ -36,12 +61,12 @@ public class LuaScriptEngine {
                 }
             });
 
-            // Register sub-APIs
-            LuaHudCanvas.register(globals);
-            LuaWorldScanner.register(globals);
-            LuaSoundSystem.register(globals);
+            // Register client-specific sub-APIs only if running on a client environment
+            if (Platform.getEnv() == EnvType.CLIENT) {
+                dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.registerClientApis(globals);
+            }
 
-            Vision_goggles.LOGGER.info("[Vision Goggles] LuaScriptEngine initialized successfully.");
+            Vision_goggles.LOGGER.info("[Vision Goggles] LuaScriptEngine initialized successfully with sandbox protection.");
         } catch (Exception e) {
             Vision_goggles.LOGGER.error("[Vision Goggles] Failed to initialize LuaScriptEngine: " + e.getMessage(), e);
         }
@@ -56,6 +81,7 @@ public class LuaScriptEngine {
 
     public static LuaValue executeString(String code) {
         try {
+            SandboxedDebugLib.resetInstructionCount();
             LuaValue chunk = getGlobals().load(code);
             return chunk.call();
         } catch (LuaError error) {

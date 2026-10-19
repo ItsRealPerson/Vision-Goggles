@@ -8,6 +8,7 @@ uniform float time;
 uniform float battery;
 uniform float focus;
 uniform float u_DSPActive;
+uniform float AspectRatio;
 
 void main() {
     vec2 uv = texCoord;
@@ -50,10 +51,8 @@ void main() {
         }
     }
 
-    // 3. Tempered Glass Diving Mask Optical Vignette
-    // Anatomical oval mask curve with smooth falloff
-    vec2 maskPos = (uv - center);
-    maskPos.x *= 1.15; // Slightly wider horizontal viewport
+    // 3. Tempered Glass Diving Mask Optical Vignette with Aspect Ratio correction
+    vec2 maskPos = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
     float maskDist = length(maskPos);
     float vignette = smoothstep(0.64 - focus * 0.15, 0.30 - focus * 0.08, maskDist);
     hydroColor *= vignette;

@@ -7,8 +7,11 @@ import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.VarArgFunction;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import java.util.List;
 
+@Environment(EnvType.CLIENT)
 public class LuaUniformBridge {
 
     public static LuaTable createBridge(List<PostPass> passes) {

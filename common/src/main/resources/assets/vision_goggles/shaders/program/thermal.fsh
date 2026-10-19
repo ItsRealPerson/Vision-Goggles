@@ -9,6 +9,7 @@ uniform float battery;
 uniform float focus;
 uniform float Interference;
 uniform float u_DSPActive;
+uniform float AspectRatio;
 
 float hashNoise(vec2 p, float t) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -55,8 +56,9 @@ float sobelEdge(vec2 coord) {
 void main() {
     vec2 uv = texCoord;
     vec2 center = vec2(0.5, 0.5);
+    vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
+    float dist = length(aspectVec);
     vec2 distVec = uv - center;
-    float dist = length(distVec);
     uv = center + distVec * (dist * dist * 0.45 + 0.82);
 
     // Zoom Tightening

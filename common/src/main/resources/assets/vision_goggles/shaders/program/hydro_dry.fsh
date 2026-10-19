@@ -8,13 +8,13 @@ uniform float time;
 uniform float battery;
 uniform float focus;
 uniform float u_DSPActive;
+uniform float AspectRatio;
 
 void main() {
     vec2 uv = texCoord;
 
     vec2 center = vec2(0.5, 0.5);
-    vec2 maskPos = (uv - center);
-    maskPos.x *= 1.15;
+    vec2 maskPos = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
     float dist = length(maskPos);
     
     // 1. Procedural Condensation Droplets running down dry lens
