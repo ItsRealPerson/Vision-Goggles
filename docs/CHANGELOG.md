@@ -154,3 +154,8 @@
 - **Auditoría Técnica Profunda Post-Plan v21 (`docs/auditorias/analisis_argon.md`)**:
   - Realizada auditoría estática y de flujo línea por línea en 5 áreas críticas (Seguridad en Servidores Dedicados, Sandbox Lua, Supervivencia y Duplicación, Paridad Fabric/Forge, y Shaders/Rendimiento).
   - Documentados los hallazgos residuales P0/P1/P2 tras el Plan v21 (métodos cliente aún presentes en `LuaModuleManager`/`LuaCustomModule`, falta de permisos OP en `/vg`, bypass `pcall` y falta de `resetInstructionCount()` por frame en `SandboxedDebugLib`, ausencia de Loot Table para `modification_station`, exploit de modo de visión al extraer módulos, ausencia de `ThermalEntityPainter` y slot `body` de Accessories en Fabric, y raycasts muertos en shaders de linterna) con calificación global de **6.4 / 10** y checklist para el Hotfix v22.
+- **Optimización de Raycasts de Linterna por Frame (Área 5 - Plan v22)**:
+  - Eliminados los 8 raycasts secundarios muertos (`VisionFlashlightsRange1..8`), rotaciones y cálculos vectoriales no leídos en `VisionRenderer.updateFlashlightEveryFrame`.
+  - Eliminada la consulta redundante `checkIsWall` que ejecutaba un `level.clip` adicional en cada frame sin ser consumida por los shaders GLSL.
+  - Reducción del 90% en raycasts de CPU por linterna por frame (de 10 raycasts a solo 1 raycast para `VisionFlashlightsRange0`), manteniendo un `hitRanges` seguro y zero-filled para los uniformes de OpenGL.
+

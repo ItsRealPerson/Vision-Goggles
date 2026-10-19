@@ -505,34 +505,11 @@ public class VisionRenderer {
                 org.joml.Vector3f color = new org.joml.Vector3f(1.0f, 0.95f, 0.85f);
                 FlashlightMode fMode = FlashlightMode.byId(src.modeId);
 
-                float offsetAngle = (float) Math.acos(fMode.coneOuter) * 0.85f;
-                float diagOffset = offsetAngle * 0.7071f;
-
-                org.joml.Vector3f dirCenter = new org.joml.Vector3f(dir);
-                org.joml.Vector3f dirUp = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, right.x, right.y, right.z);
-                org.joml.Vector3f dirDown = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, right.x, right.y, right.z);
-                org.joml.Vector3f dirLeft = new org.joml.Vector3f(dir).rotateAxis(-offsetAngle, up.x, up.y, up.z);
-                org.joml.Vector3f dirRight = new org.joml.Vector3f(dir).rotateAxis(offsetAngle, up.x, up.y, up.z);
-
-                org.joml.Vector3f dirUpLeft = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
-                org.joml.Vector3f dirUpRight = new org.joml.Vector3f(dir).rotateAxis(-diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
-                org.joml.Vector3f dirDownLeft = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(-diagOffset, up.x, up.y, up.z);
-                org.joml.Vector3f dirDownRight = new org.joml.Vector3f(dir).rotateAxis(diagOffset, right.x, right.y, right.z).rotateAxis(diagOffset, up.x, up.y, up.z);
-
                 float[] hitRanges = new float[9];
-                hitRanges[0] = performRaycast(player, originWorld, dirCenter, fMode.range);
-                hitRanges[1] = performRaycast(player, originWorld, dirUp, fMode.range);
-                hitRanges[2] = performRaycast(player, originWorld, dirDown, fMode.range);
-                hitRanges[3] = performRaycast(player, originWorld, dirRight, fMode.range);
-                hitRanges[4] = performRaycast(player, originWorld, dirLeft, fMode.range);
-                hitRanges[5] = performRaycast(player, originWorld, dirUpLeft, fMode.range);
-                hitRanges[6] = performRaycast(player, originWorld, dirUpRight, fMode.range);
-                hitRanges[7] = performRaycast(player, originWorld, dirDownLeft, fMode.range);
-                hitRanges[8] = performRaycast(player, originWorld, dirDownRight, fMode.range);
+                hitRanges[0] = performRaycast(player, originWorld, dir, fMode.range);
 
                 boolean isLocal = isLocalPlayer && isFirstPerson;
-                boolean isWall = checkIsWall(player, originWorld, dirCenter, fMode.range);
-                dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges, isLocal, isWall);
+                dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.addFlashlight(pos, dir, up, right, color, fMode, hitRanges, isLocal, false);
             }
         }
     }
@@ -547,23 +524,6 @@ public class VisionRenderer {
 
         org.joml.Vector3f armLook = headRot.transform(new org.joml.Vector3f(0, 0, 1));
         return shoulderPos.add(armLook.x * 0.38, armLook.y * 0.38 - 0.22, armLook.z * 0.38);
-    }
-
-
-    private static boolean checkIsWall(Player player, net.minecraft.world.phys.Vec3 startVec, org.joml.Vector3f dir, float maxRange) {
-        net.minecraft.world.phys.Vec3 endVec = startVec.add(dir.x() * maxRange, dir.y() * maxRange, dir.z() * maxRange);
-        net.minecraft.world.level.ClipContext context = new net.minecraft.world.level.ClipContext(
-            startVec, endVec,
-            net.minecraft.world.level.ClipContext.Block.COLLIDER,
-            net.minecraft.world.level.ClipContext.Fluid.NONE,
-            player
-        );
-        net.minecraft.world.phys.HitResult hitResult = player.level().clip(context);
-        if (hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK && hitResult instanceof net.minecraft.world.phys.BlockHitResult bhr) {
-            net.minecraft.core.Direction face = bhr.getDirection();
-            return face == net.minecraft.core.Direction.NORTH || face == net.minecraft.core.Direction.SOUTH || face == net.minecraft.core.Direction.EAST || face == net.minecraft.core.Direction.WEST;
-        }
-        return false;
     }
 
     private static float performRaycast(Player player, net.minecraft.world.phys.Vec3 startVec, org.joml.Vector3f dir, float maxRange) {
