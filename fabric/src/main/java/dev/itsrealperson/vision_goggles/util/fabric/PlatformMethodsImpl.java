@@ -12,6 +12,9 @@ import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 
 public class PlatformMethodsImpl {
     public static boolean equipInSlot(Player player, ItemStack stack) {
+        if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem)) {
+            return false;
+        }
         AccessoriesCapability capability = AccessoriesCapability.get(player);
         if (capability != null) {
             String[] possibleSlots = {"face", "eyes", "eyewear"};

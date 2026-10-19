@@ -129,13 +129,17 @@ public class ThermalEntityPainter {
 
     /** Call from RenderLevelStageEvent.AFTER_ENTITIES */
     public static void captureAndComposite(PoseStack poseStack) {
-        if (!initialized) return;
-
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
         // Check if thermal vision mode is active on the local player
         if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) return;
+
+        // Lazy-init on first use if not already initialized (e.g. on Fabric where client init runs before ResourceManager)
+        if (!initialized) {
+            init();
+            if (!initialized) return;
+        }
 
         // Resize FBO if window changed
         int w = mc.getMainRenderTarget().width;

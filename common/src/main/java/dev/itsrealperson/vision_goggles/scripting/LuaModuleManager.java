@@ -64,6 +64,8 @@ public class LuaModuleManager {
             if (content.startsWith("\uFEFF")) {
                 content = content.substring(1);
             }
+            SandboxedDebugLib.resetInstructionCount();
+            LuaScriptEngine.getGlobals().set("module", LuaValue.NIL);
             LuaValue chunk = LuaScriptEngine.getGlobals().load(content, file.getName());
             chunk.call();
 
@@ -82,8 +84,8 @@ public class LuaModuleManager {
             }
         } catch (LuaError error) {
             Vision_goggles.LOGGER.error("[Vision Goggles Lua Compile Error in " + file.getName() + "] " + error.getMessage());
-        } catch (Exception e) {
-            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to read " + file.getName() + ": " + e.getMessage(), e);
+        } catch (Throwable e) {
+            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to read or execute " + file.getName() + ": " + e.getMessage(), e);
         }
     }
 
