@@ -322,7 +322,7 @@ public class VisionRenderer {
             }
         }
 
-        dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.onClientTick(mc, currentBatteryPct);
+        dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.onClientTick(currentBatteryPct);
         VisionWorldRenderer.clientTick(mc);
     }
 

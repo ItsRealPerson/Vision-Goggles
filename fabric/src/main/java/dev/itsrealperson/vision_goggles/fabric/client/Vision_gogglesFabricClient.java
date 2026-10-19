@@ -7,6 +7,8 @@ import io.wispforest.accessories.api.client.AccessoriesRendererRegistry;
 import io.wispforest.accessories.api.client.AccessoryRenderer;
 
 
+import dev.itsrealperson.vision_goggles.client.ThermalEntityPainter;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
 import dev.itsrealperson.vision_goggles.client.renderer.VisionGogglesGeoRenderer;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
@@ -15,6 +17,8 @@ public final class Vision_gogglesFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ModClient.init();
+        ThermalEntityPainter.init();
+        WorldRenderEvents.AFTER_ENTITIES.register(context -> ThermalEntityPainter.captureAndComposite(context.matrixStack()));
         FabricLayerRegistry.init();
         VisionGogglesGeoRenderer renderer = new VisionGogglesGeoRenderer();
         net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry.DynamicItemRenderer wrapped = (stack, mode, matrices, vertexConsumers, light, overlay) -> {

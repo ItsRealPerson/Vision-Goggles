@@ -11,9 +11,21 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import net.minecraft.world.item.ItemStack;
+import dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem;
+import dev.itsrealperson.vision_goggles.util.FlashlightMode;
+
 import java.util.List;
 
 public class FlashlightDeterrence {
+
+    public static void apply(Level level, Player player, ItemStack flashlight) {
+        if (!flashlight.isEmpty() && TacticalFlashlightItem.isActive(flashlight)) {
+            if (TacticalFlashlightItem.getMode(flashlight) == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
+                apply(level, player, 24.0);
+            }
+        }
+    }
 
     public static void apply(Level level, Player player, double range) {
         if (level.isClientSide) return;

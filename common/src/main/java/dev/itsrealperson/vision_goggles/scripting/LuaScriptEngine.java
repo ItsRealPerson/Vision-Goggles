@@ -47,7 +47,10 @@ public class LuaScriptEngine {
                 @Override
                 public LuaValue call() {
                     if (Platform.getEnv() == EnvType.CLIENT) {
-                        return LuaValue.valueOf(dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.getClientTime());
+                        try {
+                            Class<?> bridge = Class.forName("dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge");
+                            return LuaValue.valueOf((Double) bridge.getMethod("getClientTime").invoke(null));
+                        } catch (Throwable ignored) {}
                     }
                     return LuaValue.valueOf(System.currentTimeMillis() / 1000.0);
                 }
@@ -63,7 +66,12 @@ public class LuaScriptEngine {
 
             // Register client-specific sub-APIs only if running on a client environment
             if (Platform.getEnv() == EnvType.CLIENT) {
-                dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.registerClientApis(globals);
+                try {
+                    Class<?> bridge = Class.forName("dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge");
+                    bridge.getMethod("registerClientApis", Globals.class).invoke(null, globals);
+                } catch (Throwable t) {
+                    Vision_goggles.LOGGER.error("[Vision Goggles] Failed to register client Lua APIs: " + t.getMessage());
+                }
             }
 
             Vision_goggles.LOGGER.info("[Vision Goggles] LuaScriptEngine initialized successfully with sandbox protection.");
@@ -87,9 +95,9 @@ public class LuaScriptEngine {
         } catch (LuaError error) {
             Vision_goggles.LOGGER.error("[Vision Goggles Lua Error] " + error.getMessage());
             return LuaValue.valueOf("ERROR: " + error.getMessage());
-        } catch (Exception e) {
-            Vision_goggles.LOGGER.error("[Vision Goggles Lua Exception] " + e.getMessage());
-            return LuaValue.valueOf("EXCEPTION: " + e.getMessage());
+        } catch (Throwable e) {
+            Vision_goggles.LOGGER.error("[Vision Goggles Lua Error/Exception] " + e.getMessage());
+            return LuaValue.valueOf("ERROR: " + e.getMessage());
         }
     }
 }
