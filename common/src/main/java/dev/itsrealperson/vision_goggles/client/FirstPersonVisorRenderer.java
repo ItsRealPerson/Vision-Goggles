@@ -106,11 +106,11 @@ public class FirstPersonVisorRenderer {
         PoseStack poseStack = gui.pose();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
-        // 1. Render the 3D tactical visor descending from the upper third of the viewport onto the eyes
-        float yOffset = Mth.lerp(progress, -height * 0.36f, 0.04f);
-        float zArc = (float) Math.sin(progress * Math.PI) * 30.0f;
+        // 1. Render the 3D tactical visor descending from above the viewport onto the eyes
+        float yOffset = Mth.lerp(progress, -height * 0.55f, 0.0f);
+        float zArc = (float) Math.sin(progress * Math.PI) * 35.0f;
         float eyeZoom = smoothstep01((progress - 0.55f) / 0.45f);
-        float scale = height * Mth.lerp(eyeZoom, 0.90f, 1.75f);
+        float scale = height * Mth.lerp(eyeZoom, 0.95f, 1.80f);
         boolean isRightArm = mc.player.getMainArm() == HumanoidArm.RIGHT;
         float sideSign = isRightArm ? 1.0f : -1.0f;
 
@@ -188,7 +188,6 @@ public class FirstPersonVisorRenderer {
         poseStack.mulPose(Axis.ZP.rotationDegrees(sideSign * (140.0f - offscreen * 10.0f - progress * 6.0f)));
         poseStack.mulPose(Axis.XP.rotationDegrees(-18.0f + progress * 10.0f));
         poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * (18.0f - offscreen * 8.0f)));
-        poseStack.translate(0.0f, -0.62f, 0.0f);
 
         // Shift so the hand/knuckles (local y = +9/16) sit directly at the grip anchor
         poseStack.translate(0.0f, -9.0f / 16.0f, 0.0f);
