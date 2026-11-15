@@ -2,8 +2,6 @@ package dev.itsrealperson.vision_goggles.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -15,7 +13,6 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
@@ -28,34 +25,11 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
-import dev.itsrealperson.vision_goggles.registry.ModSounds;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.network.chat.Component;
 
 public class VisionWorldRenderer {
     private static final ResourceLocation WHITE = new ResourceLocation("minecraft", "textures/misc/white.png");
     private static final List<BlockPos> HOT_BLOCKS = new ArrayList<>();
-    private static final List<BlockPos> SPAWN_BLOCKS = new ArrayList<>();
-    private static final List<BlockPos> PENDING_SPAWN_BLOCKS = new ArrayList<>();
-    private static final int RADIUS_SPAWN_XZ = 24;
-    private static final int RADIUS_SPAWN_Y = 8;
-    private static int currentSpawnY = -RADIUS_SPAWN_Y;
-    private static BlockPos spawnCenter = null;
     private static int hotBlocksTick = 0;
-    private static boolean spawnSecurityEnabled = true;
-
-    public static boolean isSpawnSecurityEnabled() {
-        return spawnSecurityEnabled;
-    }
-
-    public static void toggleSpawnSecurity(Minecraft mc) {
-        spawnSecurityEnabled = !spawnSecurityEnabled;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(Component.translatable(spawnSecurityEnabled ? "message.vision_goggles.spawn_security_on" : "message.vision_goggles.spawn_security_off"), true);
-            mc.getSoundManager().play(SimpleSoundInstance.forUI(spawnSecurityEnabled ? ModSounds.VISOR_ON.get() : ModSounds.VISOR_OFF.get(), 1.4F));
-        }
-    }
 
     private static final List<DebugBox> debugBoxes = new ArrayList<>();
 
@@ -135,14 +109,7 @@ public class VisionWorldRenderer {
         if (helmet.isEmpty()) return;
 
         boolean isThermal = VisionRenderer.isVisionModeActive() && VisionRenderer.getCurrentVisionMode() == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL;
-        boolean hasSpawnSecurity = false;
-
-        if (helmet.getItem() instanceof ModularGogglesItem modular) {
-            hasSpawnSecurity = modular.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY);
-        }
-
-
-        if (!isThermal && (!hasSpawnSecurity || !spawnSecurityEnabled)) return;
+        if (!isThermal) return;
 
         Vec3 cameraPos = camera.getPosition();
 
@@ -172,64 +139,19 @@ public class VisionWorldRenderer {
             RenderSystem.enableDepthTest();
         }
 
-        if (hasSpawnSecurity && spawnSecurityEnabled && !SPAWN_BLOCKS.isEmpty()) {
-            builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-            for (BlockPos pos : SPAWN_BLOCKS) {
-                poseStack.pushPose();
-                poseStack.translate(pos.getX() - cameraPos.x, pos.getY() - cameraPos.y + 0.01, pos.getZ() - cameraPos.z);
-                // Usamos amarillo (1.0, 1.0, 0.0) para que tenga mayor luminancia y sea visible con NVG
-                renderFlatSquare(poseStack.last().pose(), builder, 1.0f, 1.0f, 0.0f, 0.5f);
-                poseStack.popPose();
-            }
-            tesselator.end();
-        }
-
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
     }
 
     /**
      * Ticked once per client tick (20 TPS) from VisionRenderer.onClientTick.
-     * Slices the spawn danger scan across ticks to avoid micro-stutters on the render thread.
      */
     public static void clientTick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
 
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
         boolean hasHelmet = !helmet.isEmpty();
-        boolean isThermal = VisionRenderer.isVisionModeActive() && VisionRenderer.getCurrentVisionMode() == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL;
-        boolean hasSpawnSecurity = false;
-
-        if (hasHelmet && helmet.getItem() instanceof ModularGogglesItem modular) {
-            hasSpawnSecurity = modular.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY);
-        }
-
-        // Spawn security check: sliced across ticks (tactical 24x8x24 radius)
-        if (hasSpawnSecurity && spawnSecurityEnabled) {
-            BlockPos playerPos = mc.player.blockPosition();
-            if (spawnCenter == null || playerPos.distSqr(spawnCenter) > 64.0) {
-                spawnCenter = playerPos;
-                currentSpawnY = -RADIUS_SPAWN_Y;
-                PENDING_SPAWN_BLOCKS.clear();
-            }
-
-            int endY = Math.min(RADIUS_SPAWN_Y, currentSpawnY + 2);
-            scanSpawnSlice(mc, spawnCenter, currentSpawnY, endY);
-            currentSpawnY += 3;
-
-            if (currentSpawnY > RADIUS_SPAWN_Y) {
-                SPAWN_BLOCKS.clear();
-                SPAWN_BLOCKS.addAll(PENDING_SPAWN_BLOCKS);
-                PENDING_SPAWN_BLOCKS.clear();
-                currentSpawnY = -RADIUS_SPAWN_Y;
-                spawnCenter = mc.player.blockPosition();
-            }
-        } else {
-            if (!SPAWN_BLOCKS.isEmpty()) SPAWN_BLOCKS.clear();
-            if (!PENDING_SPAWN_BLOCKS.isEmpty()) PENDING_SPAWN_BLOCKS.clear();
-            currentSpawnY = -RADIUS_SPAWN_Y;
-            spawnCenter = null;
-        }
+        boolean isThermal = hasHelmet && VisionRenderer.isVisionModeActive() && VisionRenderer.getCurrentVisionMode() == dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL;
 
         // Thermal hot blocks: update once per second (every 20 ticks)
         if (isThermal) {
@@ -239,39 +161,6 @@ public class VisionWorldRenderer {
         } else {
             if (!HOT_BLOCKS.isEmpty()) HOT_BLOCKS.clear();
             hotBlocksTick = 0;
-        }
-    }
-
-    private static void scanSpawnSlice(Minecraft mc, BlockPos center, int startY, int endY) {
-        int cx = center.getX();
-        int cy = center.getY();
-        int cz = center.getZ();
-        int r = RADIUS_SPAWN_XZ;
-        int rSq = r * r;
-        BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();
-        BlockPos.MutableBlockPos abovePos = new BlockPos.MutableBlockPos();
-
-        for (int y = startY; y <= endY; y++) {
-            int worldY = cy + y;
-            if (worldY < mc.level.getMinBuildHeight() || worldY >= mc.level.getMaxBuildHeight() - 1) continue;
-
-            for (int x = -r; x <= r; x++) {
-                for (int z = -r; z <= r; z++) {
-                    if (x * x + z * z <= rSq) {
-                        mutPos.set(cx + x, worldY, cz + z);
-                        BlockState state = mc.level.getBlockState(mutPos);
-                        if (state.isRedstoneConductor(mc.level, mutPos) && state.isSolidRender(mc.level, mutPos)) {
-                            abovePos.set(cx + x, worldY + 1, cz + z);
-                            BlockState stateAbove = mc.level.getBlockState(abovePos);
-                            if (stateAbove.getFluidState().isEmpty() && stateAbove.getCollisionShape(mc.level, abovePos).isEmpty()) {
-                                if (mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, abovePos) == 0) {
-                                    PENDING_SPAWN_BLOCKS.add(abovePos.immutable());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -299,50 +188,6 @@ public class VisionWorldRenderer {
                 }
             }
         }
-    }
-
-    public static void updateSpawnBlocks(Minecraft mc) {
-        SPAWN_BLOCKS.clear();
-        if (mc.player == null || mc.level == null) return;
-        BlockPos p = mc.player.blockPosition();
-        int cx = p.getX(), cy = p.getY(), cz = p.getZ();
-        int r = RADIUS_SPAWN_XZ;
-        int rSq = r * r;
-        BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();
-        BlockPos.MutableBlockPos abovePos = new BlockPos.MutableBlockPos();
-
-        for (int y = -RADIUS_SPAWN_Y; y <= RADIUS_SPAWN_Y; y++) {
-            int worldY = cy + y;
-            if (worldY < mc.level.getMinBuildHeight() || worldY >= mc.level.getMaxBuildHeight() - 1) continue;
-            for (int x = -r; x <= r; x++) {
-                for (int z = -r; z <= r; z++) {
-                    if (x * x + z * z <= rSq) {
-                        mutPos.set(cx + x, worldY, cz + z);
-                        BlockState state = mc.level.getBlockState(mutPos);
-                        if (state.isRedstoneConductor(mc.level, mutPos) && state.isSolidRender(mc.level, mutPos)) {
-                            abovePos.set(cx + x, worldY + 1, cz + z);
-                            BlockState stateAbove = mc.level.getBlockState(abovePos);
-                            if (stateAbove.getFluidState().isEmpty() && stateAbove.getCollisionShape(mc.level, abovePos).isEmpty()) {
-                                if (mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, abovePos) == 0) {
-                                    SPAWN_BLOCKS.add(abovePos.immutable());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-
-    private static void renderFlatSquare(Matrix4f matrix, VertexConsumer builder, float r, float g, float b, float a) {
-        float min = 0.0f;
-        float max = 1.0f;
-        addV(matrix, builder, min, 0, min, r, g, b, a);
-        addV(matrix, builder, min, 0, max, r, g, b, a);
-        addV(matrix, builder, max, 0, max, r, g, b, a);
-        addV(matrix, builder, max, 0, min, r, g, b, a);
     }
 
     private static void renderCube(Matrix4f matrix, VertexConsumer builder, float r, float g, float b, float a) {

@@ -141,15 +141,6 @@ public class TacticalRadialScreen extends Screen {
                 NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
             }));
 
-            if (goggles.hasModule(helmet, ModConstants.ID_SPAWN_SECURITY)) {
-                boolean enabled = dev.itsrealperson.vision_goggles.client.VisionWorldRenderer.isSpawnSecurityEnabled();
-                String secDesc = Component.translatable(enabled ? "gui.vision_goggles.radial.security.on" : "gui.vision_goggles.radial.security.off").getString();
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.security").getString(), secDesc, 0xFFFF9900,
-                        ModItems.SPAWN_SECURITY_MODULE.get().getDefaultInstance(), true, () -> {
-                    dev.itsrealperson.vision_goggles.client.VisionWorldRenderer.toggleSpawnSecurity(mc);
-                }));
-            }
-
             if (goggles.hasModule(helmet, ModConstants.ID_SONAR)) {
                 CompoundTag nbt = helmet.getTag();
                 int currentMode = (nbt != null && nbt.contains(ModConstants.TAG_SONAR_MODE)) ? nbt.getInt(ModConstants.TAG_SONAR_MODE) : 0;

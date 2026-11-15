@@ -342,7 +342,6 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 case SONAR -> dev.itsrealperson.vision_goggles.registry.ModItems.SONAR_MODULE.get();
                 case VITAL_INFO -> dev.itsrealperson.vision_goggles.registry.ModItems.VITAL_INFO_MODULE.get();
                 case ENVIRONMENT -> dev.itsrealperson.vision_goggles.registry.ModItems.ENVIRONMENT_MODULE.get();
-                case SPAWN_SECURITY -> dev.itsrealperson.vision_goggles.registry.ModItems.SPAWN_SECURITY_MODULE.get();
                 case FLASHLIGHT -> dev.itsrealperson.vision_goggles.registry.ModItems.FLASHLIGHT_MODULE.get();
             };
             return new ItemStack(item);

@@ -65,9 +65,6 @@ public class ModItems {
             
     public static final RegistrySupplier<Item> TACTICAL_FLASHLIGHT = ITEMS.register("tactical_flashlight",
             () -> new dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem(new Item.Properties().stacksTo(1)));
-            
-    public static final RegistrySupplier<Item> SPAWN_SECURITY_MODULE = ITEMS.register("spawn_security_module",
-            () -> new Item(new Item.Properties().stacksTo(1)));
 
     public static final RegistrySupplier<Item> VITAL_INFO_MODULE = ITEMS.register("vital_info_module",
             () -> new Item(new Item.Properties().stacksTo(1)));

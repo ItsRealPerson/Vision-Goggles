@@ -65,8 +65,7 @@ public class VisionGogglesJeiPluginCommon {
             new ModuleEntry(ModItems.VITAL_INFO_MODULE.get(), ModConstants.ID_VITAL_INFO),
             new ModuleEntry(ModItems.ENVIRONMENT_MODULE.get(), ModConstants.ID_ENVIRONMENT),
             new ModuleEntry(ModItems.SOLAR_MODULE.get(), ModConstants.ID_SOLAR),
-            new ModuleEntry(ModItems.BATTERY_EXPANSION_MODULE.get(), ModConstants.ID_BATTERY_EXPANSION),
-            new ModuleEntry(ModItems.SPAWN_SECURITY_MODULE.get(), ModConstants.ID_SPAWN_SECURITY)
+            new ModuleEntry(ModItems.BATTERY_EXPANSION_MODULE.get(), ModConstants.ID_BATTERY_EXPANSION)
         );
 
         // 1. Module installations on Modular and Pro Modular Goggles

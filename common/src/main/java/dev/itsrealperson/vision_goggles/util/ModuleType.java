@@ -52,7 +52,6 @@ public enum ModuleType {
     BATTERY_EXPANSION(ModConstants.ID_BATTERY_EXPANSION, ModConstants.MODULE_BATTERY_EXPANSION),
     VITAL_INFO(ModConstants.ID_VITAL_INFO, ModConstants.MODULE_VITAL_INFO),
     ENVIRONMENT(ModConstants.ID_ENVIRONMENT, ModConstants.MODULE_ENVIRONMENT),
-    SPAWN_SECURITY(ModConstants.ID_SPAWN_SECURITY, ModConstants.MODULE_SPAWN_SECURITY),
     FLASHLIGHT(ModConstants.ID_FLASHLIGHT, ModConstants.MODULE_FLASHLIGHT) {
         @Override
         public void tickPower(ItemStack stack, ServerPlayer player) {
