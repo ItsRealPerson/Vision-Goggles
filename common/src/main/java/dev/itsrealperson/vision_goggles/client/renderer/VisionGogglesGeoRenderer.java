@@ -54,6 +54,14 @@ public class VisionGogglesGeoRenderer extends GeoItemRenderer<VisionGogglesItem>
     }
 
     @Override
+    public void renderByItem(ItemStack stack, ItemDisplayContext transformType, com.mojang.blaze3d.vertex.PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        if (this.model instanceof VisionGogglesGeoModel vgModel) {
+            vgModel.setCurrentStack(stack);
+        }
+        super.renderByItem(stack, transformType, poseStack, bufferSource, packedLight, packedOverlay);
+    }
+
+    @Override
     public void preRender(com.mojang.blaze3d.vertex.PoseStack poseStack, VisionGogglesItem animatable, software.bernie.geckolib.cache.object.BakedGeoModel model, MultiBufferSource bufferSource, com.mojang.blaze3d.vertex.VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         ItemStack stack = getCurrentItemStack();
         if (stack != null && getGeoModel() instanceof VisionGogglesGeoModel vgModel) {

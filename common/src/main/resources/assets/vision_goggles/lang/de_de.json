@@ -94,7 +94,8 @@
   "message.vision_goggles.flashlight_mode.focused": "§eTaschenlampe: §fFokussierter Strahl",
   "message.vision_goggles.flashlight_mode.wide": "§eTaschenlampe: §fBreiter Lichtkegel",
   "message.vision_goggles.flashlight_mode.close": "§eTaschenlampe: §fNahbereichs-Burst",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "message.vision_goggles.flashlight_mode.strobe": "§eTaschenlampe: §cTaktisches Stroboskop (13Hz)",
+  "message.vision_goggles.fully_charged": "§eGerät ist bereits voll aufgeladen!",
   "item.vision_goggles.installation_script": "Installations-Skript",
   "item.vision_goggles.programmable_module": "Programmierbares Modul",
   "item.vision_goggles.tactical_flashlight": "Taktische Taschenlampe",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Biometrischer Lebenszeichensensor",
   "jei.vision_goggles.install_module": "Hardware-Modul installieren",
   "jei.vision_goggles.flash_firmware": "Skript auf programmierbares Modul flashen",
-  "jei.vision_goggles.install_script_module": "Programmiertes Skript-Modul installieren"
+  "jei.vision_goggles.install_script_module": "Programmiertes Skript-Modul installieren",
+  "jei.vision_goggles.overhaul_repair": "Generalüberholung (100% Haltbarkeit)",
+  "jei.vision_goggles.maintenance_repair": "Feldwartung (+35% Haltbarkeit)",
+  "jei.vision_goggles.extract_module": "Modulextraktion / Demontage"
 }

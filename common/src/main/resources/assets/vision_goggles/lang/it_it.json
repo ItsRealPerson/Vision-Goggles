@@ -94,7 +94,8 @@
   "message.vision_goggles.flashlight_mode.focused": "§eTorcia: §fFascio Focalizzato",
   "message.vision_goggles.flashlight_mode.wide": "§eTorcia: §fFascio Ampio",
   "message.vision_goggles.flashlight_mode.close": "§eTorcia: §fRaffica Ravvicinata",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "message.vision_goggles.flashlight_mode.strobe": "§eTorcia: §cStroboscopico Tattico (13Hz)",
+  "message.vision_goggles.fully_charged": "§eIl dispositivo è già completamente carico!",
   "item.vision_goggles.installation_script": "Script di installazione",
   "item.vision_goggles.programmable_module": "Modulo programmabile",
   "item.vision_goggles.tactical_flashlight": "Torcia tattica",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Sensore Biometrico di Segni Vitali",
   "jei.vision_goggles.install_module": "Installa modulo hardware",
   "jei.vision_goggles.flash_firmware": "Scrivi script su modulo programmabile",
-  "jei.vision_goggles.install_script_module": "Installa modulo con script programmato"
+  "jei.vision_goggles.install_script_module": "Installa modulo con script programmato",
+  "jei.vision_goggles.overhaul_repair": "Revisione completa (100% Durabilità)",
+  "jei.vision_goggles.maintenance_repair": "Manutenzione sul campo (+35% Durabilità)",
+  "jei.vision_goggles.extract_module": "Estrazione / Smontaggio modulo"
 }

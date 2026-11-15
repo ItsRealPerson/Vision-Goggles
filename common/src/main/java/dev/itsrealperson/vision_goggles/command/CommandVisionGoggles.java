@@ -80,7 +80,12 @@ public class CommandVisionGoggles {
                             int count = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "cantidad");
                             dev.itsrealperson.vision_goggles.item.ModularGogglesItem.setCustomModularMax(count);
                             dev.itsrealperson.vision_goggles.util.ModConfig.common.modularMaxModules = count;
-                            dev.itsrealperson.vision_goggles.util.ModConfig.save();
+                            dev.itsrealperson.vision_goggles.util.ModConfig.saveCommon();
+                            String updatedJson = dev.itsrealperson.vision_goggles.util.ModConfig.toCommonJson();
+                            NetworkManager.INSTANCE.sendToPlayers(
+                                ctx.getSource().getServer().getPlayerList().getPlayers(),
+                                new dev.itsrealperson.vision_goggles.network.ConfigSyncPacket(updatedJson)
+                            );
                             ctx.getSource().sendSuccess(() -> Component.literal("§a[Vision Goggles] Capacidad de Gafas Modulares actualizada a: §e" + count + " ranuras."), true);
                             return 1;
                         })
@@ -99,7 +104,12 @@ public class CommandVisionGoggles {
                             int count = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "cantidad");
                             dev.itsrealperson.vision_goggles.item.ModularGogglesItem.setCustomProMax(count);
                             dev.itsrealperson.vision_goggles.util.ModConfig.common.proModularMaxModules = count;
-                            dev.itsrealperson.vision_goggles.util.ModConfig.save();
+                            dev.itsrealperson.vision_goggles.util.ModConfig.saveCommon();
+                            String updatedJson = dev.itsrealperson.vision_goggles.util.ModConfig.toCommonJson();
+                            NetworkManager.INSTANCE.sendToPlayers(
+                                ctx.getSource().getServer().getPlayerList().getPlayers(),
+                                new dev.itsrealperson.vision_goggles.network.ConfigSyncPacket(updatedJson)
+                            );
                             ctx.getSource().sendSuccess(() -> Component.literal("§a[Vision Goggles] Capacidad de Gafas Pro actualizada a: §e" + count + " ranuras."), true);
                             return 1;
                         })

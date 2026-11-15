@@ -94,7 +94,8 @@
   "message.vision_goggles.flashlight_mode.focused": "§eФонарь: §fФокусированный луч",
   "message.vision_goggles.flashlight_mode.wide": "§eФонарь: §fШирокий луч",
   "message.vision_goggles.flashlight_mode.close": "§eФонарь: §fБлижняя вспышка",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "message.vision_goggles.flashlight_mode.strobe": "§eФонарь: §cТактический стробоскоп (13Гц)",
+  "message.vision_goggles.fully_charged": "§eУстройство уже полностью заряжено!",
   "item.vision_goggles.installation_script": "Скрипт установки",
   "item.vision_goggles.programmable_module": "Программируемый модуль",
   "item.vision_goggles.tactical_flashlight": "Тактический фонарик",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Биометрический датчик жизненных показателей",
   "jei.vision_goggles.install_module": "Установить аппаратный модуль",
   "jei.vision_goggles.flash_firmware": "Прошить скрипт в программируемый модуль",
-  "jei.vision_goggles.install_script_module": "Установить модуль с прошитым скриптом"
+  "jei.vision_goggles.install_script_module": "Установить модуль с прошитым скриптом",
+  "jei.vision_goggles.overhaul_repair": "Капитальный ремонт (100% прочности)",
+  "jei.vision_goggles.maintenance_repair": "Полевое обслуживание (+35% прочности)",
+  "jei.vision_goggles.extract_module": "Извлечение / Демонтаж модуля"
 }

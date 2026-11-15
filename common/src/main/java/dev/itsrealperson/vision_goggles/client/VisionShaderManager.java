@@ -69,12 +69,9 @@ public class VisionShaderManager {
         }
 
         try {
-            // loadEffect() compiles the shader and sets GameRenderer.postEffect
-            ((GameRendererAccessor) mc.gameRenderer).vision_goggles$loadEffect(loc);
-
-            // Take exclusive ownership: remove from GameRenderer so no other mod can touch it
-            savedPostChain = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
-            ((GameRendererAccessor) mc.gameRenderer).vision_goggles$setPostEffect(null);
+            PostChain chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), loc);
+            chain.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+            savedPostChain = chain;
 
             activeShaderLocation = loc;
             startupTimestamp = System.currentTimeMillis();
@@ -90,9 +87,9 @@ public class VisionShaderManager {
             savedPostChain = null;
         }
         try {
-            ((GameRendererAccessor) mc.gameRenderer).vision_goggles$loadEffect(loc);
-            savedPostChain = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
-            ((GameRendererAccessor) mc.gameRenderer).vision_goggles$setPostEffect(null);
+            PostChain chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), loc);
+            chain.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+            savedPostChain = chain;
             activeShaderLocation = loc;
             startupTimestamp = System.currentTimeMillis();
         } catch (Exception e) {
@@ -110,17 +107,6 @@ public class VisionShaderManager {
         flashGlare = 0.0f;
         currentInterference = 0.0f;
         startupTimestamp = 0L;
-
-        // Safety: also clear GameRenderer in case something else put a chain there
-        try {
-            PostChain effect = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
-            if (effect != null) {
-                effect.close();
-                ((GameRendererAccessor) mc.gameRenderer).vision_goggles$setPostEffect(null);
-            }
-        } catch (Exception e) {
-            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to clear GameRenderer postEffect", e);
-        }
     }
 
     public static void enableFlashlight(Minecraft mc, int modeId) {
@@ -133,9 +119,9 @@ public class VisionShaderManager {
         }
 
         try {
-            ((GameRendererAccessor) mc.gameRenderer).vision_goggles$loadEffect(loc);
-            savedFlashlightChain = ((GameRendererAccessor) mc.gameRenderer).vision_goggles$getPostEffect();
-            ((GameRendererAccessor) mc.gameRenderer).vision_goggles$setPostEffect(null);
+            PostChain chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), loc);
+            chain.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+            savedFlashlightChain = chain;
         } catch (Exception e) {
             Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load flashlight shader: " + loc, e);
         }
@@ -161,7 +147,7 @@ public class VisionShaderManager {
         if (mc.level == null || mc.player == null) return;
 
         try {
-            updateUniforms(mc);
+            updateUniforms(mc, partialTick);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             savedPostChain.process(partialTick);
@@ -209,7 +195,7 @@ public class VisionShaderManager {
         if (mc.options.getCameraType() != null && !mc.options.getCameraType().isFirstPerson()) return;
 
         try {
-            float time = (float) mc.level.getGameTime() + mc.getFrameTime();
+            float time = ((mc.level.getGameTime() % 100000L) + partialTick) / 20.0f;
             int screenHeight = Math.max(1, mc.getWindow().getScreenHeight());
             float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) screenHeight;
 
@@ -244,13 +230,83 @@ public class VisionShaderManager {
         return savedPostChain != null;
     }
 
-    private static void updateUniforms(Minecraft mc) {
+    private static List<PostPass> currentUniformPasses = null;
+    private static org.luaj.vm2.LuaTable cachedUniformBridge = null;
+
+    private static org.luaj.vm2.LuaTable getUniformBridge(List<PostPass> passes) {
+        currentUniformPasses = passes;
+        if (cachedUniformBridge == null) {
+            org.luaj.vm2.LuaTable uniforms = new org.luaj.vm2.LuaTable();
+            uniforms.set("setFloat", new org.luaj.vm2.lib.VarArgFunction() {
+                @Override
+                public org.luaj.vm2.Varargs invoke(org.luaj.vm2.Varargs args) {
+                    if (currentUniformPasses == null) return org.luaj.vm2.LuaValue.NIL;
+                    String name = args.checkjstring(1);
+                    float val = (float) args.checkdouble(2);
+                    for (PostPass pass : currentUniformPasses) {
+                        var u = pass.getEffect().getUniform(name);
+                        if (u != null) u.set(val);
+                    }
+                    return org.luaj.vm2.LuaValue.NIL;
+                }
+            });
+            uniforms.set("setVec2", new org.luaj.vm2.lib.VarArgFunction() {
+                @Override
+                public org.luaj.vm2.Varargs invoke(org.luaj.vm2.Varargs args) {
+                    if (currentUniformPasses == null) return org.luaj.vm2.LuaValue.NIL;
+                    String name = args.checkjstring(1);
+                    float x = (float) args.checkdouble(2);
+                    float y = (float) args.checkdouble(3);
+                    for (PostPass pass : currentUniformPasses) {
+                        var u = pass.getEffect().getUniform(name);
+                        if (u != null) u.set(x, y);
+                    }
+                    return org.luaj.vm2.LuaValue.NIL;
+                }
+            });
+            uniforms.set("setVec3", new org.luaj.vm2.lib.VarArgFunction() {
+                @Override
+                public org.luaj.vm2.Varargs invoke(org.luaj.vm2.Varargs args) {
+                    if (currentUniformPasses == null) return org.luaj.vm2.LuaValue.NIL;
+                    String name = args.checkjstring(1);
+                    float r = (float) args.checkdouble(2);
+                    float g = (float) args.checkdouble(3);
+                    float b = (float) args.checkdouble(4);
+                    for (PostPass pass : currentUniformPasses) {
+                        var u = pass.getEffect().getUniform(name);
+                        if (u != null) u.set(r, g, b);
+                    }
+                    return org.luaj.vm2.LuaValue.NIL;
+                }
+            });
+            uniforms.set("setVec4", new org.luaj.vm2.lib.VarArgFunction() {
+                @Override
+                public org.luaj.vm2.Varargs invoke(org.luaj.vm2.Varargs args) {
+                    if (currentUniformPasses == null) return org.luaj.vm2.LuaValue.NIL;
+                    String name = args.checkjstring(1);
+                    float r = (float) args.checkdouble(2);
+                    float g = (float) args.checkdouble(3);
+                    float b = (float) args.checkdouble(4);
+                    float a = (float) args.checkdouble(5);
+                    for (PostPass pass : currentUniformPasses) {
+                        var u = pass.getEffect().getUniform(name);
+                        if (u != null) u.set(r, g, b, a);
+                    }
+                    return org.luaj.vm2.LuaValue.NIL;
+                }
+            });
+            cachedUniformBridge = uniforms;
+        }
+        return cachedUniformBridge;
+    }
+
+    private static void updateUniforms(Minecraft mc, float partialTick) {
         // Use our own saved reference, never GameRenderer.postEffect
         PostChain effect = savedPostChain;
         if (effect == null) return;
 
         List<PostPass> passes = ((PostChainAccessor) effect).vision_goggles$getPasses();
-        float time = (float) mc.level.getGameTime() + mc.getFrameTime();
+        float time = ((mc.level.getGameTime() % 100000L) + partialTick) / 20.0f;
         float battery = currentBatteryPct;
         int screenHeight = Math.max(1, mc.getWindow().getScreenHeight());
         float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) screenHeight;
@@ -496,12 +552,13 @@ public class VisionShaderManager {
             if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);
         }
 
-        // Call Lua uniforms hook for active modules
+        // Call Lua uniforms hook for active modules using cached LuaTable bridge
         for (dev.itsrealperson.vision_goggles.scripting.LuaCustomModule mod : dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.getLoadedModules()) {
             if (dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.canModuleRun(mod)) {
-                dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.updateUniforms(mod, passes);
+                mod.callUpdateUniforms(getUniformBridge(passes));
             }
         }
+        currentUniformPasses = null;
     }
 
     public static boolean isDspAvailable() {

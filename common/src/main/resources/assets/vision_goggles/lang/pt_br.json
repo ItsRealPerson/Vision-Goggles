@@ -94,7 +94,8 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLanterna: §fFoco Fechado",
   "message.vision_goggles.flashlight_mode.wide": "§eLanterna: §fFoco Aberto (Flood)",
   "message.vision_goggles.flashlight_mode.close": "§eLanterna: §fExplosão Curta (Burst)",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "message.vision_goggles.flashlight_mode.strobe": "§eLanterna: §cEstroboscópio Tático (13Hz)",
+  "message.vision_goggles.fully_charged": "§eO dispositivo já está totalmente carregado!",
   "item.vision_goggles.installation_script": "Script de Instalação",
   "item.vision_goggles.programmable_module": "Módulo Programável",
   "item.vision_goggles.tactical_flashlight": "Lanterna Tática",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Sensor Biométrico de Sinais Vitais",
   "jei.vision_goggles.install_module": "Instalar Módulo de Hardware",
   "jei.vision_goggles.flash_firmware": "Gravar Script no Módulo Programável",
-  "jei.vision_goggles.install_script_module": "Instalar Módulo com Script Programado"
+  "jei.vision_goggles.install_script_module": "Instalar Módulo com Script Programado",
+  "jei.vision_goggles.overhaul_repair": "Reparo Completo (100% Durabilidade)",
+  "jei.vision_goggles.maintenance_repair": "Manutenção de Campo (+35% Durabilidade)",
+  "jei.vision_goggles.extract_module": "Extração / Desmontagem de Módulo"
 }

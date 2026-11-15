@@ -81,9 +81,73 @@ public class ModConfig {
     }
 
     /** Replaces CommonConfig from a JSON string (called by clients on sync). */
-    public static void applyCommonJson(String json) {
+    public static void applyCommonJson(String jsonStr) {
+        if (jsonStr == null || jsonStr.isEmpty()) return;
         try {
-            common = GSON.fromJson(json, CommonConfig.class);
+            com.google.gson.JsonElement element = com.google.gson.JsonParser.parseString(jsonStr);
+            if (element == null || !element.isJsonObject()) return;
+            com.google.gson.JsonObject json = element.getAsJsonObject();
+            CommonConfig updated = new CommonConfig();
+
+            if (json.has("nvgDurationTicks") && !json.get("nvgDurationTicks").isJsonNull())
+                updated.nvgDurationTicks = json.get("nvgDurationTicks").getAsInt();
+            if (json.has("thermalDurationTicks") && !json.get("thermalDurationTicks").isJsonNull())
+                updated.thermalDurationTicks = json.get("thermalDurationTicks").getAsInt();
+            if (json.has("hydroDurationTicks") && !json.get("hydroDurationTicks").isJsonNull())
+                updated.hydroDurationTicks = json.get("hydroDurationTicks").getAsInt();
+            if (json.has("biometricDurationTicks") && !json.get("biometricDurationTicks").isJsonNull())
+                updated.biometricDurationTicks = json.get("biometricDurationTicks").getAsInt();
+            if (json.has("modularDurationTicks") && !json.get("modularDurationTicks").isJsonNull())
+                updated.modularDurationTicks = json.get("modularDurationTicks").getAsInt();
+
+            if (json.has("batteryDrainMultiplier") && !json.get("batteryDrainMultiplier").isJsonNull())
+                updated.batteryDrainMultiplier = json.get("batteryDrainMultiplier").getAsFloat();
+            if (json.has("batteryStandbyDrain") && !json.get("batteryStandbyDrain").isJsonNull())
+                updated.batteryStandbyDrain = json.get("batteryStandbyDrain").getAsFloat();
+            if (json.has("batteryExpansionMultiplier") && !json.get("batteryExpansionMultiplier").isJsonNull())
+                updated.batteryExpansionMultiplier = json.get("batteryExpansionMultiplier").getAsFloat();
+            if (json.has("solarChargeRate") && !json.get("solarChargeRate").isJsonNull())
+                updated.solarChargeRate = json.get("solarChargeRate").getAsFloat();
+
+            if (json.has("extraBatteryItems") && !json.get("extraBatteryItems").isJsonNull() && json.get("extraBatteryItems").isJsonArray()) {
+                List<String> items = new ArrayList<>();
+                for (com.google.gson.JsonElement item : json.getAsJsonArray("extraBatteryItems")) {
+                    if (item != null && !item.isJsonNull()) {
+                        items.add(item.getAsString());
+                    }
+                }
+                updated.extraBatteryItems = items;
+            }
+
+            if (json.has("gogglesDurability") && !json.get("gogglesDurability").isJsonNull())
+                updated.gogglesDurability = json.get("gogglesDurability").getAsInt();
+            if (json.has("damageTransferRatio") && !json.get("damageTransferRatio").isJsonNull())
+                updated.damageTransferRatio = json.get("damageTransferRatio").getAsFloat();
+
+            if (json.has("nvgGlareMaxRange") && !json.get("nvgGlareMaxRange").isJsonNull())
+                updated.nvgGlareMaxRange = json.get("nvgGlareMaxRange").getAsInt();
+            if (json.has("nvgGlareBackFactor") && !json.get("nvgGlareBackFactor").isJsonNull())
+                updated.nvgGlareBackFactor = json.get("nvgGlareBackFactor").getAsFloat();
+            if (json.has("nvgGenericLightIntensity") && !json.get("nvgGenericLightIntensity").isJsonNull())
+                updated.nvgGenericLightIntensity = json.get("nvgGenericLightIntensity").getAsFloat();
+
+            if (json.has("maxSimultaneousFlashlights") && !json.get("maxSimultaneousFlashlights").isJsonNull())
+                updated.maxSimultaneousFlashlights = json.get("maxSimultaneousFlashlights").getAsInt();
+
+            if (json.has("modularMaxModules") && !json.get("modularMaxModules").isJsonNull()) {
+                updated.modularMaxModules = json.get("modularMaxModules").getAsInt();
+                if (dev.itsrealperson.vision_goggles.item.ModularGogglesItem.getCustomModularMax() > 0) {
+                    dev.itsrealperson.vision_goggles.item.ModularGogglesItem.setCustomModularMax(updated.modularMaxModules);
+                }
+            }
+            if (json.has("proModularMaxModules") && !json.get("proModularMaxModules").isJsonNull()) {
+                updated.proModularMaxModules = json.get("proModularMaxModules").getAsInt();
+                if (dev.itsrealperson.vision_goggles.item.ModularGogglesItem.getCustomProMax() > 0) {
+                    dev.itsrealperson.vision_goggles.item.ModularGogglesItem.setCustomProMax(updated.proModularMaxModules);
+                }
+            }
+
+            common = updated;
             updateBatteryMap();
         } catch (Exception e) {
             System.err.println("[Vision Goggles] Failed to apply synced config: " + e.getMessage());

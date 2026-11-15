@@ -24,12 +24,8 @@ public class ConfigSyncPacket {
 
     public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
         NetworkManager.PacketContext context = contextSupplier.get();
-        // If received on server, ignore unless sender is OP / has permission level 2
         if (context.getEnv() != EnvType.CLIENT) {
-            net.minecraft.world.entity.player.Player player = context.getPlayer();
-            if (player == null || !player.hasPermissions(2)) {
-                return;
-            }
+            return;
         }
 
         context.queue(() -> {

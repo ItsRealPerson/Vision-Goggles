@@ -16,22 +16,27 @@ public class DurabilityModule implements IHudModule {
 
     private static final ResourceLocation CRACKED_LENS = new ResourceLocation("vision_goggles", "textures/gui/cracked_lens.png");
 
+    public static float getDamagePercent(ItemStack goggles) {
+        if (!goggles.isDamageableItem() || goggles.getMaxDamage() <= 0) return 0.0f;
+        return (float) goggles.getDamageValue() / goggles.getMaxDamage();
+    }
+
     @Override
     public boolean shouldRender(Player player, ItemStack goggles) {
         if (!ModConfig.shouldShowDurabilityWarning()) return false;
-        return goggles.isDamageableItem() && (float) goggles.getDamageValue() / goggles.getMaxDamage() >= 0.0f;
+        return getDamagePercent(goggles) > 0.7f;
     }
 
     @Override
     public void render(GuiGraphics gui, ItemStack goggles, float partialTicks, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
-        float damagePct = (float) goggles.getDamageValue() / goggles.getMaxDamage();
+        float damagePct = getDamagePercent(goggles);
 
         // Determine color based on active mode
         float r = 1.0f, g = 1.0f, b = 1.0f;
         if (goggles.hasTag() && goggles.getTag().getBoolean(ModConstants.TAG_ACTIVE)) {
-             int modeId = goggles.getTag().getInt(ModConstants.TAG_MODE);
-             VisionMode mode = VisionMode.byId(modeId);
+             VisionMode mode = VisionGogglesItem.getActiveVisionMode(goggles);
+             if (mode == null) mode = VisionMode.NIGHT_VISION;
              switch (mode) {
                  case NIGHT_VISION -> { r = 0.2f; g = 1.0f; b = 0.2f; } // Verde
                  case THERMAL -> { r = 0.2f; g = 0.5f; b = 1.0f; }      // Azul (Térmica)

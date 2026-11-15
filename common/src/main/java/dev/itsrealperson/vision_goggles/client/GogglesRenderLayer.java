@@ -97,7 +97,10 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
         }
 
         // Dynamic Wilcox mount pose: Smoothly interpolate between flipped-up on helmet brow and flipped-down over eyes
-        float progress = GogglesFlipAnimator.getEntityProgress(player.getUUID(), isActive);
+        boolean isLocalPlayer = (player == Minecraft.getInstance().player);
+        float progress = isLocalPlayer
+            ? GogglesFlipAnimator.getLocalProgress()
+            : GogglesFlipAnimator.getEntityProgress(player.getUUID(), isActive);
         try {
             net.minecraft.client.model.geom.ModelPart visor = this.model.head_bone.getChild("visor");
             visor.yRot = 0.0F;
@@ -110,22 +113,7 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
         ResourceLocation baseTex = NVG_TEXTURE;
         ResourceLocation glowTex = NVG_GLOW;
 
-        VisionMode mode = null;
-
-        if (goggles instanceof ModularGogglesItem modular) {
-            List<VisionMode> modes = modular.getModes(stack);
-            if (!modes.isEmpty()) {
-                // Priority: Thermal > Bio > Hydro > NVG
-                for (VisionMode m : modes) {
-                    if (m == VisionMode.THERMAL) { mode = m; break; }
-                    if (m == VisionMode.BIOMETRIC) { mode = m; break; }
-                    if (m == VisionMode.HYDRO) { mode = m; }
-                }
-                if (mode == null) mode = modes.get(0);
-            }
-        } else {
-            mode = goggles.getVisionMode();
-        }
+        VisionMode mode = VisionGogglesItem.getActiveVisionMode(stack);
 
         if (mode == VisionMode.THERMAL) {
             baseTex = THERMAL_TEXTURE;

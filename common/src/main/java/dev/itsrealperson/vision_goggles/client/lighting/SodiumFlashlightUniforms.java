@@ -7,6 +7,10 @@ import java.util.Map;
 public class SodiumFlashlightUniforms {
     private static final Map<Integer, int[]> locCache = new HashMap<>();
 
+    public static void clearCache() {
+        locCache.clear();
+    }
+
     // Indices into the cached location array
     private static final int LOC_COUNT     = 0;
     private static final int LOC_POS       = 1;

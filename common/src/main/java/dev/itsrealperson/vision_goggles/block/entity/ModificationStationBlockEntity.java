@@ -279,7 +279,9 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(items, slot);
+        ItemStack result = ContainerHelper.takeItem(items, slot);
+        this.setChanged();
+        return result;
     }
 
     @Override

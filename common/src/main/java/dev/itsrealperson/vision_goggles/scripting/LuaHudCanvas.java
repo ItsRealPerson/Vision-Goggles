@@ -1,8 +1,15 @@
 package dev.itsrealperson.vision_goggles.scripting;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import org.joml.Matrix4f;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
@@ -134,7 +141,7 @@ public class LuaHudCanvas {
             }
         });
 
-        // Draw a line between two screen points (approximated as thin rectangles)
+        // Draw a line between two screen points as a single 1px-thick oriented quad
         hud.set("drawLine", new VarArgFunction() {
             @Override
             public Varargs invoke(Varargs args) {
@@ -145,23 +152,42 @@ public class LuaHudCanvas {
                 final int color = parseColor(args.optjstring(5, "#FFFFFF"));
 
                 queueCommand((g, mc) -> {
-                    int dx = x2 - x1;
-                    int dy = y2 - y1;
+                    float dx = x2 - x1;
+                    float dy = y2 - y1;
                     float len = (float) Math.sqrt(dx * dx + dy * dy);
-                    if (len < 1) return;
-                    int steps = Math.min(1920, (int) Math.ceil(len));
-                    for (int i = 0; i <= steps; i++) {
-                        float t = i / (float) steps;
-                        int px = Math.round(x1 + dx * t);
-                        int py = Math.round(y1 + dy * t);
-                        g.fill(px, py, px + 1, py + 1, color);
-                    }
+                    if (len < 0.001f) return;
+
+                    float nx = -dy / len * 0.5f;
+                    float ny = dx / len * 0.5f;
+
+                    int a = (color >> 24) & 0xFF;
+                    int r = (color >> 16) & 0xFF;
+                    int gr = (color >> 8) & 0xFF;
+                    int b = color & 0xFF;
+
+                    Matrix4f matrix = g.pose().last().pose();
+                    RenderSystem.enableBlend();
+                    RenderSystem.defaultBlendFunc();
+                    RenderSystem.disableCull();
+                    RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+                    Tesselator tesselator = Tesselator.getInstance();
+                    BufferBuilder builder = tesselator.getBuilder();
+                    builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+                    builder.vertex(matrix, x1 + nx, y1 + ny, 0).color(r, gr, b, a).endVertex();
+                    builder.vertex(matrix, x1 - nx, y1 - ny, 0).color(r, gr, b, a).endVertex();
+                    builder.vertex(matrix, x2 - nx, y2 - ny, 0).color(r, gr, b, a).endVertex();
+                    builder.vertex(matrix, x2 + nx, y2 + ny, 0).color(r, gr, b, a).endVertex();
+                    tesselator.end();
+
+                    RenderSystem.enableCull();
+                    RenderSystem.disableBlend();
                 });
                 return LuaValue.NIL;
             }
         });
 
-        // Draw an approximated circle outline at (cx, cy) with radius
+        // Draw a 32-segment polygon circle outline at (cx, cy) with radius in a single BufferBuilder batch
         hud.set("drawCircle", new VarArgFunction() {
             @Override
             public Varargs invoke(Varargs args) {
@@ -172,14 +198,42 @@ public class LuaHudCanvas {
                 final int color = parseColor(args.optjstring(4, "#FFFFFF"));
 
                 queueCommand((g, mc) -> {
-                    int segments = Math.min(1024, Math.max(16, radius * 2));
-                    double step = 2.0 * Math.PI / segments;
+                    final int segments = 32;
+                    final float rIn = radius - 0.5f;
+                    final float rOut = radius + 0.5f;
+                    final double step = (2.0 * Math.PI) / segments;
+
+                    int a = (color >> 24) & 0xFF;
+                    int red = (color >> 16) & 0xFF;
+                    int gr = (color >> 8) & 0xFF;
+                    int b = color & 0xFF;
+
+                    Matrix4f matrix = g.pose().last().pose();
+                    RenderSystem.enableBlend();
+                    RenderSystem.defaultBlendFunc();
+                    RenderSystem.disableCull();
+                    RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+                    Tesselator tesselator = Tesselator.getInstance();
+                    BufferBuilder builder = tesselator.getBuilder();
+                    builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
                     for (int i = 0; i < segments; i++) {
-                        double angle = i * step;
-                        int px = cx + (int) Math.round(Math.cos(angle) * radius);
-                        int py = cy + (int) Math.round(Math.sin(angle) * radius);
-                        g.fill(px, py, px + 1, py + 1, color);
+                        double a1 = i * step;
+                        double a2 = (i + 1) * step;
+                        float cos1 = (float) Math.cos(a1);
+                        float sin1 = (float) Math.sin(a1);
+                        float cos2 = (float) Math.cos(a2);
+                        float sin2 = (float) Math.sin(a2);
+
+                        builder.vertex(matrix, cx + cos1 * rIn, cy + sin1 * rIn, 0).color(red, gr, b, a).endVertex();
+                        builder.vertex(matrix, cx + cos1 * rOut, cy + sin1 * rOut, 0).color(red, gr, b, a).endVertex();
+                        builder.vertex(matrix, cx + cos2 * rOut, cy + sin2 * rOut, 0).color(red, gr, b, a).endVertex();
+                        builder.vertex(matrix, cx + cos2 * rIn, cy + sin2 * rIn, 0).color(red, gr, b, a).endVertex();
                     }
+                    tesselator.end();
+
+                    RenderSystem.enableCull();
+                    RenderSystem.disableBlend();
                 });
                 return LuaValue.NIL;
             }

@@ -133,6 +133,19 @@ public class ModConfigGui {
                     .setTooltip(Component.translatable("config.vision_goggles.max_flashlights.tooltip"))
                     .setSaveConsumer(v -> ModConfig.common.maxSimultaneousFlashlights = v)
                     .build());
+
+            // --- Modular Goggles Slots ---
+            server.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.modular_max_modules"), ModConfig.getModularMaxModules(), 1, 10)
+                    .setDefaultValue(2)
+                    .setTooltip(Component.translatable("config.vision_goggles.modular_max_modules.tooltip"))
+                    .setSaveConsumer(v -> ModConfig.common.modularMaxModules = v)
+                    .build());
+
+            server.addEntry(entryBuilder.startIntSlider(Component.translatable("config.vision_goggles.pro_modular_max_modules"), ModConfig.getProModularMaxModules(), 1, 10)
+                    .setDefaultValue(4)
+                    .setTooltip(Component.translatable("config.vision_goggles.pro_modular_max_modules.tooltip"))
+                    .setSaveConsumer(v -> ModConfig.common.proModularMaxModules = v)
+                    .build());
         }
 
         // ─────────────────────────────────────────────────────────────────────

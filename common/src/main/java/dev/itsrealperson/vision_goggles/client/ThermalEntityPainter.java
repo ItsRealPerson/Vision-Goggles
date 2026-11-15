@@ -88,12 +88,31 @@ public class ThermalEntityPainter {
 
     private static boolean initialized = false;
     private static boolean active = false;
+    private static boolean hasPerEntityCustomColor = false;
 
     // Thermal tint color: cyan
     private static final float TINT_R = 0.0f;
     private static final float TINT_G = 1.0f;
     private static final float TINT_B = 1.0f;
     private static final float TINT_A = 0.85f;
+
+    public static boolean hasPerEntityCustomColor() {
+        return hasPerEntityCustomColor;
+    }
+
+    public static void setHasPerEntityCustomColor(boolean value) {
+        hasPerEntityCustomColor = value;
+    }
+
+    public static int resolveEntityThermalColor(LivingEntity entity) {
+        String entityTypeId = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        boolean isHostile = entity instanceof net.minecraft.world.entity.monster.Enemy || !entity.getType().getCategory().isFriendly();
+        Integer luaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor(entityTypeId, isHostile);
+        if (luaColor != null) {
+            return luaColor;
+        }
+        return -1;
+    }
 
     public static void init() {
         if (initialized) return;
@@ -173,6 +192,8 @@ public class ThermalEntityPainter {
         RenderSystem.clearColor(0f, 0f, 0f, 0f);
         RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
 
+        hasPerEntityCustomColor = false;
+
         for (Entity entity : mc.level.entitiesForRendering()) {
             // Skip non-living, undead (they don't emit heat), and self in first person
             if (!(entity instanceof LivingEntity living)) continue;
@@ -233,6 +254,10 @@ public class ThermalEntityPainter {
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             
             final float finalHeat = heat;
+            final int customColor = resolveEntityThermalColor(living);
+            if (customColor != -1) {
+                hasPerEntityCustomColor = true;
+            }
             try {
                 float lerpYaw = entity.yRotO + (entity.getYRot() - entity.yRotO) * partialTick;
                 
@@ -255,10 +280,10 @@ public class ThermalEntityPainter {
                     
                     if (isBody) {
                         // Cuerpo -> Calor con gradiente vertical
-                        return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int)(finalHeat * 255), finalDy, entityHeight, true);
+                        return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int)(finalHeat * 255), finalDy, entityHeight, true, customColor);
                     } else {
                         // Armadura / Custom Mods -> Frío (Aislante térmico, alpha = 38)
-                        return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), 38, finalDy, entityHeight, false);
+                        return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), 38, finalDy, entityHeight, false, customColor);
                     }
                 };
                 
@@ -309,16 +334,22 @@ public class ThermalEntityPainter {
         float tintG = TINT_G;
         float tintB = TINT_B;
         float tintA = TINT_A;
-        Integer luaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
-        if (luaColor != null) {
-            tintA = ((luaColor >> 24) & 0xFF) / 255.0f;
-            tintR = ((luaColor >> 16) & 0xFF) / 255.0f;
-            tintG = ((luaColor >> 8) & 0xFF) / 255.0f;
-            tintB = (luaColor & 0xFF) / 255.0f;
-            if (tintA <= 0.0f) tintA = 0.85f;
+        if (!hasPerEntityCustomColor) {
+            Integer luaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
+            if (luaColor != null) {
+                tintA = ((luaColor >> 24) & 0xFF) / 255.0f;
+                tintR = ((luaColor >> 16) & 0xFF) / 255.0f;
+                tintG = ((luaColor >> 8) & 0xFF) / 255.0f;
+                tintB = (luaColor & 0xFF) / 255.0f;
+                if (tintA <= 0.0f) tintA = 0.85f;
+            }
         }
 
         GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), tintR, tintG, tintB, tintA);
+        int useVertexColorLoc = GL20.glGetUniformLocation(programId, "UseVertexColor");
+        if (useVertexColorLoc != -1) {
+            GL20.glUniform1f(useVertexColorLoc, hasPerEntityCustomColor ? 1.0f : 0.0f);
+        }
 
         GL30.glBindVertexArray(quadVAO);
         GL30.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
@@ -389,9 +420,34 @@ public class ThermalEntityPainter {
 
     private static String loadShader(String path) throws IOException {
         ResourceLocation loc = new ResourceLocation(Vision_goggles.MOD_ID, path);
-        Resource res = Minecraft.getInstance().getResourceManager().getResource(loc).orElseThrow();
+        var opt = Minecraft.getInstance().getResourceManager().getResource(loc);
+        if (opt.isEmpty() && path.equals("shaders/thermal/thermal_overlay.fsh")) {
+            opt = Minecraft.getInstance().getResourceManager().getResource(
+                    new ResourceLocation(Vision_goggles.MOD_ID, "shaders/program/thermal_vision.fsh")
+            );
+        }
+        Resource res = opt.orElseThrow();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(res.open(), StandardCharsets.UTF_8))) {
-            return reader.lines().collect(Collectors.joining("\n"));
+            String src = reader.lines().collect(Collectors.joining("\n"));
+            // Inject UseVertexColor support if the loaded thermal_overlay.fsh doesn't declare it yet
+            if (path.equals("shaders/thermal/thermal_overlay.fsh") && !src.contains("UseVertexColor")) {
+                src = """
+                        #version 150
+                        uniform sampler2D EntityMask;
+                        uniform vec4 TintColor;
+                        uniform float UseVertexColor;
+                        in vec2 texCoord;
+                        out vec4 fragColor;
+                        void main() {
+                            vec4 sampleCol = texture(EntityMask, texCoord);
+                            float alpha = sampleCol.a;
+                            if (alpha < 0.01) discard;
+                            vec3 rgb = (UseVertexColor > 0.5) ? sampleCol.rgb : TintColor.rgb;
+                            fragColor = vec4(rgb, alpha * TintColor.a);
+                        }
+                        """;
+            }
+            return src;
         }
     }
 
@@ -485,14 +541,20 @@ public class ThermalEntityPainter {
         private final double dy;
         private final float entityHeight;
         private final boolean isBody;
+        private final int customColor;
         private double lastY = 0;
 
         public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody) {
+            this(delegate, baseAlpha, dy, entityHeight, isBody, -1);
+        }
+
+        public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody, int customColor) {
             this.delegate = delegate;
             this.baseAlpha = baseAlpha;
             this.dy = dy;
             this.entityHeight = entityHeight;
             this.isBody = isBody;
+            this.customColor = customColor;
         }
 
         @Override
@@ -504,7 +566,16 @@ public class ThermalEntityPainter {
         
         @Override
         public com.mojang.blaze3d.vertex.VertexConsumer color(int r, int g, int b, int a) { 
-            delegate.color(r, g, b, this.baseAlpha); 
+            if (customColor != -1) {
+                double relY = (entityHeight > 0.01f) ? Math.max(0.0, Math.min(1.0, (this.lastY - dy) / entityHeight)) : 0.5;
+                float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.45f;
+                int cr = Math.min(255, Math.round(((customColor >> 16) & 0xFF) * zoneLum));
+                int cg = Math.min(255, Math.round(((customColor >> 8) & 0xFF) * zoneLum));
+                int cb = Math.min(255, Math.round((customColor & 0xFF) * zoneLum));
+                delegate.color(cr, cg, cb, this.baseAlpha);
+            } else {
+                delegate.color(r, g, b, this.baseAlpha); 
+            }
             return this; 
         }
         @Override
@@ -518,7 +589,16 @@ public class ThermalEntityPainter {
         @Override
         public void endVertex() { delegate.endVertex(); }
         @Override
-        public void defaultColor(int r, int g, int b, int a) { delegate.defaultColor(r, g, b, this.baseAlpha); }
+        public void defaultColor(int r, int g, int b, int a) {
+            if (customColor != -1) {
+                int cr = (customColor >> 16) & 0xFF;
+                int cg = (customColor >> 8) & 0xFF;
+                int cb = customColor & 0xFF;
+                delegate.defaultColor(cr, cg, cb, this.baseAlpha);
+            } else {
+                delegate.defaultColor(r, g, b, this.baseAlpha);
+            }
+        }
         @Override
         public void unsetDefaultColor() { delegate.unsetDefaultColor(); }
     }

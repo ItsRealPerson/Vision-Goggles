@@ -67,16 +67,26 @@ public enum ModuleType {
                         stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
                         stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ON, false);
                         stack.getOrCreateTag().putBoolean("is_on", false);
+                        dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
+                            player.serverLevel().players(),
+                            new dev.itsrealperson.vision_goggles.network.SyncFlashlightPacket(player.getId(), false)
+                        );
                     }
                 } else {
                     stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
                     stack.getOrCreateTag().putBoolean(ModConstants.TAG_FLASHLIGHT_ON, false);
                     stack.getOrCreateTag().putBoolean("is_on", false);
+                    dev.itsrealperson.vision_goggles.network.NetworkManager.INSTANCE.sendToPlayers(
+                        player.serverLevel().players(),
+                        new dev.itsrealperson.vision_goggles.network.SyncFlashlightPacket(player.getId(), false)
+                    );
                 }
 
-                int modeId = stack.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
-                if (modeId == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
-                    FlashlightDeterrence.apply(player.serverLevel(), player, 24.0);
+                if (stack.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE)) {
+                    int modeId = stack.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                    if (modeId == FlashlightMode.STROBE.id && player.tickCount % 5 == 0) {
+                        FlashlightDeterrence.apply(player.serverLevel(), player, 24.0);
+                    }
                 }
             }
         }

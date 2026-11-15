@@ -40,15 +40,11 @@ public class SyncFlashlightPacket {
 
     public void handle(java.util.function.Supplier<NetworkManager.PacketContext> contextSupplier) {
         NetworkManager.PacketContext context = contextSupplier.get();
-        // Server validation: Clients can only synchronize their own flashlight, and modeId must be valid
         if (context.getEnv() != EnvType.CLIENT) {
-            Player sender = context.getPlayer();
-            if (sender == null || sender.getId() != this.entityId) {
-                return;
-            }
-            if (this.modeId < 0 || this.modeId >= FlashlightMode.values().length) {
-                return;
-            }
+            return;
+        }
+        if (this.modeId < 0 || this.modeId >= FlashlightMode.values().length) {
+            return;
         }
 
         context.queue(() -> {

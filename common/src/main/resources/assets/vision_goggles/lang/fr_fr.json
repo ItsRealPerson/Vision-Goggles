@@ -94,7 +94,8 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLampe Torche : §fFaisceau Concentré",
   "message.vision_goggles.flashlight_mode.wide": "§eLampe Torche : §fFaisceau Large",
   "message.vision_goggles.flashlight_mode.close": "§eLampe Torche : §fRaffale Courte",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "message.vision_goggles.flashlight_mode.strobe": "§eLampe Torche : §cStroboscope Tactique (13Hz)",
+  "message.vision_goggles.fully_charged": "§eL'appareil est déjà complètement chargé !",
   "item.vision_goggles.installation_script": "Script d'installation",
   "item.vision_goggles.programmable_module": "Module programmable",
   "item.vision_goggles.tactical_flashlight": "Lampe torche tactique",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Capteur Biométrique de Signes Vitaux",
   "jei.vision_goggles.install_module": "Installer le module matériel",
   "jei.vision_goggles.flash_firmware": "Flasher le script sur le module programmable",
-  "jei.vision_goggles.install_script_module": "Installer le module avec script programmé"
+  "jei.vision_goggles.install_script_module": "Installer le module avec script programmé",
+  "jei.vision_goggles.overhaul_repair": "Révision complète (100% Durabilité)",
+  "jei.vision_goggles.maintenance_repair": "Maintenance de terrain (+35% Durabilité)",
+  "jei.vision_goggles.extract_module": "Extraction / Démontage de module"
 }

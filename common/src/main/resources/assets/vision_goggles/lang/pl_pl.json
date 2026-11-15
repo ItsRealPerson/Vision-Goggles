@@ -94,7 +94,8 @@
   "message.vision_goggles.flashlight_mode.focused": "§eLatarka: §fSkupiona Wiązka",
   "message.vision_goggles.flashlight_mode.wide": "§eLatarka: §fSzeroki Strumień",
   "message.vision_goggles.flashlight_mode.close": "§eLatarka: §fBliski Błysk",
-  "message.vision_goggles.fully_charged": "§eDevice is already fully charged!",
+  "message.vision_goggles.flashlight_mode.strobe": "§eLatarka: §cTaktyczny Stroboskop (13Hz)",
+  "message.vision_goggles.fully_charged": "§eUrządzenie jest już w pełni naładowane!",
   "item.vision_goggles.installation_script": "Skrypt instalacyjny",
   "item.vision_goggles.programmable_module": "Programowalny moduł",
   "item.vision_goggles.tactical_flashlight": "Latarka taktyczna",
@@ -168,5 +169,8 @@
   "item.vision_goggles.lifesign_sensor": "Biometryczny Czujnik Życia",
   "jei.vision_goggles.install_module": "Zainstaluj moduł sprzętowy",
   "jei.vision_goggles.flash_firmware": "Wgraj skrypt do programowalnego modułu",
-  "jei.vision_goggles.install_script_module": "Zainstaluj zaprogramowany moduł skryptu"
+  "jei.vision_goggles.install_script_module": "Zainstaluj zaprogramowany moduł skryptu",
+  "jei.vision_goggles.overhaul_repair": "Generalna naprawa (100% Wytrzymałości)",
+  "jei.vision_goggles.maintenance_repair": "Konserwacja polowa (+35% Wytrzymałości)",
+  "jei.vision_goggles.extract_module": "Wyjmowanie / Demontaż modułu"
 }

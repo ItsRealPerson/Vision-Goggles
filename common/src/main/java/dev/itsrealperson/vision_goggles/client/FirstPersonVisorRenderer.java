@@ -134,6 +134,7 @@ public class FirstPersonVisorRenderer {
         renderPlayerArm(mc.player, poseStack, bufferSource, width, height, scale, yOffset, zArc, progress, isRightArm, sideSign);
 
         bufferSource.endBatch();
+        Lighting.setupForFlatItems();
 
         RenderSystem.disableDepthTest();
     }
@@ -207,21 +208,7 @@ public class FirstPersonVisorRenderer {
     }
 
     private static VisionMode resolveMode(ItemStack stack, VisionGogglesItem goggles) {
-        if (goggles instanceof ModularGogglesItem modular) {
-            List<VisionMode> modes = modular.getModes(stack);
-            if (!modes.isEmpty()) {
-                VisionMode selected = null;
-                // Priority: Thermal > Bio > Hydro > NVG
-                for (VisionMode m : modes) {
-                    if (m == VisionMode.THERMAL) { selected = m; break; }
-                    if (m == VisionMode.BIOMETRIC) { selected = m; break; }
-                    if (m == VisionMode.HYDRO) { selected = m; }
-                }
-                return selected != null ? selected : modes.get(0);
-            }
-            return null;
-        }
-        return goggles.getVisionMode();
+        return VisionGogglesItem.getActiveVisionMode(stack);
     }
 
     private static ResourceLocation resolveBaseTexture(VisionMode mode) {

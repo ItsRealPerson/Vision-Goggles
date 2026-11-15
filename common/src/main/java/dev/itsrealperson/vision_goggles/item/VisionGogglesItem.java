@@ -69,6 +69,33 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
         return false;
     }
 
+    public static VisionMode getActiveVisionMode(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem goggles)) {
+            return null;
+        }
+        CompoundTag nbt = stack.getTag();
+        int nbtModeId = (nbt != null && nbt.contains(ModConstants.TAG_MODE)) ? nbt.getInt(ModConstants.TAG_MODE) : -1;
+        if (goggles instanceof ModularGogglesItem modular) {
+            List<VisionMode> modes = modular.getModes(stack);
+            if (modes.isEmpty()) return null;
+            if (nbtModeId != -1) {
+                VisionMode requested = VisionMode.byId(nbtModeId);
+                if (requested != null && modes.contains(requested)) {
+                    return requested;
+                }
+            }
+            return modes.get(0);
+        } else {
+            if (nbtModeId != -1) {
+                VisionMode requested = VisionMode.byId(nbtModeId);
+                if (requested != null && goggles.getSupportedModes().contains(requested)) {
+                    return requested;
+                }
+            }
+            return goggles.getVisionMode();
+        }
+    }
+
     public void serverTick(ItemStack stack, ServerPlayer player) {
         CompoundTag nbt = stack.getOrCreateTag();
         float maxBattery = (float) getBatteryCapacity(stack);
@@ -76,12 +103,20 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
         if (!nbt.contains(ModConstants.TAG_BATTERY)) nbt.putFloat(ModConstants.TAG_BATTERY, maxBattery);
         float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
         
-        int modeId = nbt.getInt(ModConstants.TAG_MODE);
-        VisionMode mode = VisionMode.byId(modeId);
+        VisionMode mode = getActiveVisionMode(stack);
 
         if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
             if (currentBattery > 0) {
-                float baseDrain = (mode == VisionMode.THERMAL) ? 2.0f : 1.0f;
+                float baseDrain = (mode != null) ? ((mode == VisionMode.THERMAL) ? 2.0f : 1.0f) : 0.0f;
+                if (this instanceof ModularGogglesItem modular) {
+                    for (String modId : modular.getModules(stack)) {
+                        dev.itsrealperson.vision_goggles.scripting.LuaCustomModule luaMod =
+                            dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.findModuleByIdOrPath(modId);
+                        if (luaMod != null && luaMod.getBatteryDrain() > 0) {
+                            baseDrain += luaMod.getBatteryDrain();
+                        }
+                    }
+                }
                 float drain = baseDrain * dev.itsrealperson.vision_goggles.util.ModConfig.getBatteryDrainMultiplier();
                 currentBattery = Math.max(0, currentBattery - drain);
                 nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
@@ -150,7 +185,7 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "visor_controller", 5, state -> {
+        controllers.add(new AnimationController<>(this, "visor_controller", 0, state -> {
             ItemStack stack = state.getData(DataTickets.ITEMSTACK);
             boolean active = stack != null && stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE);
             return state.setAndContinue(active ? IDLE_DOWN : IDLE_UP);
@@ -158,11 +193,11 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
     }
 
     private final java.util.function.Supplier<Object> renderProvider = new java.util.function.Supplier<Object>() {
-        private software.bernie.geckolib.animatable.client.RenderProvider geoRenderProvider;
+        private Object geoRenderProvider;
         @Override
         public Object get() {
             if (this.geoRenderProvider == null) {
-                createRenderer(provider -> this.geoRenderProvider = (software.bernie.geckolib.animatable.client.RenderProvider) provider);
+                createRenderer(provider -> this.geoRenderProvider = provider);
             }
             return this.geoRenderProvider;
         }
@@ -170,16 +205,7 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
 
     @Override
     public void createRenderer(java.util.function.Consumer<Object> consumer) {
-        consumer.accept(new software.bernie.geckolib.animatable.client.RenderProvider() {
-            private dev.itsrealperson.vision_goggles.client.renderer.VisionGogglesGeoRenderer renderer;
-
-            @Override
-            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (this.renderer == null)
-                    this.renderer = new dev.itsrealperson.vision_goggles.client.renderer.VisionGogglesGeoRenderer();
-                return this.renderer;
-            }
-        });
+        dev.itsrealperson.vision_goggles.client.renderer.VisionGogglesClientRenderHelper.createRenderer(consumer);
     }
 
     @Override

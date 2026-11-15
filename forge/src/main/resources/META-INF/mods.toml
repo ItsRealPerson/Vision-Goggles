@@ -53,3 +53,10 @@ mandatory = true
 versionRange = "*"
 ordering = "AFTER"
 side = "BOTH"
+
+[[dependencies.vision_goggles]]
+modId = "geckolib"
+mandatory = true
+versionRange = "[4.4,)"
+ordering = "NONE"
+side = "BOTH"

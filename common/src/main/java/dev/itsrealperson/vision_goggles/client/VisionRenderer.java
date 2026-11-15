@@ -155,25 +155,19 @@ public class VisionRenderer {
             CompoundTag nbt = helmet.getOrCreateTag();
             boolean isServerActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
             
-            int nbtModeId = nbt.contains(ModConstants.TAG_MODE) ? nbt.getInt(ModConstants.TAG_MODE) : -1;
-            
-            // If mode ID is invalid (-1) or not found, try to get default from goggles, 
-            // BUT for Modular Goggles, default might be null/empty if no modules installed.
-            if (nbtModeId == -1) {
-                if (goggles instanceof ModularGogglesItem modular) {
-                     List<VisionMode> modes = modular.getModes(helmet);
-                     if (!modes.isEmpty()) {
-                         currentVisionMode = modes.get(0);
-                         nbtModeId = currentVisionMode.getId();
-                     } else {
-                         currentVisionMode = null;
-                     }
-                } else {
-                    currentVisionMode = goggles.getVisionMode();
-                    nbtModeId = currentVisionMode.getId();
+            currentVisionMode = VisionGogglesItem.getActiveVisionMode(helmet);
+            int nbtModeId = currentVisionMode != null ? currentVisionMode.getId() : -1;
+
+            net.minecraft.resources.ResourceLocation customLuaShader = null;
+            if (currentVisionMode == null && goggles instanceof ModularGogglesItem modular) {
+                for (dev.itsrealperson.vision_goggles.scripting.LuaCustomModule customMod : dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.getLoadedModules()) {
+                    if ("VISION_MODE".equalsIgnoreCase(customMod.getType())
+                            && customMod.getShaderLocation() != null
+                            && customMod.isHardwareInstalled(helmet, modular)) {
+                        customLuaShader = customMod.getShaderLocation();
+                        break;
+                    }
                 }
-            } else {
-                currentVisionMode = VisionMode.byId(nbtModeId);
             }
             
             float maxBattery = (float) goggles.getBatteryCapacity(helmet);
@@ -184,7 +178,7 @@ public class VisionRenderer {
             // Update flip-down / flip-up animation state machine
             GogglesFlipAnimator.updateLocal(isServerActive, true);
             boolean isFullyDown = isServerActive && GogglesFlipAnimator.isLocalFullyDown();
-            boolean shaderNeeded = (currentVisionMode != null);
+            boolean shaderNeeded = (currentVisionMode != null || customLuaShader != null);
 
             visionModeActive = isFullyDown && shaderNeeded;
             visorActive = isFullyDown;
@@ -205,9 +199,12 @@ public class VisionRenderer {
             }
 
             if (isFullyDown && (!lastFullyDown || nbtModeId != lastModeId)) {
-                if (shaderNeeded) {
+                if (currentVisionMode != null) {
                     grayscaleEnabled = true;
                     VisionShaderManager.enableShader(mc, currentVisionMode);
+                } else if (customLuaShader != null) {
+                    grayscaleEnabled = true;
+                    VisionShaderManager.enableCustomShader(mc, customLuaShader);
                 } else {
                     grayscaleEnabled = false;
                     VisionShaderManager.disableShader(mc);
@@ -286,7 +283,11 @@ public class VisionRenderer {
                 // Initial enable if shader isn't loaded yet (first equip, F5 switch, etc.)
                 // Frame-rate restoration is handled by MixinGameRenderer.vision_goggles$ensureShaderPerFrame
                 if (!VisionShaderManager.isShaderActive()) {
-                    VisionShaderManager.enableShader(mc, currentVisionMode);
+                    if (currentVisionMode != null) {
+                        VisionShaderManager.enableShader(mc, currentVisionMode);
+                    } else if (customLuaShader != null) {
+                        VisionShaderManager.enableCustomShader(mc, customLuaShader);
+                    }
                 }
 
                 // Hydro-mode needs a shader swap when entering/leaving water

@@ -26,8 +26,7 @@ public class MixinFogRenderer {
                 ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
                 if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
                     if (helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
-                        int modeId = helmet.getOrCreateTag().getInt(ModConstants.TAG_MODE);
-                        VisionMode mode = VisionMode.byId(modeId);
+                        VisionMode mode = VisionGogglesItem.getActiveVisionMode(helmet);
                         
                         if (mode == VisionMode.HYDRO) {
                             RenderSystem.setShaderFogStart(viewDistance * 0.5F);
