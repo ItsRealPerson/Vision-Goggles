@@ -21,7 +21,7 @@ public final class GogglesFlipAnimator {
         FLIPPING_UP
     }
 
-    private static final float TRANSITION_DURATION_SECONDS = 0.42f;
+    private static final float TRANSITION_DURATION_SECONDS = 0.55f;
     private static final float MAX_DT_SECONDS = 0.05f;
     private static final long PRUNE_INTERVAL_NANOS = 10_000_000_000L;
     private static final long PRUNE_MAX_AGE_NANOS = 10_000_000_000L;
