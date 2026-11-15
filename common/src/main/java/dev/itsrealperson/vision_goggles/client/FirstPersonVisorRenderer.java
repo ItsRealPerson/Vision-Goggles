@@ -106,10 +106,11 @@ public class FirstPersonVisorRenderer {
         PoseStack poseStack = gui.pose();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
-        // 1. Render the 3D tactical visor descending from above the viewport to eye level
+        // 1. Render the 3D tactical visor descending from above the viewport and zooming onto the eyes
         float yOffset = Mth.lerp(progress, -height * 0.62f, 0.0f);
         float zArc = (float) Math.sin(progress * Math.PI) * 35.0f;
-        float scale = height * 1.15f;
+        float eyeZoom = smoothstep01((progress - 0.55f) / 0.45f);
+        float scale = height * Mth.lerp(eyeZoom, 0.95f, 1.85f);
         boolean isRightArm = mc.player.getMainArm() == HumanoidArm.RIGHT;
         float sideSign = isRightArm ? 1.0f : -1.0f;
 
@@ -173,20 +174,22 @@ public class FirstPersonVisorRenderer {
         float visorEdgeY = height * 0.5f + yOffset + visorScale * 0.01f;
         float visorEdgeZ = 300.0f + zArc + 14.0f;
 
-        float handX = visorEdgeX + sideSign * (offscreen * width * 0.34f);
-        float handY = visorEdgeY + offscreen * height * 0.42f;
-        float handZ = visorEdgeZ + 12.0f;
+        float handX = visorEdgeX + sideSign * (offscreen * width * 0.38f);
+        float handY = visorEdgeY + offscreen * height * 0.48f;
+        float handZ = visorEdgeZ + 14.0f;
 
-        float armScale = height * 0.92f;
+        float armScale = height * 1.45f;
 
         poseStack.pushPose();
         poseStack.translate(handX, handY, handZ);
         poseStack.scale(armScale, armScale, armScale);
 
-        // Angle the forearm from the bottom-side of the screen toward the goggle rim
-        poseStack.mulPose(Axis.ZP.rotationDegrees(sideSign * (-148.0f + offscreen * 18.0f + progress * 10.0f)));
-        poseStack.mulPose(Axis.XP.rotationDegrees(-24.0f + progress * 16.0f));
-        poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * (-18.0f + offscreen * 12.0f)));
+        // Rotate so +Y (the fist) points up-left toward the goggles, and -Y (the shoulder) extends off-screen bottom-right
+        poseStack.mulPose(Axis.ZP.rotationDegrees(sideSign * (142.0f - offscreen * 16.0f - progress * 8.0f)));
+        poseStack.mulPose(Axis.XP.rotationDegrees(-18.0f + progress * 12.0f));
+        poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * (20.0f - offscreen * 10.0f)));
+        // Shift along the arm axis so the fist (+0.68f) grips the visor edge and the shoulder stays well off-screen
+        poseStack.translate(0.0f, -0.68f, 0.0f);
 
         // Shift so the hand/knuckles (local y = +9/16) sit directly at the grip anchor
         poseStack.translate(0.0f, -9.0f / 16.0f, 0.0f);

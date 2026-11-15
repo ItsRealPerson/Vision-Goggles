@@ -10,6 +10,7 @@
   "client": [
     "client.MixinLevelRenderer",
     "client.MixinLivingEntity",
+    "client.MixinItemInHandRenderer",
     "client.MixinGameRenderer",
     "client.MixinMinecraft",
     "client.MixinMouseHandler",
