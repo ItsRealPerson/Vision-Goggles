@@ -21,7 +21,8 @@ public final class GogglesFlipAnimator {
         FLIPPING_UP
     }
 
-    private static final float TRANSITION_DURATION_SECONDS = 0.55f;
+    private static final float TRANSITION_DURATION_SECONDS = 0.72f;
+    private static final float REACH_PHASE_END = 0.35f;
     private static final float MAX_DT_SECONDS = 0.05f;
     private static final long PRUNE_INTERVAL_NANOS = 10_000_000_000L;
     private static final long PRUNE_MAX_AGE_NANOS = 10_000_000_000L;
@@ -51,6 +52,38 @@ public final class GogglesFlipAnimator {
     private static float easeSmoothstep(float t) {
         float clamped = Math.max(0.0f, Math.min(1.0f, t));
         return clamped * clamped * (3.0f - 2.0f * clamped);
+    }
+
+    /**
+     * Phase 1 ({@code 0.0 -> REACH_PHASE_END}): visor stays UP while the hand rises.
+     * Phase 2 ({@code REACH_PHASE_END -> 1.0}): visor flips down smoothly.
+     */
+    private static float computeVisorProgress(float rawT) {
+        if (rawT <= REACH_PHASE_END) {
+            return 0.0f;
+        }
+        return easeSmoothstep((rawT - REACH_PHASE_END) / (1.0f - REACH_PHASE_END));
+    }
+
+    /**
+     * Two-phase arm reach envelope:
+     * <ul>
+     *   <li>{@code 0.0 -> 0.35}: arm rises smoothly to the brow</li>
+     *   <li>{@code 0.35 -> 0.88}: arm grips and pulls/pushes the goggles</li>
+     *   <li>{@code 0.88 -> 1.0}: arm lowers back down cleanly</li>
+     * </ul>
+     */
+    private static float computeArmReach(float rawT) {
+        if (rawT <= 0.001f || rawT >= 0.999f) {
+            return 0.0f;
+        }
+        if (rawT <= REACH_PHASE_END) {
+            return easeSmoothstep(rawT / REACH_PHASE_END);
+        }
+        if (rawT <= 0.88f) {
+            return 1.0f;
+        }
+        return 1.0f - easeSmoothstep((rawT - 0.88f) / 0.12f);
     }
 
     private static float computeDeltaSeconds(long nowNanos, long prevNanos) {
@@ -143,12 +176,12 @@ public final class GogglesFlipAnimator {
     }
 
     /**
-     * Returns the eased local flip progress in {@code [0.0f, 1.0f]},
+     * Returns the eased local visor flip progress in {@code [0.0f, 1.0f]},
      * advancing sub-tick interpolation on every render call.
      */
     public static float getLocalProgress() {
         tickFrame();
-        return easeSmoothstep(linearProgress);
+        return computeVisorProgress(linearProgress);
     }
 
     public static boolean isLocalFullyDown() {
@@ -191,11 +224,11 @@ public final class GogglesFlipAnimator {
             ENTITY_ANIMS.entrySet().removeIf(entry -> (now - entry.getValue().lastNanos) > PRUNE_MAX_AGE_NANOS);
         }
 
-        return easeSmoothstep(anim.progress);
+        return computeVisorProgress(anim.progress);
     }
 
     /**
-     * Returns the current eased flip progress {@code [0.0f, 1.0f]} for an entity
+     * Returns the current eased visor flip progress {@code [0.0f, 1.0f]} for an entity
      * without advancing the per-entity delta timer (which is already updated by
      * {@link #getEntityProgress(UUID, boolean)} during layer rendering).
      */
@@ -207,6 +240,22 @@ public final class GogglesFlipAnimator {
             return 0.0f;
         }
         EntityAnim anim = ENTITY_ANIMS.get(entityId);
-        return anim != null ? easeSmoothstep(anim.progress) : 0.0f;
+        return anim != null ? computeVisorProgress(anim.progress) : 0.0f;
+    }
+
+    /**
+     * Returns the two-phase arm reach factor {@code [0.0f, 1.0f]} for an entity
+     * (used by {@code MixinHumanoidModel} for 3rd-person arm animation).
+     */
+    public static float getEntityArmReach(UUID entityId, boolean isLocalPlayer) {
+        if (isLocalPlayer) {
+            tickFrame();
+            return computeArmReach(linearProgress);
+        }
+        if (entityId == null) {
+            return 0.0f;
+        }
+        EntityAnim anim = ENTITY_ANIMS.get(entityId);
+        return anim != null ? computeArmReach(anim.progress) : 0.0f;
     }
 }

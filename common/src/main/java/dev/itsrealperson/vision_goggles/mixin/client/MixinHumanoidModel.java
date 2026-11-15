@@ -50,12 +50,10 @@ public abstract class MixinHumanoidModel<T extends LivingEntity> {
         }
 
         boolean isLocal = (player == Minecraft.getInstance().player);
-        float progress = GogglesFlipAnimator.getEntityRenderProgress(player.getUUID(), isLocal);
-        if (progress <= 0.002f || progress >= 0.998f) {
+        float reach = GogglesFlipAnimator.getEntityArmReach(player.getUUID(), isLocal);
+        if (reach <= 0.002f) {
             return;
         }
-
-        float reach = (float) Math.sin(progress * Math.PI);
         HumanoidArm mainArm = player.getMainArm();
         ModelPart arm = (mainArm == HumanoidArm.RIGHT) ? this.rightArm : this.leftArm;
         float sideSign = (mainArm == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
