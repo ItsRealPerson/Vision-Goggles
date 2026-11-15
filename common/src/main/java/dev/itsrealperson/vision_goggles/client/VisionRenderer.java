@@ -15,7 +15,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 
 import net.minecraft.world.entity.player.Player;
@@ -63,6 +62,16 @@ public class VisionRenderer {
     public static boolean isVisorActive() { return visorActive; }
     public static boolean isVisionModeActive() { return visionModeActive; }
     public static VisionMode getCurrentVisionMode() { return currentVisionMode; }
+
+    public static boolean shouldApplyNightVisionLight() {
+        return visorActive && currentVisionMode != null && (
+                currentVisionMode == VisionMode.NIGHT_VISION
+                || currentVisionMode == VisionMode.THERMAL
+                || (currentVisionMode == VisionMode.HYDRO
+                    && Minecraft.getInstance().player != null
+                    && Minecraft.getInstance().player.isUnderWater())
+        );
+    }
     public static boolean isZoomActive() { return zoomActive || currentZoomFactor > 1.05f; }
     public static float getZoomMultiplier() { return currentZoom; }
     public static float getCurrentZoomFactor() { return currentZoomFactor; }
@@ -193,9 +202,6 @@ public class VisionRenderer {
                 VisionShaderManager.disableShader(mc);
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.85F));
-                if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
-                    mc.player.removeEffect(MobEffects.NIGHT_VISION);
-                }
             }
 
             if (isFullyDown && (!lastFullyDown || nbtModeId != lastModeId)) {
@@ -210,17 +216,6 @@ public class VisionRenderer {
 
                 if (!lastFullyDown) {
                     mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
-                }
-
-                // Al cambiar de modo, limpiar el efecto de visión nocturna SOLO si el nuevo modo
-                // no lo requiere. THERMAL e HYDRO reciben NV del servidor, no se deben limpiar aquí.
-                if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
-                    boolean newModeUsesNV = currentVisionMode == VisionMode.NIGHT_VISION
-                                        || currentVisionMode == VisionMode.THERMAL
-                                        || currentVisionMode == VisionMode.HYDRO;
-                    if (!newModeUsesNV) {
-                        mc.player.removeEffect(MobEffects.NIGHT_VISION);
-                    }
                 }
             }
 
@@ -577,9 +572,6 @@ public class VisionRenderer {
         currentZoom = 1.0f;
         VisionShaderManager.disableShader(mc);
         dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(null);
-        if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
-            mc.player.removeEffect(MobEffects.NIGHT_VISION);
-        }
         try {
             dev.itsrealperson.vision_goggles.client.audio.GogglesHumSoundInstance.updateHum(mc.player);
         } catch (Throwable ignored) {}
@@ -611,6 +603,7 @@ public class VisionRenderer {
     }
 
     public static void renderHUD(GuiGraphics g, float partialTicks) {
+        FirstPersonVisorRenderer.render(g, partialTicks);
         if (!visorActive) return;
         
         // Delegar al nuevo sistema modular

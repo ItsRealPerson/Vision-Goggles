@@ -86,19 +86,9 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                 currentBattery = Math.max(0, currentBattery - drain);
                 nbt.putFloat(ModConstants.TAG_BATTERY, currentBattery);
                 
-                // Effect Logic
-                boolean shouldApplyNV = true;
-                if (modeId == -1 || mode == VisionMode.BIOMETRIC) {
-                    shouldApplyNV = false;
-                } else if (mode == VisionMode.HYDRO && !player.isUnderWater()) {
-                    shouldApplyNV = false;
-                }
-
-                if (shouldApplyNV) {
-                    player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0, false, false, false));
-                } else {
-                    cleanUpEffect(player);
-                }
+                // Night vision is handled purely client-side via LightTexture mixin;
+                // clean up any legacy invisible NIGHT_VISION effect from older saves.
+                cleanUpEffect(player);
                 
                 if (currentBattery <= 0) {
                     nbt.putBoolean(ModConstants.TAG_ACTIVE, false);

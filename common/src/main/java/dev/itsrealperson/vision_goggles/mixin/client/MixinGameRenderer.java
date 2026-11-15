@@ -5,7 +5,10 @@ import dev.itsrealperson.vision_goggles.client.VisionShaderManager;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -59,15 +62,27 @@ public class MixinGameRenderer {
 
     @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
     private static void vision_goggles$instantCutoff(LivingEntity livingEntity, float partialTick, CallbackInfoReturnable<Float> cir) {
+        if (livingEntity == Minecraft.getInstance().player) {
+            if (VisionRenderer.shouldApplyNightVisionLight()) {
+                cir.setReturnValue(1.0f);
+                return;
+            }
+            if (!VisionRenderer.isVisorActive()) {
+                MobEffectInstance effect = livingEntity.getEffect(MobEffects.NIGHT_VISION);
+                if (effect != null && !effect.isVisible() && !effect.showIcon()) {
+                    cir.setReturnValue(0.0f);
+                }
+            }
+            return;
+        }
         if (livingEntity instanceof Player player) {
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
             if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-                // For the local player, wait until the flip-down animation completes (VisionRenderer.isVisorActive())
-                boolean active = (player == net.minecraft.client.Minecraft.getInstance().player)
-                        ? VisionRenderer.isVisorActive()
-                        : helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE);
-                if (!active) {
-                    cir.setReturnValue(0.0f);
+                if (!helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+                    MobEffectInstance effect = livingEntity.getEffect(MobEffects.NIGHT_VISION);
+                    if (effect != null && !effect.isVisible() && !effect.showIcon()) {
+                        cir.setReturnValue(0.0f);
+                    }
                 }
             }
         }

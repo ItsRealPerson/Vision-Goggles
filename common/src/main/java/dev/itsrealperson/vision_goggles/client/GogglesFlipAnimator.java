@@ -193,4 +193,20 @@ public final class GogglesFlipAnimator {
 
         return easeSmoothstep(anim.progress);
     }
+
+    /**
+     * Returns the current eased flip progress {@code [0.0f, 1.0f]} for an entity
+     * without advancing the per-entity delta timer (which is already updated by
+     * {@link #getEntityProgress(UUID, boolean)} during layer rendering).
+     */
+    public static float getEntityRenderProgress(UUID entityId, boolean isLocalPlayer) {
+        if (isLocalPlayer) {
+            return getLocalProgress();
+        }
+        if (entityId == null) {
+            return 0.0f;
+        }
+        EntityAnim anim = ENTITY_ANIMS.get(entityId);
+        return anim != null ? easeSmoothstep(anim.progress) : 0.0f;
+    }
 }

@@ -72,6 +72,7 @@ public class FirstPersonVisorRenderer {
 
         gui.flush();
         RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(true);
         Lighting.setupFor3DItems();
 
         PoseStack poseStack = gui.pose();
@@ -80,10 +81,10 @@ public class FirstPersonVisorRenderer {
         // Descend smoothly from above the top of the viewport down to the center of the camera
         float yOffset = Mth.lerp(progress, -height * 0.65f, 0.0f);
         float zArc = (float) Math.sin(progress * Math.PI) * 35.0f;
-        poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 220.0f + zArc);
+        poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 300.0f + zArc);
 
         // Scale the 1/16th-unit model to span the center viewport cleanly
-        float scale = height * 0.92f;
+        float scale = height * 1.15f;
         poseStack.scale(scale, scale, scale);
         // Slight pitch tilt so the dual-tube underside and lens rims read clearly in 3D
         poseStack.mulPose(Axis.XP.rotationDegrees(10.0f));

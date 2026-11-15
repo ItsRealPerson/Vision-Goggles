@@ -8,6 +8,7 @@
   ],
   "client": [
     "client.MixinLevelRenderer",
+    "client.MixinLightTexture",
     "client.MixinGameRenderer",
     "client.MixinMinecraft",
     "client.MixinMouseHandler",
@@ -16,6 +17,7 @@
     "client.PostChainAccessor",
     "client.MixinFogRenderer",
     "client.MixinClientPacketListener",
+    "client.MixinHumanoidModel",
     "lighting.ShaderInstanceMixin",
     "sodium.SodiumChunkUniformMixin",
     "sodium.SodiumShaderParserMixin"
