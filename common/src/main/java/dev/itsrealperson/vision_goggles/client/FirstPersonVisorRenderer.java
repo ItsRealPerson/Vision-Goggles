@@ -12,12 +12,19 @@ import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -40,12 +47,33 @@ public class FirstPersonVisorRenderer {
     private static final ResourceLocation BIO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_glow.png");
 
     private static FirstPersonVisorModel model;
+    private static PlayerModel<AbstractClientPlayer> wideArmModel;
+    private static PlayerModel<AbstractClientPlayer> slimArmModel;
 
     private static FirstPersonVisorModel getModel() {
         if (model == null) {
             model = new FirstPersonVisorModel(FirstPersonVisorModel.createBodyLayer().bakeRoot());
         }
         return model;
+    }
+
+    private static PlayerModel<AbstractClientPlayer> getArmModel(boolean slim) {
+        if (slim) {
+            if (slimArmModel == null) {
+                slimArmModel = new PlayerModel<>(
+                        LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, true), 64, 64).bakeRoot(),
+                        true
+                );
+            }
+            return slimArmModel;
+        }
+        if (wideArmModel == null) {
+            wideArmModel = new PlayerModel<>(
+                    LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64).bakeRoot(),
+                    false
+            );
+        }
+        return wideArmModel;
     }
 
     public static void render(GuiGraphics gui, float partialTicks) {
@@ -76,20 +104,22 @@ public class FirstPersonVisorRenderer {
         Lighting.setupFor3DItems();
 
         PoseStack poseStack = gui.pose();
-        poseStack.pushPose();
-
-        // Descend smoothly from above the top of the viewport down to the center of the camera
-        float yOffset = Mth.lerp(progress, -height * 0.65f, 0.0f);
-        float zArc = (float) Math.sin(progress * Math.PI) * 35.0f;
-        poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 300.0f + zArc);
-
-        // Scale the 1/16th-unit model to span the center viewport cleanly
-        float scale = height * 1.15f;
-        poseStack.scale(scale, scale, scale);
-        // Slight pitch tilt so the dual-tube underside and lens rims read clearly in 3D
-        poseStack.mulPose(Axis.XP.rotationDegrees(10.0f));
-
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+
+        // 1. Render the 3D tactical visor descending from above the viewport to eye level
+        float yOffset = Mth.lerp(progress, -height * 0.62f, 0.0f);
+        float zArc = (float) Math.sin(progress * Math.PI) * 35.0f;
+        float scale = height * 1.15f;
+        boolean isRightArm = mc.player.getMainArm() == HumanoidArm.RIGHT;
+        float sideSign = isRightArm ? 1.0f : -1.0f;
+
+        poseStack.pushPose();
+        poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 300.0f + zArc);
+        poseStack.scale(scale, scale, scale);
+        // Slight tactical 3D angle so the dual-tube underside and side rim read clearly
+        poseStack.mulPose(Axis.YP.rotationDegrees(6.0f * sideSign * (1.0f - progress * 0.5f)));
+        poseStack.mulPose(Axis.XP.rotationDegrees(14.0f));
+
         VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
         visorModel.renderToBuffer(poseStack, baseConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -97,11 +127,82 @@ public class FirstPersonVisorRenderer {
             VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
             visorModel.renderToBuffer(poseStack, glowConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
         }
-
-        bufferSource.endBatch();
         poseStack.popPose();
 
+        // 2. Render the player's main arm + sleeve reaching in to grip the side of the goggles
+        renderPlayerArm(mc.player, poseStack, bufferSource, width, height, scale, yOffset, zArc, progress, isRightArm, sideSign);
+
+        bufferSource.endBatch();
+
         RenderSystem.disableDepthTest();
+    }
+
+    private static void renderPlayerArm(
+            AbstractClientPlayer player,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            int width,
+            int height,
+            float visorScale,
+            float yOffset,
+            float zArc,
+            float progress,
+            boolean isRightArm,
+            float sideSign
+    ) {
+        boolean slim = "slim".equals(player.getModelName());
+        PlayerModel<AbstractClientPlayer> armModel = getArmModel(slim);
+        ModelPart arm = isRightArm ? armModel.rightArm : armModel.leftArm;
+        ModelPart sleeve = isRightArm ? armModel.rightSleeve : armModel.leftSleeve;
+
+        arm.setPos(0.0f, 0.0f, 0.0f);
+        arm.setRotation(0.0f, 0.0f, 0.0f);
+        arm.visible = true;
+
+        sleeve.setPos(0.0f, 0.0f, 0.0f);
+        sleeve.setRotation(0.0f, 0.0f, 0.0f);
+        sleeve.visible = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
+
+        // Reach-in (0.0 -> 0.18), grip & pull/push (0.18 -> 0.82), retract (0.82 -> 1.0)
+        float reachIn = smoothstep01(progress / 0.18f);
+        float retract = smoothstep01((progress - 0.82f) / 0.18f);
+        float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
+
+        // Anchor the hand (+Y end of the 12px arm) to the side edge of the 3D goggles
+        float visorEdgeX = width * 0.5f + sideSign * (visorScale * 0.24f);
+        float visorEdgeY = height * 0.5f + yOffset + visorScale * 0.01f;
+        float visorEdgeZ = 300.0f + zArc + 14.0f;
+
+        float handX = visorEdgeX + sideSign * (offscreen * width * 0.34f);
+        float handY = visorEdgeY + offscreen * height * 0.42f;
+        float handZ = visorEdgeZ + 12.0f;
+
+        float armScale = height * 0.92f;
+
+        poseStack.pushPose();
+        poseStack.translate(handX, handY, handZ);
+        poseStack.scale(armScale, armScale, armScale);
+
+        // Angle the forearm from the bottom-side of the screen toward the goggle rim
+        poseStack.mulPose(Axis.ZP.rotationDegrees(sideSign * (-148.0f + offscreen * 18.0f + progress * 10.0f)));
+        poseStack.mulPose(Axis.XP.rotationDegrees(-24.0f + progress * 16.0f));
+        poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * (-18.0f + offscreen * 12.0f)));
+
+        // Shift so the hand/knuckles (local y = +9/16) sit directly at the grip anchor
+        poseStack.translate(0.0f, -9.0f / 16.0f, 0.0f);
+
+        ResourceLocation skin = player.getSkinTextureLocation();
+        VertexConsumer armConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(skin));
+        arm.render(poseStack, armConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+        if (sleeve.visible) {
+            sleeve.render(poseStack, armConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+        }
+        poseStack.popPose();
+    }
+
+    private static float smoothstep01(float t) {
+        float c = Mth.clamp(t, 0.0f, 1.0f);
+        return c * c * (3.0f - 2.0f * c);
     }
 
     private static VisionMode resolveMode(ItemStack stack, VisionGogglesItem goggles) {

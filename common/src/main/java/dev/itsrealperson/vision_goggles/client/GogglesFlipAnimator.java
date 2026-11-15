@@ -21,7 +21,7 @@ public final class GogglesFlipAnimator {
         FLIPPING_UP
     }
 
-    private static final float DURATION_SECONDS = 0.28f;
+    private static final float TRANSITION_DURATION_SECONDS = 0.42f;
     private static final float MAX_DT_SECONDS = 0.05f;
     private static final long PRUNE_INTERVAL_NANOS = 10_000_000_000L;
     private static final long PRUNE_MAX_AGE_NANOS = 10_000_000_000L;
@@ -77,7 +77,7 @@ public final class GogglesFlipAnimator {
             return;
         }
 
-        float step = dt / DURATION_SECONDS;
+        float step = dt / TRANSITION_DURATION_SECONDS;
         if (state == FlipState.FLIPPING_DOWN) {
             linearProgress += step;
             if (linearProgress >= 1.0f) {
@@ -178,7 +178,7 @@ public final class GogglesFlipAnimator {
         anim.lastNanos = now;
 
         if (dt > 0.0f) {
-            float step = dt / DURATION_SECONDS;
+            float step = dt / TRANSITION_DURATION_SECONDS;
             if (targetActive) {
                 anim.progress = Math.min(1.0f, anim.progress + step);
             } else {
