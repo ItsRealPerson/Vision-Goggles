@@ -114,6 +114,7 @@ public class FirstPersonVisorRenderer {
         float scale = height * Mth.lerp(eyeZoom, 0.95f, 1.80f);
         boolean isRightArm = mc.player.getMainArm() == HumanoidArm.RIGHT;
         float sideSign = isRightArm ? 1.0f : -1.0f;
+        int packedLight = mc.getEntityRenderDispatcher().getPackedLightCoords(mc.player, partialTicks);
 
         poseStack.pushPose();
         poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 300.0f + zArc);
@@ -123,7 +124,7 @@ public class FirstPersonVisorRenderer {
         poseStack.mulPose(Axis.XP.rotationDegrees(14.0f));
 
         VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
-        visorModel.renderToBuffer(poseStack, baseConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+        visorModel.renderToBuffer(poseStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
 
         if (visorProgress > 0.70f) {
             VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
@@ -132,7 +133,7 @@ public class FirstPersonVisorRenderer {
         poseStack.popPose();
 
         // 2. Render the player's main arm + sleeve reaching in to grip the side of the goggles
-        renderPlayerArm(mc.player, poseStack, bufferSource, width, height, scale, yOffset, zArc, rawT, visorProgress, isRightArm, sideSign);
+        renderPlayerArm(mc.player, poseStack, bufferSource, width, height, scale, yOffset, zArc, rawT, visorProgress, isRightArm, sideSign, packedLight);
 
         bufferSource.endBatch();
         Lighting.setupForFlatItems();
@@ -152,7 +153,8 @@ public class FirstPersonVisorRenderer {
             float rawT,
             float visorProgress,
             boolean isRightArm,
-            float sideSign
+            float sideSign,
+            int packedLight
     ) {
         boolean slim = "slim".equals(player.getModelName());
         PlayerModel<AbstractClientPlayer> armModel = getArmModel(slim);
@@ -197,9 +199,9 @@ public class FirstPersonVisorRenderer {
 
         ResourceLocation skin = player.getSkinTextureLocation();
         VertexConsumer armConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(skin));
-        arm.render(poseStack, armConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+        arm.render(poseStack, armConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
         if (sleeve.visible) {
-            sleeve.render(poseStack, armConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+            sleeve.render(poseStack, armConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
         }
         poseStack.popPose();
     }
