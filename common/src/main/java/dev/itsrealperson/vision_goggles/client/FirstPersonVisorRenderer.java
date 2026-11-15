@@ -164,19 +164,19 @@ public class FirstPersonVisorRenderer {
         sleeve.setRotation(0.0f, 0.0f, 0.0f);
         sleeve.visible = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
 
-        // Reach-in (0.0 -> 0.18), grip & pull/push (0.18 -> 0.82), retract (0.82 -> 1.0)
-        float reachIn = smoothstep01(progress / 0.18f);
-        float retract = smoothstep01((progress - 0.82f) / 0.18f);
+        // Reach-in (0.0 -> 0.12), grip & pull/push (0.12 -> 0.88), retract (0.88 -> 1.0)
+        float reachIn = smoothstep01(progress / 0.12f);
+        float retract = smoothstep01((progress - 0.88f) / 0.12f);
         float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
 
-        // Anchor the hand (+Y end of the 12px arm) to the side edge of the 3D goggles
-        float visorEdgeX = width * 0.5f + sideSign * (visorScale * 0.24f);
-        float visorEdgeY = height * 0.5f + yOffset + visorScale * 0.01f;
-        float visorEdgeZ = 300.0f + zArc + 14.0f;
+        // Anchor the fist (+Y end of the 12px arm) right onto the side edge of the 3D goggles
+        float visorEdgeX = width * 0.5f + sideSign * (visorScale * 0.21f);
+        float visorEdgeY = height * 0.5f + yOffset + visorScale * 0.02f;
+        float visorEdgeZ = 300.0f + zArc + 16.0f;
 
-        float handX = visorEdgeX + sideSign * (offscreen * width * 0.38f);
-        float handY = visorEdgeY + offscreen * height * 0.48f;
-        float handZ = visorEdgeZ + 14.0f;
+        float handX = visorEdgeX + sideSign * (offscreen * width * 0.16f);
+        float handY = visorEdgeY + offscreen * height * 0.20f;
+        float handZ = visorEdgeZ + 12.0f;
 
         float armScale = height * 1.45f;
 
