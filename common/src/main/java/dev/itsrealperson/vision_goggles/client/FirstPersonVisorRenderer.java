@@ -164,32 +164,38 @@ public class FirstPersonVisorRenderer {
         sleeve.setRotation(0.0f, 0.0f, 0.0f);
         sleeve.visible = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
 
-        // Reach-in (0.0 -> 0.12), grip & pull/push (0.12 -> 0.88), retract (0.88 -> 1.0)
-        float reachIn = smoothstep01(progress / 0.12f);
-        float retract = smoothstep01((progress - 0.88f) / 0.12f);
-        float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
+        // Reach-in (0.0 -> 0.14), grip & pull/push (0.14 -> 0.86), retract (0.86 -> 1.0)
+        float reachIn = smoothstep01(progress / 0.14f);
+        float retract = smoothstep01((progress - 0.86f) / 0.14f);
+        float gripBlend = Mth.clamp(reachIn - retract, 0.0f, 1.0f);
 
-        // Anchor the fist (+Y end of the 12px arm) right onto the side edge of the 3D goggles
-        float visorEdgeX = width * 0.5f + sideSign * (visorScale * 0.21f);
+        // Target point: side rim of the 3D goggles
+        float visorEdgeX = width * 0.5f + sideSign * (visorScale * 0.19f);
         float visorEdgeY = height * 0.5f + yOffset + visorScale * 0.02f;
-        float visorEdgeZ = 300.0f + zArc + 16.0f;
+        float visorEdgeZ = 300.0f + zArc + 18.0f;
 
-        float handX = visorEdgeX + sideSign * (offscreen * width * 0.16f);
-        float handY = visorEdgeY + offscreen * height * 0.20f;
-        float handZ = visorEdgeZ + 12.0f;
+        // Shoulder anchored off-screen at the bottom-right (or bottom-left) corner
+        float shoulderX = width * (isRightArm ? 0.88f : 0.12f);
+        float shoulderY = height * 1.12f;
 
-        float armScale = height * 1.45f;
+        // Extend the fist from a lower ready position up to the exact goggle rim
+        float targetX = Mth.lerp(gripBlend, shoulderX - sideSign * (width * 0.08f), visorEdgeX);
+        float targetY = Mth.lerp(gripBlend, height * 0.92f, visorEdgeY);
+
+        float dx = targetX - shoulderX;
+        float dy = targetY - shoulderY;
+        float dist = (float) Math.hypot(dx, dy);
+        // Unrotated arm points along +Y (angle +PI/2 in screen space), so rotate by atan2(dy, dx) - PI/2
+        float zAngleRad = (float) (Math.atan2(dy, dx) - Math.PI * 0.5);
+        // Fist in PlayerModel is at y = +0.625 (10/16); scale so the fist lands right on targetX/targetY
+        float armScale = Math.max(height * 0.8f, dist / 0.60f);
 
         poseStack.pushPose();
-        poseStack.translate(handX, handY, handZ);
+        poseStack.translate(shoulderX, shoulderY, visorEdgeZ);
         poseStack.scale(armScale, armScale, armScale);
-
-        // Rotate so +Y (the fist) points up-left toward the goggles, and -Y (the shoulder) extends off-screen bottom-right
-        poseStack.mulPose(Axis.ZP.rotationDegrees(sideSign * (142.0f - offscreen * 16.0f - progress * 8.0f)));
-        poseStack.mulPose(Axis.XP.rotationDegrees(-18.0f + progress * 12.0f));
-        poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * (20.0f - offscreen * 10.0f)));
-        // Shift along the arm axis so the fist (+0.68f) grips the visor edge and the shoulder stays well off-screen
-        poseStack.translate(0.0f, -0.68f, 0.0f);
+        poseStack.mulPose(Axis.ZP.rotation(zAngleRad));
+        poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * -18.0f));
+        poseStack.mulPose(Axis.XP.rotationDegrees(-12.0f));
 
         // Shift so the hand/knuckles (local y = +9/16) sit directly at the grip anchor
         poseStack.translate(0.0f, -9.0f / 16.0f, 0.0f);
