@@ -566,15 +566,16 @@ public class ThermalEntityPainter {
         
         @Override
         public com.mojang.blaze3d.vertex.VertexConsumer color(int r, int g, int b, int a) { 
+            double relY = (entityHeight > 0.01f) ? Math.max(0.0, Math.min(1.0, (this.lastY - dy) / entityHeight)) : 0.5;
+            float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.45f;
+            int zonedAlpha = Math.min(255, Math.max(0, Math.round(this.baseAlpha * zoneLum)));
             if (customColor != -1) {
-                double relY = (entityHeight > 0.01f) ? Math.max(0.0, Math.min(1.0, (this.lastY - dy) / entityHeight)) : 0.5;
-                float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.45f;
-                int cr = Math.min(255, Math.round(((customColor >> 16) & 0xFF) * zoneLum));
-                int cg = Math.min(255, Math.round(((customColor >> 8) & 0xFF) * zoneLum));
-                int cb = Math.min(255, Math.round((customColor & 0xFF) * zoneLum));
-                delegate.color(cr, cg, cb, this.baseAlpha);
+                int cr = (customColor >> 16) & 0xFF;
+                int cg = (customColor >> 8) & 0xFF;
+                int cb = customColor & 0xFF;
+                delegate.color(cr, cg, cb, zonedAlpha);
             } else {
-                delegate.color(r, g, b, this.baseAlpha); 
+                delegate.color(0, 255, 255, zonedAlpha); 
             }
             return this; 
         }
