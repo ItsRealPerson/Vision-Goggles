@@ -62,8 +62,11 @@ public class MixinGameRenderer {
         if (livingEntity instanceof Player player) {
             ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
             if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-                // If goggles are equipped but NOT active, force 0.0 scale (instant off)
-                if (!helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+                // For the local player, wait until the flip-down animation completes (VisionRenderer.isVisorActive())
+                boolean active = (player == net.minecraft.client.Minecraft.getInstance().player)
+                        ? VisionRenderer.isVisorActive()
+                        : helmet.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE);
+                if (!active) {
                     cir.setReturnValue(0.0f);
                 }
             }

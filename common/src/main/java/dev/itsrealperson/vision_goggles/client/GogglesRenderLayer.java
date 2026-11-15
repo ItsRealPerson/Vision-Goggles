@@ -96,20 +96,15 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
             }
         }
 
-        // Dynamic Wilcox mount pose: Flipped down over eyes when active, flipped up onto helmet brow when inactive
+        // Dynamic Wilcox mount pose: Smoothly interpolate between flipped-up on helmet brow and flipped-down over eyes
+        float progress = GogglesFlipAnimator.getEntityProgress(player.getUUID(), isActive);
         try {
             net.minecraft.client.model.geom.ModelPart visor = this.model.head_bone.getChild("visor");
             visor.yRot = 0.0F;
             visor.zRot = 0.0F;
-            if (isActive) {
-                visor.xRot = 0.0F;
-                visor.y = -2.3355F;
-                visor.z = -7.7094F;
-            } else {
-                visor.xRot = -1.10F; // ~ -63 degrees upward
-                visor.y = -3.5F;
-                visor.z = -6.2F;
-            }
+            visor.xRot = net.minecraft.util.Mth.lerp(progress, -1.10F, 0.0F);
+            visor.y = net.minecraft.util.Mth.lerp(progress, -3.5F, -2.3355F);
+            visor.z = net.minecraft.util.Mth.lerp(progress, -6.2F, -7.7094F);
         } catch (Exception ignored) {}
 
         ResourceLocation baseTex = NVG_TEXTURE;
@@ -146,8 +141,8 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
         VertexConsumer baseConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(baseTex));
         this.model.head_bone.render(matrixStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
 
-        // Only emit optical lens glow when the goggles are actively powered on
-        if (isActive) {
+        // Only emit optical lens glow when the goggles are actively powered on and finished flipping down
+        if (isActive && progress >= 0.98f) {
             VertexConsumer glowConsumer = buffer.getBuffer(RenderType.eyes(glowTex));
             this.model.head_bone.render(matrixStack, glowConsumer, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
         }

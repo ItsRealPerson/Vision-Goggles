@@ -31,6 +31,7 @@ public class VisionRenderer {
     public static float getCurrentBatteryPct() { return currentBatteryPct; }
     private static int damageFlickerTimer = 0;
     private static boolean lastServerActive = false;
+    private static boolean lastFullyDown = false;
     private static boolean lastWasUnderwater = false;
 
     private static boolean zoomActive = false;
@@ -170,34 +171,47 @@ public class VisionRenderer {
             float currentBattery = nbt.contains(ModConstants.TAG_BATTERY) ? nbt.getFloat(ModConstants.TAG_BATTERY) : maxBattery;
             currentBatteryPct = currentBattery / maxBattery;
             boolean isFlashlightActive = nbt.getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && currentBatteryPct > 0.0f;
-            visionModeActive = isServerActive && currentVisionMode != null;
-            visorActive = isServerActive;
 
-            // Shader Lifecycle Management
+            // Update flip-down / flip-up animation state machine
+            GogglesFlipAnimator.updateLocal(isServerActive, true);
+            boolean isFullyDown = isServerActive && GogglesFlipAnimator.isLocalFullyDown();
             boolean shaderNeeded = (currentVisionMode != null);
 
-            if (isServerActive != lastServerActive || (isServerActive && nbtModeId != lastModeId)) {
-                if (isServerActive) {
-                    if (shaderNeeded) {
-                        grayscaleEnabled = true;
-                        VisionShaderManager.enableShader(mc, currentVisionMode);
-                    } else {
-                        grayscaleEnabled = false;
-                        VisionShaderManager.disableShader(mc);
-                    }
-                    lastModeId = nbtModeId;
-                    if (isServerActive != lastServerActive) {
-                        mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
-                        mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, 1.25F));
-                    }
+            visionModeActive = isFullyDown && shaderNeeded;
+            visorActive = isFullyDown;
+
+            // Delayed Shader & Sound Lifecycle Management
+            if (isServerActive && !lastServerActive) {
+                // Flip-down just started: play mechanical hinge/mount sound only, keep shader/HUD off
+                lastModeId = -1;
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, 1.25F));
+            } else if (!isServerActive && lastServerActive) {
+                // Deactivation: immediately disable shader/HUD/zoom and start flip-up animation
+                grayscaleEnabled = false;
+                lastModeId = -1;
+                zoomLocked = false;
+                VisionShaderManager.disableShader(mc);
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.85F));
+                if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
+                    mc.player.removeEffect(MobEffects.NIGHT_VISION);
+                }
+            }
+
+            if (isFullyDown && (!lastFullyDown || nbtModeId != lastModeId)) {
+                if (shaderNeeded) {
+                    grayscaleEnabled = true;
+                    VisionShaderManager.enableShader(mc, currentVisionMode);
                 } else {
                     grayscaleEnabled = false;
-                    lastModeId = -1;
-                    zoomLocked = false;
                     VisionShaderManager.disableShader(mc);
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.85F));
                 }
+                lastModeId = nbtModeId;
+
+                if (!lastFullyDown) {
+                    mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
+                }
+
                 // Al cambiar de modo, limpiar el efecto de visión nocturna SOLO si el nuevo modo
                 // no lo requiere. THERMAL e HYDRO reciben NV del servidor, no se deben limpiar aquí.
                 if (mc.player != null && mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
@@ -208,8 +222,10 @@ public class VisionRenderer {
                         mc.player.removeEffect(MobEffects.NIGHT_VISION);
                     }
                 }
-                lastServerActive = isServerActive;
             }
+
+            lastServerActive = isServerActive;
+            lastFullyDown = isFullyDown;
             int flashlightModeId = nbt.contains(ModConstants.TAG_FLASHLIGHT_MODE) ? nbt.getInt(ModConstants.TAG_FLASHLIGHT_MODE) : 0;
             ItemStack heldFlashlight = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(mc.player);
             if (!heldFlashlight.isEmpty() && !isFlashlightActive) {
@@ -228,9 +244,9 @@ public class VisionRenderer {
             }
 
             // Update Grayscale state for tick updates
-            grayscaleEnabled = isServerActive && shaderNeeded;
+            grayscaleEnabled = isFullyDown && shaderNeeded;
 
-            if (isServerActive && hasSonar) {
+            if (isFullyDown && hasSonar) {
                 if (sonarPulseTimer > 0) sonarPulseTimer--;
                 else sonarPulseTimer = SONAR_PULSE_INTERVAL;
             } else {
@@ -238,12 +254,12 @@ public class VisionRenderer {
             }
 
             // Battery Alert
-            if (isServerActive && currentBatteryPct <= 0.10f && mc.level.getGameTime() % 40 == 0) {
+            if (isFullyDown && currentBatteryPct <= 0.10f && mc.level.getGameTime() % 40 == 0) {
                 mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 1.0f);
             }
 
             // Oxygen Alert
-            if (isServerActive && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
+            if (isFullyDown && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
                 int air = mc.player.getAirSupply();
                 int maxAir = mc.player.getMaxAirSupply();
                 if (air < maxAir * 0.20 && mc.level.getGameTime() % 20 == 0) {
@@ -251,7 +267,7 @@ public class VisionRenderer {
                 }
             }
 
-            if (isServerActive && hasZoom && (ModKeyMappings.zoomKey.isDown() || zoomLocked)) {
+            if (isFullyDown && hasZoom && (ModKeyMappings.zoomKey.isDown() || zoomLocked)) {
                 zoomActive = true;
                 if (targetZoomFactor < 1.2f) {
                     targetZoomFactor = 2.5f; // Default starting magnification
@@ -269,7 +285,7 @@ public class VisionRenderer {
             currentZoom = 1.0f / currentZoomFactor;
 
             // Shader updates (battery failure, color filter, etc.)
-            if (isServerActive && shaderNeeded) {
+            if (isFullyDown && shaderNeeded) {
                 boolean isUnderwater = mc.player.isUnderWater();
 
                 // Initial enable if shader isn't loaded yet (first equip, F5 switch, etc.)
@@ -292,6 +308,7 @@ public class VisionRenderer {
             } catch (Throwable ignored) {}
         } else {
             // Check handheld tactical flashlight when not wearing goggles
+            GogglesFlipAnimator.resetLocal();
             currentVisionMode = null;
             visionModeActive = false;
             visorActive = false;
@@ -549,7 +566,9 @@ public class VisionRenderer {
         currentVisionMode = null;
         grayscaleEnabled = false;
         lastServerActive = false;
+        lastFullyDown = false;
         lastModeId = -1;
+        GogglesFlipAnimator.resetLocal();
         sonarPulseTimer = 0;
         damageFlickerTimer = 0;
         zoomActive = false;

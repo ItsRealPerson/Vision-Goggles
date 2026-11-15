@@ -45,7 +45,6 @@ public class VisionGogglesGeoModel extends GeoModel<VisionGogglesItem> {
 
     @Override
     public ResourceLocation getAnimationResource(VisionGogglesItem animatable) {
-        String name = BuiltInRegistries.ITEM.getKey(animatable).getPath();
-        return new ResourceLocation(Vision_goggles.MOD_ID, "animations/item/" + name + ".animation.json");
+        return new ResourceLocation(Vision_goggles.MOD_ID, "animations/item/vision_goggles.animation.json");
     }
 }

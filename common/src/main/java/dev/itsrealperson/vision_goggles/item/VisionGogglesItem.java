@@ -22,9 +22,12 @@ import java.util.List;
 import java.util.function.IntSupplier;
 
 import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.constant.DataTickets;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.util.GeckoLibUtil;
 import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.RawAnimation;
 
 public class VisionGogglesItem extends Item implements GeoItem, CustomReequipItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
@@ -152,9 +155,16 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
         return UseAnim.BOW;
     }
 
+    private static final RawAnimation IDLE_DOWN = RawAnimation.begin().thenLoop("idle_down");
+    private static final RawAnimation IDLE_UP = RawAnimation.begin().thenLoop("idle_up");
+
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Añadir controladores si hay animaciones
+        controllers.add(new AnimationController<>(this, "visor_controller", 5, state -> {
+            ItemStack stack = state.getData(DataTickets.ITEMSTACK);
+            boolean active = stack != null && stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE);
+            return state.setAndContinue(active ? IDLE_DOWN : IDLE_UP);
+        }));
     }
 
     private final java.util.function.Supplier<Object> renderProvider = new java.util.function.Supplier<Object>() {

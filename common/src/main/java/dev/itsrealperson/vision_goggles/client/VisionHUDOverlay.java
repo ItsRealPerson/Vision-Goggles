@@ -18,6 +18,8 @@ public class VisionHUDOverlay {
     }
 
     public static void render(GuiGraphics gui, float partialTicks) {
+        FirstPersonVisorRenderer.render(gui, partialTicks);
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
