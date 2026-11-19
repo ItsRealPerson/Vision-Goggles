@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 public class LuaModuleManager {
@@ -26,6 +27,21 @@ public class LuaModuleManager {
             "04_hud_piloto_avionica.lua",
             "05_escaner_geologico_entorno.lua",
             "06_suite_termica_flir.lua"
+    );
+
+    private static final List<String> LEGACY_EXAMPLE_FILES = List.of(
+            "01_visor_cibernetico.lua",
+            "02_hud_militar_brujula.lua",
+            "03_detector_amenazas.lua",
+            "04_filtro_termico_colores.lua",
+            "05_vision_fosforo_blanco.lua",
+            "06_modulo_programable_radar.lua",
+            "07_hud_tactico_avanzado.lua",
+            "08_nvg_adaptativo.lua",
+            "09_bio_scanner_avanzado.lua",
+            "10_geo_scanner_minero.lua",
+            "11_predator_thermal_lock.lua",
+            "12_visor_abissal_hydro.lua"
     );
 
     public static void init() {
@@ -48,18 +64,12 @@ public class LuaModuleManager {
                 dir.mkdirs();
             }
 
-            File guide = new File(dir, "00_GUIA_PASO_A_PASO.txt");
-            if (!guide.exists()) {
-                generateExampleScripts(dir);
-            }
+            removeLegacyExampleScripts(dir);
+            generateExampleScripts(dir);
 
             File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".lua"));
-            if (files == null || files.length == 0) {
-                generateExampleScripts(dir);
-                files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".lua"));
-            }
-
             if (files != null) {
+                Arrays.sort(files, Comparator.comparing(File::getName));
                 for (File file : files) {
                     loadModuleFile(file);
                 }
@@ -141,11 +151,26 @@ public class LuaModuleManager {
         loadAllModules();
     }
 
+    private static void removeLegacyExampleScripts(File dir) {
+        for (String legacyName : LEGACY_EXAMPLE_FILES) {
+            File legacyFile = new File(dir, legacyName);
+            if (legacyFile.exists() && legacyFile.isFile()) {
+                try {
+                    Files.deleteIfExists(legacyFile.toPath());
+                    Vision_goggles.LOGGER.info("[Vision Goggles] Removed obsolete legacy Lua example: " + legacyName);
+                } catch (Exception e) {
+                    Vision_goggles.LOGGER.warn("[Vision Goggles] Could not remove legacy Lua example " + legacyName + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
     private static void generateExampleScripts(File dir) {
         try {
             for (String fileName : DEFAULT_RESOURCE_FILES) {
                 File target = new File(dir, fileName);
-                if (target.exists()) {
+                boolean isGuide = "00_GUIA_PASO_A_PASO.txt".equals(fileName);
+                if (target.exists() && !isGuide) {
                     continue;
                 }
                 String resourcePath = "/assets/vision_goggles/lua_examples/" + fileName;
@@ -154,7 +179,7 @@ public class LuaModuleManager {
                         Vision_goggles.LOGGER.warn("[Vision Goggles] Missing bundled Lua example resource: " + resourcePath);
                         continue;
                     }
-                    Files.copy(in, target.toPath());
+                    Files.copy(in, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
             }
         } catch (Exception e) {

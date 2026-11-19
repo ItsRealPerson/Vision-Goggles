@@ -119,7 +119,7 @@ void main() {
             float glareAmount = Glare * 2.0;
             visionColor += vec3(glareAmount);
             float maxCol = max(visionColor.r, max(visionColor.g, visionColor.b));
-            visionColor = mix(visionColor, vec3(maxCol), Glare);
+            visionColor = mix(visionColor, vec3(maxCol), clamp(Glare, 0.0, 1.0));
         }
     }
 

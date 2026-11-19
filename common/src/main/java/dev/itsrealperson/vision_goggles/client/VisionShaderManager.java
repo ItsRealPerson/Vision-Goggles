@@ -461,6 +461,16 @@ public class VisionShaderManager {
                     }
                 }
 
+                if (!hasModFlashlight) {
+                    net.minecraft.world.item.ItemStack otherTactical =
+                            dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(other);
+                    if (!otherTactical.isEmpty()) {
+                        hasModFlashlight = true;
+                        int modeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(otherTactical);
+                        flashMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(modeId);
+                    }
+                }
+
                 net.minecraft.world.item.ItemStack main = other.getMainHandItem();
                 net.minecraft.world.item.ItemStack off = other.getOffhandItem();
                 boolean holdingLight = isHoldingLight(main) || isHoldingLight(off);
@@ -493,12 +503,22 @@ public class VisionShaderManager {
             net.minecraft.world.item.ItemStack myHelmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(mc.player);
             if (!myHelmet.isEmpty() && myHelmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem myModular) {
                 if (myModular.getUtilityModules(myHelmet).contains(dev.itsrealperson.vision_goggles.util.ModuleType.FLASHLIGHT)) {
-                    if (myHelmet.getOrCreateTag().getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE)) {
+                    float helmetBatt = myHelmet.getOrCreateTag().getFloat(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_BATTERY);
+                    if (myHelmet.getOrCreateTag().getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE) && helmetBatt > 0.0f) {
                         int myModeId = myHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
-                        float flashIntensity = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(myModeId).glareIntensity;
+                        float flashIntensity = Math.max(1.25f, dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(myModeId).glareIntensity);
                         if (targetGlare < flashIntensity) targetGlare = flashIntensity;
                     }
                 }
+            }
+
+            // Active Tactical Flashlight worn on torso (Curios/Accessories) or held in either hand blinds active NVG tubes
+            net.minecraft.world.item.ItemStack myTacticalFlashlight =
+                    dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(mc.player);
+            if (!myTacticalFlashlight.isEmpty()) {
+                int tacticalModeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(myTacticalFlashlight);
+                float tacticalFlashGlare = Math.max(1.25f, dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(tacticalModeId).glareIntensity);
+                if (targetGlare < tacticalFlashGlare) targetGlare = tacticalFlashGlare;
             }
         }
 
