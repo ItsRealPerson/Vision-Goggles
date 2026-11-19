@@ -163,13 +163,14 @@ public class LuaWorldScanner {
 
                 float forward = (float) (relX * look.x + relY * look.y + relZ * look.z);
                 double totalDist = Math.sqrt(relX * relX + relY * relY + relZ * relZ);
+                double roundedDist = Math.round(totalDist * 10.0) / 10.0;
                 if (forward <= 0.05f) {
                     LuaTable res = new LuaTable();
                     res.set("x", LuaValue.valueOf(-1000));
                     res.set("y", LuaValue.valueOf(-1000));
                     res.set("visible", LuaValue.valueOf(false));
                     res.set("behind", LuaValue.valueOf(true));
-                    res.set("distance", LuaValue.valueOf(totalDist));
+                    res.set("distance", LuaValue.valueOf(roundedDist));
                     return res;
                 }
 
@@ -197,7 +198,7 @@ public class LuaWorldScanner {
                 res.set("y", LuaValue.valueOf(screenY));
                 res.set("visible", LuaValue.valueOf(onScreen));
                 res.set("behind", LuaValue.valueOf(false));
-                res.set("distance", LuaValue.valueOf(totalDist));
+                res.set("distance", LuaValue.valueOf(roundedDist));
                 return res;
             }
         });

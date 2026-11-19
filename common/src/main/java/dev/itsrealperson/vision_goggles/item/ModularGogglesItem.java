@@ -72,6 +72,20 @@ public class ModularGogglesItem extends VisionGogglesItem {
         return List.of();
     }
 
+    public static VisionMode resolveHardwareVisionMode(String rawId) {
+        if (rawId == null || rawId.isEmpty()) return null;
+        VisionMode direct = VisionMode.byLocation(rawId);
+        if (direct != null) return direct;
+        String stripped = rawId.contains(":") ? rawId.substring(rawId.indexOf(':') + 1) : rawId;
+        return switch (stripped.toLowerCase()) {
+            case "nvg", "night_vision", "nvg_module", "night_vision_module" -> VisionMode.NIGHT_VISION;
+            case "thermal", "thermal_module" -> VisionMode.THERMAL;
+            case "hydro", "hydro_module" -> VisionMode.HYDRO;
+            case "bio", "biometric", "bio_module", "biometric_module" -> VisionMode.BIOMETRIC;
+            default -> null;
+        };
+    }
+
     @Override
     public boolean hasModule(ItemStack stack, String moduleName) {
         if (moduleName == null || moduleName.isEmpty()) return false;
@@ -79,9 +93,18 @@ public class ModularGogglesItem extends VisionGogglesItem {
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             String strippedReq = moduleName.contains(":") ? moduleName.split(":")[1] : moduleName;
+            VisionMode reqVisionMode = resolveHardwareVisionMode(moduleName);
 
             for (int i = 0; i < modules.size(); i++) {
                 String mod = modules.getString(i);
+                if (reqVisionMode != null) {
+                    // Hardware vision mode queries must match real vision hardware only (never Lua scripts like thermal_palette)
+                    if (resolveHardwareVisionMode(mod) == reqVisionMode) {
+                        return true;
+                    }
+                    continue;
+                }
+
                 if (mod.equalsIgnoreCase(moduleName)) return true;
                 String strippedMod = mod.contains(":") ? mod.split(":")[1] : mod;
                 if (strippedMod.equalsIgnoreCase(strippedReq)) return true;
@@ -92,30 +115,8 @@ public class ModularGogglesItem extends VisionGogglesItem {
                     return true;
                 }
 
-                // Alias biométrico: bio <-> biometric
-                if (("bio".equalsIgnoreCase(strippedReq) || "biometric".equalsIgnoreCase(strippedReq)) &&
-                    ("bio".equalsIgnoreCase(strippedMod) || "biometric".equalsIgnoreCase(strippedMod) || mod.contains("biometric"))) {
-                    return true;
-                }
-
-                // Alias visión nocturna: nvg <-> night_vision
-                if (("nvg".equalsIgnoreCase(strippedReq) || "night_vision".equalsIgnoreCase(strippedReq)) &&
-                    ("nvg".equalsIgnoreCase(strippedMod) || "night_vision".equalsIgnoreCase(strippedMod) || mod.contains("night_vision"))) {
-                    return true;
-                }
-
-                // Alias térmico: thermal
-                if ("thermal".equalsIgnoreCase(strippedReq) && ("thermal".equalsIgnoreCase(strippedMod) || mod.contains("thermal"))) {
-                    return true;
-                }
-
-                // Alias hydro: hydro
-                if ("hydro".equalsIgnoreCase(strippedReq) && ("hydro".equalsIgnoreCase(strippedMod) || mod.contains("hydro"))) {
-                    return true;
-                }
-
                 if ("programmable".equalsIgnoreCase(moduleName) || "generic".equalsIgnoreCase(moduleName)) {
-                    if (mod.equals(ModConstants.ID_PROGRAMMABLE) || (!mod.contains("night_vision") && !mod.contains("thermal") && !mod.contains("hydro") && !mod.contains("biometric") && ModuleType.byId(mod) == null)) {
+                    if (mod.equals(ModConstants.ID_PROGRAMMABLE) || (resolveHardwareVisionMode(mod) == null && ModuleType.byId(mod) == null)) {
                         return true;
                     }
                 }
@@ -124,12 +125,6 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 ModuleType type = ModuleType.byId(mod);
                 if (type != null) {
                     if (type.getId().equals(moduleName) || type.name().equals(moduleName)) return true;
-                }
-
-                // Check for VisionMode matches (handles both new ID and legacy name)
-                VisionMode mode = VisionMode.byLocation(mod);
-                if (mode != null) {
-                    if (mode.getModuleLocation().toString().equals(moduleName) || mode.name().equals(moduleName)) return true;
                 }
             }
         }
@@ -271,15 +266,8 @@ public class ModularGogglesItem extends VisionGogglesItem {
                     tag.remove("mod_name_" + moduleId);
                     tag.remove("mod_color_" + moduleId);
 
-                    // 1. If removed module matches currently active TAG_MODE or if getModules(goggles).isEmpty(), turn off goggles
-                    VisionMode removedMode = VisionMode.byLocation(moduleId);
-                    if (removedMode == null) {
-                        String lower = moduleId.toLowerCase();
-                        if (lower.contains("night_vision") || lower.contains("nvg")) removedMode = VisionMode.NIGHT_VISION;
-                        else if (lower.contains("thermal")) removedMode = VisionMode.THERMAL;
-                        else if (lower.contains("hydro")) removedMode = VisionMode.HYDRO;
-                        else if (lower.contains("biometric") || lower.contains("bio")) removedMode = VisionMode.BIOMETRIC;
-                    }
+                    // 1. If removed module is a hardware VisionMode that matches active TAG_MODE or if getModules(goggles).isEmpty(), turn off goggles
+                    VisionMode removedMode = resolveHardwareVisionMode(modEntry);
 
                     int currentModeId = tag.getInt(ModConstants.TAG_MODE);
                     if (getModules(stack).isEmpty() || (removedMode != null && removedMode.getId() == currentModeId)) {
@@ -287,8 +275,9 @@ public class ModularGogglesItem extends VisionGogglesItem {
                         tag.putInt(ModConstants.TAG_MODE, -1);
                     }
 
-                    // 2. If moduleId equals or contains "flashlight", set TAG_FLASHLIGHT_ACTIVE = false and TAG_FLASHLIGHT_ON = false
-                    if (moduleId.equalsIgnoreCase("flashlight") || moduleId.toLowerCase().contains("flashlight")) {
+                    // 2. Only reset flashlight tags if the removed item is actually the flashlight hardware module
+                    String strippedEntry = modEntry.contains(":") ? modEntry.substring(modEntry.indexOf(':') + 1) : modEntry;
+                    if (ModuleType.byId(modEntry) == ModuleType.FLASHLIGHT || "flashlight".equalsIgnoreCase(strippedEntry)) {
                         tag.putBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE, false);
                         tag.putBoolean(ModConstants.TAG_FLASHLIGHT_ON, false);
                         tag.putBoolean("is_on", false);

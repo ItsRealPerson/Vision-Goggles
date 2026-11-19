@@ -11,7 +11,10 @@ import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class VisionShaderManager {
     private static VisionMode activeMode = null;
@@ -21,20 +24,29 @@ public class VisionShaderManager {
     private static float currentInterference = 0.0f; // Smooth thermal biome noise
 
     /**
-     * Our own reference to the compiled PostChain.
+     * Our own references to compiled PostChains.
      *
-     * KEY DESIGN: this chain is NEVER placed in GameRenderer.postEffect.
-     * After compiling it via loadEffect(), we immediately remove it from
-     * GameRenderer's control (setPostEffect(null)). This means:
-     *   - Superb Warfare, acceleratedrendering, Embeddium, or ANY other mod
-     *     cannot close, replace, or null our chain — they only see postEffect=null.
-     *   - We call process() ourselves in MixinGameRenderer.render() TAIL.
-     *   - Zero interference, zero flicker.
+     * KEY DESIGN:
+     *   1. Chains are NEVER placed in GameRenderer.postEffect (zero third-party interference).
+     *   2. Compiled chains stay resident in SHADER_CACHE and are NOT closed on mode switch or toggle-off,
+     *      preventing re-reads from modified mod JARs (ZipException) and eliminating reload hitches.
+     *   3. Failed shader loads use a 5-second retry cooldown to prevent 20 Hz log/compile spam.
      */
+    private static final Map<ResourceLocation, PostChain> SHADER_CACHE = new HashMap<>();
+    private static final Map<ResourceLocation, Long> FAILED_SHADER_TIMESTAMPS = new HashMap<>();
+    private static final long RETRY_COOLDOWN_MS = 5000L;
+    private static final ResourceLocation FLASHLIGHT_SHADER_LOC =
+            new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/flashlight.json");
+
     private static PostChain savedPostChain = null;
     private static ResourceLocation activeShaderLocation = null;
 
     private static PostChain savedFlashlightChain = null;
+    private static PostChain cachedFlashlightChain = null;
+    private static boolean prewarmed = false;
+    private static int lastWindowWidth = -1;
+    private static int lastWindowHeight = -1;
+
     private static int currentFlashlightMode = 0;
     private static long startupTimestamp = 0L;
     private static float flashGlare = 0.0f;
@@ -50,58 +62,117 @@ public class VisionShaderManager {
         // Uniforms are updated inside processShader() every render frame.
     }
 
-    public static void enableShader(Minecraft mc, VisionMode mode) {
-        ResourceLocation loc;
-
-        if (mode != null) {
-            loc = mode.getShaderLocation();
-            if (mode == VisionMode.HYDRO && !mc.player.isUnderWater()) {
-                loc = new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/hydro_dry.json");
-            }
-        } else {
+    /**
+     * Pre-compiles built-in goggle and flashlight PostChains while resources are freshly loaded,
+     * so subsequent mode switches are instantaneous and immune to JAR file replacement.
+     */
+    public static void prewarmShaders(Minecraft mc) {
+        if (prewarmed || mc == null || mc.getResourceManager() == null || mc.getMainRenderTarget() == null) {
             return;
         }
+        prewarmed = true;
+        getOrCreateChain(mc, VisionMode.NIGHT_VISION.getShaderLocation(), false);
+        getOrCreateChain(mc, VisionMode.THERMAL.getShaderLocation(), false);
+        getOrCreateChain(mc, VisionMode.BIOMETRIC.getShaderLocation(), false);
+        getOrCreateChain(mc, VisionMode.HYDRO.getShaderLocation(), false);
+        getOrCreateChain(mc, new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/hydro_dry.json"), false);
+        getOrCreateFlashlightChain(mc);
+    }
 
-        // Close previous chain if switching modes
-        if (savedPostChain != null) {
-            try { savedPostChain.close(); } catch (Exception ignored) {}
-            savedPostChain = null;
+    private static PostChain getOrCreateChain(Minecraft mc, ResourceLocation loc, boolean isFlashlight) {
+        if (mc == null || loc == null) return null;
+        int w = Math.max(1, mc.getWindow().getWidth());
+        int h = Math.max(1, mc.getWindow().getHeight());
+
+        PostChain existing = isFlashlight ? cachedFlashlightChain : SHADER_CACHE.get(loc);
+        if (existing != null) {
+            if (w != lastWindowWidth || h != lastWindowHeight) {
+                try {
+                    existing.resize(w, h);
+                    lastWindowWidth = w;
+                    lastWindowHeight = h;
+                } catch (Exception e) {
+                    Vision_goggles.LOGGER.warn("[Vision Goggles] Cached PostChain resize failed for {}, evicting: {}", loc, e.getMessage());
+                    try { existing.close(); } catch (Exception ignored) {}
+                    if (isFlashlight) {
+                        cachedFlashlightChain = null;
+                    } else {
+                        SHADER_CACHE.remove(loc);
+                    }
+                    existing = null;
+                }
+            }
+            if (existing != null) {
+                return existing;
+            }
+        }
+
+        long now = System.currentTimeMillis();
+        Long lastFail = FAILED_SHADER_TIMESTAMPS.get(loc);
+        if (lastFail != null && (now - lastFail) < RETRY_COOLDOWN_MS) {
+            return null;
         }
 
         try {
             PostChain chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), loc);
-            chain.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
-            savedPostChain = chain;
-
-            activeShaderLocation = loc;
-            startupTimestamp = System.currentTimeMillis();
+            chain.resize(w, h);
+            lastWindowWidth = w;
+            lastWindowHeight = h;
+            if (isFlashlight) {
+                cachedFlashlightChain = chain;
+            } else {
+                SHADER_CACHE.put(loc, chain);
+            }
+            FAILED_SHADER_TIMESTAMPS.remove(loc);
+            return chain;
         } catch (Exception e) {
-            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load shader: " + loc, e);
+            FAILED_SHADER_TIMESTAMPS.put(loc, now);
+            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load shader: " + loc + " (will retry in 5s)", e);
+            return null;
         }
     }
 
-    public static void enableCustomShader(Minecraft mc, ResourceLocation loc) {
-        if (loc == null || mc.player == null) return;
-        if (savedPostChain != null) {
-            try { savedPostChain.close(); } catch (Exception ignored) {}
-            savedPostChain = null;
+    private static PostChain getOrCreateFlashlightChain(Minecraft mc) {
+        return getOrCreateChain(mc, FLASHLIGHT_SHADER_LOC, true);
+    }
+
+    public static void enableShader(Minecraft mc, VisionMode mode) {
+        if (mode == null || mc == null || mc.player == null) {
+            return;
         }
-        try {
-            PostChain chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), loc);
-            chain.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        ResourceLocation loc = mode.getShaderLocation();
+        if (mode == VisionMode.HYDRO && !mc.player.isUnderWater()) {
+            loc = new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/hydro_dry.json");
+        }
+        activateVisionChain(mc, loc);
+    }
+
+    public static void enableCustomShader(Minecraft mc, ResourceLocation loc) {
+        if (loc == null || mc == null || mc.player == null) return;
+        activateVisionChain(mc, loc);
+    }
+
+    private static void activateVisionChain(Minecraft mc, ResourceLocation loc) {
+        if (savedPostChain != null && loc.equals(activeShaderLocation)) {
+            return;
+        }
+        PostChain chain = getOrCreateChain(mc, loc, false);
+        if (chain != null) {
+            boolean wasInactive = (savedPostChain == null);
             savedPostChain = chain;
             activeShaderLocation = loc;
-            startupTimestamp = System.currentTimeMillis();
-        } catch (Exception e) {
-            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load custom shader: " + loc, e);
+            if (wasInactive || startupTimestamp == 0L) {
+                startupTimestamp = System.currentTimeMillis();
+            }
+        } else {
+            savedPostChain = null;
+            activeShaderLocation = null;
         }
     }
 
     public static void disableShader(Minecraft mc) {
-        if (savedPostChain != null) {
-            try { savedPostChain.close(); } catch (Exception ignored) {}
-            savedPostChain = null;
-        }
+        // Keep compiled PostChain instances alive in SHADER_CACHE; only deactivate active pointers.
+        savedPostChain = null;
         activeShaderLocation = null;
         currentGlare = 0.0f;
         flashGlare = 0.0f;
@@ -111,27 +182,13 @@ public class VisionShaderManager {
 
     public static void enableFlashlight(Minecraft mc, int modeId) {
         currentFlashlightMode = modeId;
-        ResourceLocation loc = new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/flashlight.json");
-
-        if (savedFlashlightChain != null) {
-            try { savedFlashlightChain.close(); } catch (Exception ignored) {}
-            savedFlashlightChain = null;
-        }
-
-        try {
-            PostChain chain = new PostChain(mc.getTextureManager(), mc.getResourceManager(), mc.getMainRenderTarget(), loc);
-            chain.resize(mc.getWindow().getWidth(), mc.getWindow().getHeight());
-            savedFlashlightChain = chain;
-        } catch (Exception e) {
-            Vision_goggles.LOGGER.error("[Vision Goggles] Failed to load flashlight shader: " + loc, e);
-        }
+        PostChain chain = getOrCreateFlashlightChain(mc);
+        savedFlashlightChain = chain;
     }
 
     public static void disableFlashlight(Minecraft mc) {
-        if (savedFlashlightChain != null) {
-            try { savedFlashlightChain.close(); } catch (Exception ignored) {}
-            savedFlashlightChain = null;
-        }
+        // Keep cachedFlashlightChain alive to avoid recompiling on toggle.
+        savedFlashlightChain = null;
     }
 
     /**
@@ -151,38 +208,55 @@ public class VisionShaderManager {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             savedPostChain.process(partialTick);
-            RenderSystem.disableBlend();
-            // Restore main render target binding after the chain's internal blit
-            mc.getMainRenderTarget().bindWrite(false);
         } catch (Exception e) {
-            // Chain became invalid (resize race, resource reload, etc.)
-            // Close so isShaderActive() returns false and VisionRenderer re-creates it next tick
-            Vision_goggles.LOGGER.warn("[Vision Goggles] processShader failed, will reload: " + e.getMessage());
+            // Chain became invalid (resize race, resource reload, etc.) — evict & apply cooldown
+            Vision_goggles.LOGGER.warn("[Vision Goggles] processShader failed, evicting shader {}: {}", activeShaderLocation, e.getMessage());
             try { savedPostChain.close(); } catch (Exception ignored) {}
+            if (activeShaderLocation != null) {
+                SHADER_CACHE.remove(activeShaderLocation);
+                FAILED_SHADER_TIMESTAMPS.put(activeShaderLocation, System.currentTimeMillis());
+            }
             savedPostChain = null;
+            activeShaderLocation = null;
+        } finally {
+            RenderSystem.disableBlend();
+            mc.getMainRenderTarget().bindWrite(false);
         }
     }
 
     /**
-     * Called when GameRenderer.resize() fires so our chain's framebuffers
+     * Called when GameRenderer.resize() fires so all cached PostChain framebuffers
      * stay in sync with the window dimensions.
      */
     public static void onResize(int width, int height) {
-        if (savedPostChain != null) {
+        if (width <= 0 || height <= 0) return;
+        lastWindowWidth = width;
+        lastWindowHeight = height;
+
+        Iterator<Map.Entry<ResourceLocation, PostChain>> it = SHADER_CACHE.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<ResourceLocation, PostChain> entry = it.next();
+            PostChain chain = entry.getValue();
             try {
-                savedPostChain.resize(width, height);
+                chain.resize(width, height);
             } catch (Exception e) {
-                Vision_goggles.LOGGER.warn("[Vision Goggles] PostChain resize failed, will reload: " + e.getMessage());
-                try { savedPostChain.close(); } catch (Exception ignored) {}
-                savedPostChain = null;
+                Vision_goggles.LOGGER.warn("[Vision Goggles] Cached PostChain resize failed for {}, evicting: {}", entry.getKey(), e.getMessage());
+                try { chain.close(); } catch (Exception ignored) {}
+                it.remove();
+                if (chain == savedPostChain) {
+                    savedPostChain = null;
+                    activeShaderLocation = null;
+                }
             }
         }
-        if (savedFlashlightChain != null) {
+
+        if (cachedFlashlightChain != null) {
             try {
-                savedFlashlightChain.resize(width, height);
+                cachedFlashlightChain.resize(width, height);
             } catch (Exception e) {
-                Vision_goggles.LOGGER.warn("[Vision Goggles] FlashlightChain resize failed, will reload: " + e.getMessage());
-                try { savedFlashlightChain.close(); } catch (Exception ignored) {}
+                Vision_goggles.LOGGER.warn("[Vision Goggles] FlashlightChain resize failed, evicting: {}", e.getMessage());
+                try { cachedFlashlightChain.close(); } catch (Exception ignored) {}
+                cachedFlashlightChain = null;
                 savedFlashlightChain = null;
             }
         }
@@ -216,18 +290,49 @@ public class VisionShaderManager {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             savedFlashlightChain.process(partialTick);
+        } catch (Exception e) {
+            Vision_goggles.LOGGER.warn("[Vision Goggles] processFlashlight failed, evicting: {}", e.getMessage());
+            try { savedFlashlightChain.close(); } catch (Exception ignored) {}
+            cachedFlashlightChain = null;
+            savedFlashlightChain = null;
+            FAILED_SHADER_TIMESTAMPS.put(FLASHLIGHT_SHADER_LOC, System.currentTimeMillis());
+        } finally {
             RenderSystem.disableBlend();
             mc.getMainRenderTarget().bindWrite(false);
-        } catch (Exception e) {
-            Vision_goggles.LOGGER.warn("[Vision Goggles] processFlashlight failed, will reload: " + e.getMessage());
-            try { savedFlashlightChain.close(); } catch (Exception ignored) {}
-            savedFlashlightChain = null;
         }
     }
 
     /** True when our PostChain is compiled and ready to process. */
     public static boolean isShaderActive() {
         return savedPostChain != null;
+    }
+
+    public static ResourceLocation getActiveShaderLocation() {
+        return activeShaderLocation;
+    }
+
+    public static boolean isNvgOrThermalCustomShaderActive() {
+        if (activeShaderLocation == null) return false;
+        String path = activeShaderLocation.getPath().toLowerCase();
+        return path.contains("nvg") || path.contains("thermal");
+    }
+
+    public static void clearCache() {
+        for (PostChain chain : SHADER_CACHE.values()) {
+            try { chain.close(); } catch (Exception ignored) {}
+        }
+        SHADER_CACHE.clear();
+        if (cachedFlashlightChain != null) {
+            try { cachedFlashlightChain.close(); } catch (Exception ignored) {}
+            cachedFlashlightChain = null;
+        }
+        savedPostChain = null;
+        savedFlashlightChain = null;
+        activeShaderLocation = null;
+        FAILED_SHADER_TIMESTAMPS.clear();
+        prewarmed = false;
+        lastWindowWidth = -1;
+        lastWindowHeight = -1;
     }
 
     private static List<PostPass> currentUniformPasses = null;
@@ -316,8 +421,13 @@ public class VisionShaderManager {
         if (theme == 1) { rf = 0.8f; gf = 0.9f; bf = 1.0f; }
         else if (theme == 2) { rf = 0.0f; gf = 0.8f; bf = 1.0f; }
 
+        boolean isThermalShader = activeMode == VisionMode.THERMAL
+                || (activeMode == null && activeShaderLocation != null && activeShaderLocation.getPath().toLowerCase().contains("thermal"));
+        boolean isNvgShader = activeMode == VisionMode.NIGHT_VISION
+                || (activeMode == null && activeShaderLocation != null && activeShaderLocation.getPath().toLowerCase().contains("nvg"));
+
         float targetInterference = 0.0f;
-        if (activeMode == VisionMode.THERMAL) {
+        if (isThermalShader) {
             if (mc.level.dimension() == net.minecraft.world.level.Level.NETHER) {
                 // Nether: target máximo, pero entrada/salida es gradual (currentInterference hace la transición)
                 targetInterference = 0.8f;
@@ -355,7 +465,7 @@ public class VisionShaderManager {
 
 
         float targetGlare = 0.0f;
-        if (activeMode == VisionMode.NIGHT_VISION && mc.player != null) {
+        if (isNvgShader && mc.player != null) {
             net.minecraft.core.BlockPos pos = mc.player.blockPosition().above();
             
             // 1. Ceguera solar basada en la hora del día y vector de mirada hacia el sol:

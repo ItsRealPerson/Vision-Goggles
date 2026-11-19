@@ -166,6 +166,7 @@ public class LuaHudCanvas {
                     int b = color & 0xFF;
 
                     Matrix4f matrix = g.pose().last().pose();
+                    g.flush();
                     RenderSystem.enableBlend();
                     RenderSystem.defaultBlendFunc();
                     RenderSystem.disableCull();
@@ -181,7 +182,7 @@ public class LuaHudCanvas {
                     tesselator.end();
 
                     RenderSystem.enableCull();
-                    RenderSystem.disableBlend();
+                    RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 });
                 return LuaValue.NIL;
             }
@@ -209,6 +210,7 @@ public class LuaHudCanvas {
                     int b = color & 0xFF;
 
                     Matrix4f matrix = g.pose().last().pose();
+                    g.flush();
                     RenderSystem.enableBlend();
                     RenderSystem.defaultBlendFunc();
                     RenderSystem.disableCull();
@@ -233,7 +235,7 @@ public class LuaHudCanvas {
                     tesselator.end();
 
                     RenderSystem.enableCull();
-                    RenderSystem.disableBlend();
+                    RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 });
                 return LuaValue.NIL;
             }
@@ -259,6 +261,7 @@ public class LuaHudCanvas {
                     int b = color & 0xFF;
 
                     Matrix4f matrix = g.pose().last().pose();
+                    g.flush();
                     RenderSystem.enableBlend();
                     RenderSystem.defaultBlendFunc();
                     RenderSystem.disableCull();
@@ -282,7 +285,7 @@ public class LuaHudCanvas {
                     tesselator.end();
 
                     RenderSystem.enableCull();
-                    RenderSystem.disableBlend();
+                    RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 });
                 return LuaValue.NIL;
             }
@@ -334,6 +337,11 @@ public class LuaHudCanvas {
         } else {
             currentAlertText = null;
         }
+
+        g.flush();
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
     }
 
     public static int parseColor(String hex) {

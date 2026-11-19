@@ -4,6 +4,7 @@ import dev.itsrealperson.vision_goggles.client.VisionRenderer;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.scripting.*;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
+import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -42,7 +43,23 @@ public class LuaClientBridge {
         if (goggles.isEmpty() || !(goggles.getItem() instanceof ModularGogglesItem modular)) {
             return false;
         }
-        return mod.isHardwareInstalled(goggles, modular);
+        if (!mod.isHardwareInstalled(goggles, modular)) {
+            return false;
+        }
+
+        // If the script targets a specific hardware vision mode (e.g. "nvg", "thermal", "bio", "hydro"),
+        // run it only while that VisionMode is active so switching modes in the radial menu doesn't leak effects.
+        String req = mod.getRequiredModule();
+        if (req != null && !req.isEmpty()) {
+            VisionMode reqMode = ModularGogglesItem.resolveHardwareVisionMode(req);
+            if (reqMode != null) {
+                VisionMode activeMode = VisionRenderer.getCurrentVisionMode();
+                if (activeMode != null && activeMode != reqMode) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public static void onClientTick(float batteryPct) {

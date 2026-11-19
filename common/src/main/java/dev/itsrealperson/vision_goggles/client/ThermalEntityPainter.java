@@ -3,6 +3,7 @@ package dev.itsrealperson.vision_goggles.client;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
@@ -48,6 +49,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -142,6 +147,24 @@ public class ThermalEntityPainter {
         initialized = false;
     }
 
+    private static class ThermalRenderEntry {
+        final LivingEntity entity;
+        final double dx;
+        final double dy;
+        final double dz;
+        final float heat;
+        final int colorRgb;
+
+        ThermalRenderEntry(LivingEntity entity, double dx, double dy, double dz, float heat, int colorRgb) {
+            this.entity = entity;
+            this.dx = dx;
+            this.dy = dy;
+            this.dz = dz;
+            this.heat = heat;
+            this.colorRgb = colorRgb;
+        }
+    }
+
     /** Call from RenderLevelStageEvent.AFTER_ENTITIES */
     public static void captureAndComposite(PoseStack poseStack) {
         Minecraft mc = Minecraft.getInstance();
@@ -156,39 +179,13 @@ public class ThermalEntityPainter {
             if (!initialized) return;
         }
 
-        // Resize FBO if window changed
-        int w = mc.getMainRenderTarget().width;
-        int h = mc.getMainRenderTarget().height;
-        if (w != fboWidth || h != fboHeight) resizeFBO(w, h);
-
-        // Save currently-bound FBO (Xenon/Sodium manages its own FBOs)
-        int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
-
-        // Flush any previous batches to ensure clean state
-        mc.renderBuffers().bufferSource().endBatch();
-
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL11.GL_LEQUAL);
-        RenderSystem.depthMask(true);
-
-        EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
-        boolean oldShadow = mc.options.entityShadows().get();
-        dispatcher.setRenderShadow(false);
-
         float partialTick = mc.getFrameTime();
         Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
 
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL30.GL_LEQUAL);
-        RenderSystem.depthMask(true);
+        Integer defaultLuaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
+        int defaultRgb = (defaultLuaColor != null) ? (defaultLuaColor & 0x00FFFFFF) : 0x00FFFF;
 
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
-        GlStateManager._viewport(0, 0, fboWidth, fboHeight);
-        RenderSystem.clearColor(0f, 0f, 0f, 0f);
-        RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
-
-        hasPerEntityCustomColor = false;
+        Map<Integer, List<ThermalRenderEntry>> buckets = new LinkedHashMap<>();
 
         for (Entity entity : mc.level.entitiesForRendering()) {
             // Skip non-living, undead (they don't emit heat), and self in first person
@@ -230,85 +227,162 @@ public class ThermalEntityPainter {
                 new Vec3(bb.maxX, bb.maxY, bb.minZ),
                 new Vec3(bb.maxX, bb.maxY, bb.maxZ)
             };
-            
+
             float maxHeat = 0.0f;
             for (Vec3 pt : points) {
                 float ptHeat = getThermalAttenuation(camPos, pt, mc.level);
                 if (ptHeat > maxHeat) maxHeat = ptHeat;
                 if (maxHeat >= 1.0f) break; // Si ya encontramos un punto 100% visible, no buscar más
             }
-            
+
             float heat = maxHeat;
             if (heat <= 0.11f) continue; // Too weak or fully blocked
 
-            PoseStack entityPoseStack = new PoseStack();
-            entityPoseStack.last().pose().set(poseStack.last().pose());
-            entityPoseStack.last().normal().set(poseStack.last().normal());
-            entityPoseStack.translate(dx, dy, dz);
-            
-            // Set global shader color alpha to 1.0 (we will control alpha per vertex now)
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            
-            final float finalHeat = heat;
-            final Integer customColor = resolveEntityThermalColor(living);
-            if (customColor != null) {
-                hasPerEntityCustomColor = true;
-            }
-            try {
-                float lerpYaw = entity.yRotO + (entity.getYRot() - entity.yRotO) * partialTick;
-                
-                net.minecraft.resources.ResourceLocation primaryTex = dispatcher.getRenderer(entity).getTextureLocation(entity);
-                final String primaryPath = primaryTex != null ? primaryTex.getPath().toLowerCase() : "unknown_texture";
-                
-                MultiBufferSource wrappedSource = type -> {
-                    String name = type.toString().toLowerCase();
-                    // Ocultar items (usualmente blocks atlas) y otros accesorios que no deben verse
-                    if (name.contains("item") || name.contains("eyes") || name.contains("glint") || name.contains("cape") || name.contains("elytra") || name.contains("blocks")) {
-                        return dummyBufferSource.getBuffer(type);
-                    }
-                    
-                    // Usamos una heurística infalible: si la textura es la textura PRINCIPAL de la entidad (su piel), es el cuerpo.
-                    // Si es cualquier OTRA textura, es armadura, curios, mochilas, chalecos (mods externos).
-                    boolean isBody = primaryTex != null && name.contains(primaryPath);
-                    
-                    final double finalDy = dy;
-                    final float entityHeight = entity.getBbHeight();
-                    
-                    if (isBody) {
-                        // Cuerpo -> Calor con gradiente vertical
-                        return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int)(finalHeat * 255), finalDy, entityHeight, true, customColor);
-                    } else {
-                        // Armadura / Custom Mods -> Frío (Aislante térmico, alpha = 38)
-                        return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), 38, finalDy, entityHeight, false, customColor);
-                    }
-                };
-                
-                dispatcher.render(entity, 0, 0, 0, lerpYaw, partialTick, entityPoseStack, wrappedSource, 15728880);
-            } catch (Throwable ignored) {
-            } finally {
-                // Flush immediately so the shader color applies correctly to this entity
-                try { maskBufferSource.endBatch(); } catch (Throwable ignored) {}
-                // Flush dummy buffer silently
-                try { dummyBufferSource.endBatch(); } catch (Throwable ignored) {}
-            }
+            Integer customColor = resolveEntityThermalColor(living);
+            int bucketRgb = (customColor != null) ? (customColor & 0x00FFFFFF) : defaultRgb;
+            buckets.computeIfAbsent(bucketRgb, k -> new ArrayList<>())
+                   .add(new ThermalRenderEntry(living, dx, dy, dz, heat, bucketRgb));
         }
 
-        // Reset shader color for normal rendering
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        hasPerEntityCustomColor = false;
+        if (buckets.isEmpty()) {
+            return;
+        }
 
-        dispatcher.setRenderShadow(oldShadow);
+        // Resize FBO if window changed
+        int w = mc.getMainRenderTarget().width;
+        int h = mc.getMainRenderTarget().height;
+        if (w != fboWidth || h != fboHeight) resizeFBO(w, h);
 
-        // Restore main framebuffer and composite ONCE at the end
-        mc.getMainRenderTarget().bindWrite(false);
-        GlStateManager._viewport(0, 0, mc.getMainRenderTarget().width, mc.getMainRenderTarget().height);
-        doComposite();
+        // Save currently-bound FBO & GL clear color (Xenon/Sodium manages its own FBOs)
+        int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        float[] prevClearColor = new float[4];
+        GL11C.glGetFloatv(GL11.GL_COLOR_CLEAR_VALUE, prevClearColor);
 
-        // Restore the previously-bound FBO so Xenon/Sodium can continue with its own pipeline
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
+        // Flush any previous batches to ensure clean state
+        mc.renderBuffers().bufferSource().endBatch();
+
+        EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
+        boolean oldShadow = mc.options.entityShadows().get();
+        dispatcher.setRenderShadow(false);
+
+        try {
+            if (buckets.size() == 1) {
+                Map.Entry<Integer, List<ThermalRenderEntry>> single = buckets.entrySet().iterator().next();
+                GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+                GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+                RenderSystem.enableDepthTest();
+                RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                RenderSystem.depthMask(true);
+                RenderSystem.colorMask(true, true, true, true);
+                RenderSystem.clearColor(0f, 0f, 0f, 0f);
+                RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
+
+                for (ThermalRenderEntry entry : single.getValue()) {
+                    renderEntityMask(dispatcher, poseStack, entry, partialTick);
+                }
+
+                mc.getMainRenderTarget().bindWrite(false);
+                GlStateManager._viewport(0, 0, mc.getMainRenderTarget().width, mc.getMainRenderTarget().height);
+                doComposite(single.getKey());
+            } else {
+                // Multi-bucket: 1) depth pre-pass across all thermal entities so occlusion across colors is exact,
+                // 2) render & composite each color bucket separately using flat TintColor (UseVertexColor=0)
+                //    so skin textures never corrupt thermal RGB ratios.
+                GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+                GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+                RenderSystem.enableDepthTest();
+                RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                RenderSystem.depthMask(true);
+                RenderSystem.colorMask(true, true, true, true);
+                RenderSystem.clearColor(0f, 0f, 0f, 0f);
+                RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
+
+                RenderSystem.colorMask(false, false, false, false);
+                for (List<ThermalRenderEntry> group : buckets.values()) {
+                    for (ThermalRenderEntry entry : group) {
+                        renderEntityMask(dispatcher, poseStack, entry, partialTick);
+                    }
+                }
+
+                RenderSystem.colorMask(true, true, true, true);
+                for (Map.Entry<Integer, List<ThermalRenderEntry>> bucket : buckets.entrySet()) {
+                    GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+                    GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+                    RenderSystem.enableDepthTest();
+                    RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                    RenderSystem.depthMask(false);
+                    RenderSystem.disableBlend();
+                    RenderSystem.clearColor(0f, 0f, 0f, 0f);
+                    RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
+
+                    for (ThermalRenderEntry entry : bucket.getValue()) {
+                        renderEntityMask(dispatcher, poseStack, entry, partialTick);
+                    }
+
+                    mc.getMainRenderTarget().bindWrite(false);
+                    GlStateManager._viewport(0, 0, mc.getMainRenderTarget().width, mc.getMainRenderTarget().height);
+                    doComposite(bucket.getKey());
+                }
+            }
+        } finally {
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.depthMask(true);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            RenderSystem.clearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
+            dispatcher.setRenderShadow(oldShadow);
+            // Restore the previously-bound FBO so Xenon/Sodium can continue with its own pipeline
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
+        }
     }
 
-    private static void doComposite() {
+    private static void renderEntityMask(EntityRenderDispatcher dispatcher, PoseStack poseStack, ThermalRenderEntry entry, float partialTick) {
+        PoseStack entityPoseStack = new PoseStack();
+        entityPoseStack.last().pose().set(poseStack.last().pose());
+        entityPoseStack.last().normal().set(poseStack.last().normal());
+        entityPoseStack.translate(entry.dx, entry.dy, entry.dz);
+
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        final float finalHeat = entry.heat;
+        final double finalDy = entry.dy;
+        final float entityHeight = entry.entity.getBbHeight();
+
+        try {
+            float lerpYaw = entry.entity.yRotO + (entry.entity.getYRot() - entry.entity.yRotO) * partialTick;
+            net.minecraft.resources.ResourceLocation primaryTex = dispatcher.getRenderer(entry.entity).getTextureLocation(entry.entity);
+            final String primaryPath = primaryTex != null ? primaryTex.getPath().toLowerCase() : "unknown_texture";
+
+            MultiBufferSource wrappedSource = type -> {
+                String name = type.toString().toLowerCase();
+                // Ocultar items (usualmente blocks atlas) y otros accesorios que no deben verse
+                if (name.contains("item") || name.contains("eyes") || name.contains("glint") || name.contains("cape") || name.contains("elytra") || name.contains("blocks")) {
+                    return dummyBufferSource.getBuffer(type);
+                }
+
+                // Si la textura es la textura PRINCIPAL de la entidad (su piel), es el cuerpo; otras texturas son armadura/accesorios.
+                boolean isBody = primaryTex != null && name.contains(primaryPath);
+
+                if (isBody) {
+                    // Cuerpo -> Calor con gradiente vertical
+                    return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int) (finalHeat * 255), finalDy, entityHeight, true, null);
+                } else {
+                    // Armadura / Custom Mods -> Frío (Aislante térmico, alpha = 38)
+                    return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), 38, finalDy, entityHeight, false, null);
+                }
+            };
+
+            dispatcher.render(entry.entity, 0, 0, 0, lerpYaw, partialTick, entityPoseStack, wrappedSource, 15728880);
+        } catch (Throwable ignored) {
+        } finally {
+            try { maskBufferSource.endBatch(); } catch (Throwable ignored) {}
+            try { dummyBufferSource.endBatch(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static void doComposite(int rgbColor) {
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableBlend();
@@ -326,30 +400,21 @@ public class ThermalEntityPainter {
         GlStateManager._bindTexture(colorTexture);
         GL20.glUniform1i(GL20.glGetUniformLocation(programId, "EntityMask"), 0);
 
-        float tintR = TINT_R;
-        float tintG = TINT_G;
-        float tintB = TINT_B;
+        float tintR = ((rgbColor >> 16) & 0xFF) / 255.0f;
+        float tintG = ((rgbColor >> 8) & 0xFF) / 255.0f;
+        float tintB = (rgbColor & 0xFF) / 255.0f;
         float tintA = TINT_A;
-        if (!hasPerEntityCustomColor) {
-            Integer luaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
-            if (luaColor != null) {
-                tintA = ((luaColor >> 24) & 0xFF) / 255.0f;
-                tintR = ((luaColor >> 16) & 0xFF) / 255.0f;
-                tintG = ((luaColor >> 8) & 0xFF) / 255.0f;
-                tintB = (luaColor & 0xFF) / 255.0f;
-                if (tintA <= 0.0f) tintA = 0.85f;
-            }
-        }
 
         GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), tintR, tintG, tintB, tintA);
         int useVertexColorLoc = GL20.glGetUniformLocation(programId, "UseVertexColor");
         if (useVertexColorLoc != -1) {
-            GL20.glUniform1f(useVertexColorLoc, hasPerEntityCustomColor ? 1.0f : 0.0f);
+            GL20.glUniform1f(useVertexColorLoc, 0.0f);
         }
 
         GL30.glBindVertexArray(quadVAO);
         GL30.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
         GL30.glBindVertexArray(0);
+        BufferUploader.invalidate();
 
         GL20.glUseProgram(0);
         RenderSystem.enableDepthTest();
