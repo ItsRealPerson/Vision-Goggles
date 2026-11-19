@@ -215,7 +215,7 @@ public final class FirstPersonEquipRenderer {
         sleevePart.visible = player.isModelPartShown(isRight ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
 
         float centerOffsetX = (isRight ? 1.0f : -1.0f) * (slim ? 0.5f : 1.0f) / 16.0f;
-        poseStack.scale(scale, scale, scale);
+        poseStack.scale(scale, scale * 1.45f, scale);
         poseStack.translate(centerOffsetX, -9.0f / 16.0f, 0.0f);
 
         ResourceLocation skin = player.getSkinTextureLocation();

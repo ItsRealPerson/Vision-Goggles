@@ -107,11 +107,12 @@ public class FirstPersonVisorRenderer {
         PoseStack poseStack = gui.pose();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
-        // 1. Render the 3D tactical visor descending from above the viewport onto the eyes
-        float yOffset = Mth.lerp(visorProgress, -height * 0.55f, 0.0f);
+        // 1. Render the 3D tactical visor descending from above the viewport onto the eyes with progressive eye-approach zoom
+        float ez = smoothstep01(visorProgress);
+        float eyeZoom = 0.45f * ez + 0.55f * (visorProgress * ez);
+        float scale = height * Mth.lerp(eyeZoom, 1.05f, 3.85f);
+        float yOffset = height * Mth.lerp(ez, -0.46f, -0.21f);
         float zArc = (float) Math.sin(visorProgress * Math.PI) * 35.0f;
-        float eyeZoom = smoothstep01((visorProgress - 0.55f) / 0.45f);
-        float scale = height * Mth.lerp(eyeZoom, 0.95f, 1.80f);
         boolean isRightArm = mc.player.getMainArm() == HumanoidArm.RIGHT;
         float sideSign = isRightArm ? 1.0f : -1.0f;
         int packedLight = mc.getEntityRenderDispatcher().getPackedLightCoords(mc.player, partialTicks);
@@ -175,24 +176,27 @@ public class FirstPersonVisorRenderer {
         float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
 
         // Anchor the fist directly onto the outer optical tube / side rim of the 3D goggles
-        float visorEdgeX = width * 0.5f + sideSign * (visorScale * 0.17f);
-        float visorEdgeY = height * 0.5f + yOffset + visorScale * 0.02f;
+        float gripScale = height * Mth.lerp(smoothstep01(visorProgress), 1.05f, 2.35f);
+        float visorEdgeX = width * 0.5f + sideSign * (gripScale * 0.17f);
+        float visorEdgeY = height * 0.5f + yOffset + gripScale * 0.03f;
         float visorEdgeZ = 300.0f + zArc + 18.0f;
 
         float handX = visorEdgeX + sideSign * (offscreen * width * 0.14f);
         float handY = visorEdgeY + offscreen * height * 0.62f;
         float handZ = visorEdgeZ + 12.0f;
 
-        float armScale = height * 1.45f;
+        float armScale = height * 1.50f;
+        float armLengthScale = height * 2.30f;
 
         poseStack.pushPose();
         poseStack.translate(handX, handY, handZ);
-        poseStack.scale(armScale, armScale, armScale);
 
-        // Proven orientation: +Y fist points up-left toward the visor edge, shoulder stays off-screen bottom-right
+        // Proven orientation: +Y fist points up-left toward the visor edge, shoulder extends past bottom-right corner
         poseStack.mulPose(Axis.ZP.rotationDegrees(sideSign * (140.0f - offscreen * 18.0f - visorProgress * 6.0f)));
         poseStack.mulPose(Axis.XP.rotationDegrees(-18.0f + visorProgress * 10.0f));
         poseStack.mulPose(Axis.YP.rotationDegrees(sideSign * (18.0f - offscreen * 8.0f)));
+
+        poseStack.scale(armScale, armLengthScale, armScale);
 
         // Shift so the hand/knuckles (local y = +9/16) sit directly at the grip anchor
         poseStack.translate(0.0f, -9.0f / 16.0f, 0.0f);

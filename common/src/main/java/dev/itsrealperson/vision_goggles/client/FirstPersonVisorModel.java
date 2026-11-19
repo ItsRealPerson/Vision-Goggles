@@ -29,9 +29,10 @@ public class FirstPersonVisorModel extends Model {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
 
-        // Main visor pivot centered around the mount hinge above the eyes
+        // Main visor pivot centered around the mount hinge above the eyes, with full-width upper brow shroud
         PartDefinition visorPivot = partdefinition.addOrReplaceChild("visor_pivot", CubeListBuilder.create()
-                .texOffs(24, 12).addBox(-4.0F, -1.5F, -1.7F, 8.0F, 2.0F, 3.0F, new CubeDeformation(-0.5F)),
+                .texOffs(24, 12).addBox(-4.0F, -1.5F, -1.7F, 8.0F, 2.0F, 3.0F, new CubeDeformation(-0.5F))
+                .texOffs(24, 12).addBox(-4.5F, -3.2F, -1.7F, 9.0F, 2.4F, 3.0F, new CubeDeformation(-0.3F)),
                 PartPose.ZERO);
 
         // Top rotational bridge detail
