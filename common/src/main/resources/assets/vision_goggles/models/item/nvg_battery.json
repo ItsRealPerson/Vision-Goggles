@@ -1,1 +1,6 @@
-{   "parent": "minecraft:item/generated",   "textures": {     "layer0": "vision_goggles:item/batteries_v2"   } }
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "vision_goggles:item/nvg_battery"
+  }
+}
