@@ -65,31 +65,22 @@ public class ModEvents {
             return EventResult.pass();
         });
 
-        // Detect when player right-clicks with an item that could be a battery
+        // Detect when player right-clicks with an extra configured battery item (native BatteryItem is handled by BatteryItem.use)
         InteractionEvent.RIGHT_CLICK_ITEM.register((player, hand) -> {
             ItemStack stack = player.getItemInHand(hand);
-            if (stack.isEmpty()) return CompoundEventResult.pass();
-
-            ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-            if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem goggles)) {
+            if (stack.isEmpty() || stack.getItem() instanceof dev.itsrealperson.vision_goggles.item.BatteryItem) {
                 return CompoundEventResult.pass();
             }
 
-            float currentBatt = helmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
-            float maxBatt = goggles.getBatteryCapacity(helmet);
-            if (currentBatt >= maxBatt) return CompoundEventResult.pass();
-
-            float chargeFraction = ModConfig.getBatteryCharge(stack);
-            if (chargeFraction > 0) {
-                float chargeToAdd = maxBatt * chargeFraction;
-                float newBatt = Math.min(maxBatt, currentBatt + chargeToAdd);
-                helmet.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, newBatt);
-
-                if (!player.isCreative()) {
-                    stack.shrink(1);
+            if (ModConfig.getBatteryCharge(stack) > 0) {
+                dev.itsrealperson.vision_goggles.item.BatteryItem.RechargeTargetInfo target =
+                        dev.itsrealperson.vision_goggles.item.BatteryItem.resolveTarget(player);
+                if (target.type == dev.itsrealperson.vision_goggles.item.BatteryItem.TargetType.NONE || !target.canCharge()) {
+                    return CompoundEventResult.pass();
                 }
-
-                player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+                if (!player.level().isClientSide && player instanceof ServerPlayer serverPlayer) {
+                    BatteryPacket.rechargeWithStack(serverPlayer, stack, true);
+                }
                 return CompoundEventResult.interruptTrue(stack);
             }
             return CompoundEventResult.pass();
@@ -123,6 +114,11 @@ public class ModEvents {
         if (!flashlight.isEmpty() && flashlight.getItem() instanceof TacticalFlashlightItem && TacticalFlashlightItem.isActive(flashlight)) {
             TacticalFlashlightItem.tickBattery(flashlight, player);
             FlashlightDeterrence.apply(player.level(), player, flashlight);
+            if (player.tickCount % 20 == 0 || !TacticalFlashlightItem.isActive(flashlight)) {
+                NetworkManager.INSTANCE.sendToPlayer(player, new dev.itsrealperson.vision_goggles.network.BatterySyncPacket(
+                        TacticalFlashlightItem.getBattery(flashlight), true
+                ));
+            }
         }
     }
 }

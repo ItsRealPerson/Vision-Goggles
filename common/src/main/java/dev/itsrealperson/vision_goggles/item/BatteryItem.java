@@ -36,7 +36,7 @@ public class BatteryItem extends Item {
         }
 
         public boolean canCharge() {
-            return type != TargetType.NONE && current < max;
+            return type != TargetType.NONE && max > 0 && (max - current) >= Math.max(1.0f, max * 0.005f);
         }
 
         public float getPercentage() {
@@ -75,10 +75,7 @@ public class BatteryItem extends Item {
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
         RechargeTargetInfo helmetInfo = null;
         if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem goggles) {
-            float max = (float) goggles.getBatteryCapacity();
-            if (goggles instanceof ModularGogglesItem modular) {
-                max = (float) modular.getBatteryCapacity(helmet);
-            }
+            float max = (float) goggles.getBatteryCapacity(helmet);
             float cur = helmet.hasTag() && helmet.getTag().contains(ModConstants.TAG_BATTERY)
                     ? helmet.getTag().getFloat(ModConstants.TAG_BATTERY) : max;
             helmetInfo = new RechargeTargetInfo(TargetType.HELMET, helmet, cur, max);
@@ -119,32 +116,13 @@ public class BatteryItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack batteryStack = player.getItemInHand(hand);
-        RechargeTargetInfo target = resolveTarget(player);
-
-        if (target.type != TargetType.NONE) {
-            if (target.canCharge()) {
-                if (level.isClientSide) {
-                    NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
-                    float charge = ModConfig.getBatteryCharge(batteryStack);
-                    int pct = (int)(charge * 100);
-                    if (target.type == TargetType.FLASHLIGHT) {
-                        player.displayClientMessage(Component.translatable("message.vision_goggles.recharged_flashlight", pct), true);
-                    } else {
-                        player.displayClientMessage(Component.translatable("message.vision_goggles.recharged", pct), true);
-                    }
-                }
-                return InteractionResultHolder.sidedSuccess(batteryStack, level.isClientSide);
-            } else {
-                if (level.isClientSide) {
-                    player.displayClientMessage(Component.translatable("message.vision_goggles.fully_charged").withStyle(ChatFormatting.YELLOW), true);
-                }
-                return InteractionResultHolder.fail(batteryStack);
-            }
-        } else {
-            if (level.isClientSide) {
-                player.displayClientMessage(Component.translatable("message.vision_goggles.equip_warning"), true);
-            }
-            return InteractionResultHolder.fail(batteryStack);
+        if (!level.isClientSide && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            boolean charged = BatteryPacket.rechargeWithStack(serverPlayer, batteryStack, true);
+            return charged ? InteractionResultHolder.consume(batteryStack) : InteractionResultHolder.fail(batteryStack);
         }
+        RechargeTargetInfo target = resolveTarget(player);
+        return target.canCharge()
+                ? InteractionResultHolder.success(batteryStack)
+                : InteractionResultHolder.pass(batteryStack);
     }
 }
