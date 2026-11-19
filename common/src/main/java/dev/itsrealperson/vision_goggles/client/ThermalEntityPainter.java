@@ -104,14 +104,10 @@ public class ThermalEntityPainter {
         hasPerEntityCustomColor = value;
     }
 
-    public static int resolveEntityThermalColor(LivingEntity entity) {
+    public static Integer resolveEntityThermalColor(LivingEntity entity) {
         String entityTypeId = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         boolean isHostile = entity instanceof net.minecraft.world.entity.monster.Enemy || !entity.getType().getCategory().isFriendly();
-        Integer luaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor(entityTypeId, isHostile);
-        if (luaColor != null) {
-            return luaColor;
-        }
-        return -1;
+        return dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor(entityTypeId, isHostile);
     }
 
     public static void init() {
@@ -254,8 +250,8 @@ public class ThermalEntityPainter {
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             
             final float finalHeat = heat;
-            final int customColor = resolveEntityThermalColor(living);
-            if (customColor != -1) {
+            final Integer customColor = resolveEntityThermalColor(living);
+            if (customColor != null) {
                 hasPerEntityCustomColor = true;
             }
             try {
@@ -541,14 +537,14 @@ public class ThermalEntityPainter {
         private final double dy;
         private final float entityHeight;
         private final boolean isBody;
-        private final int customColor;
+        private final Integer customColor;
         private double lastY = 0;
 
         public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody) {
-            this(delegate, baseAlpha, dy, entityHeight, isBody, -1);
+            this(delegate, baseAlpha, dy, entityHeight, isBody, null);
         }
 
-        public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody, int customColor) {
+        public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody, Integer customColor) {
             this.delegate = delegate;
             this.baseAlpha = baseAlpha;
             this.dy = dy;
@@ -569,7 +565,7 @@ public class ThermalEntityPainter {
             double relY = (entityHeight > 0.01f) ? Math.max(0.0, Math.min(1.0, (this.lastY - dy) / entityHeight)) : 0.5;
             float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.45f;
             int zonedAlpha = Math.min(255, Math.max(0, Math.round(this.baseAlpha * zoneLum)));
-            if (customColor != -1) {
+            if (customColor != null) {
                 int cr = (customColor >> 16) & 0xFF;
                 int cg = (customColor >> 8) & 0xFF;
                 int cb = customColor & 0xFF;
@@ -591,7 +587,7 @@ public class ThermalEntityPainter {
         public void endVertex() { delegate.endVertex(); }
         @Override
         public void defaultColor(int r, int g, int b, int a) {
-            if (customColor != -1) {
+            if (customColor != null) {
                 int cr = (customColor >> 16) & 0xFF;
                 int cg = (customColor >> 8) & 0xFF;
                 int cb = customColor & 0xFF;

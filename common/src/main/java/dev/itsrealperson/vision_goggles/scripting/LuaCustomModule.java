@@ -1,5 +1,6 @@
 package dev.itsrealperson.vision_goggles.scripting;
 
+import dev.itsrealperson.vision_goggles.Vision_goggles;
 import net.minecraft.resources.ResourceLocation;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
@@ -48,9 +49,9 @@ public class LuaCustomModule {
         ResourceLocation shader = null;
         if (table.get("shader").isstring()) {
             String s = table.get("shader").tojstring();
-            // Allow shorthand or full path: "minecraft:shaders/post/invert.json" or "mi_pack:cyber"
+            // Allow shorthand or full path: "vision_goggles:shaders/post/nvg.json", "shaders/post/nvg.json", or "nvg"
             if (s.contains(".json")) {
-                shader = new ResourceLocation(s);
+                shader = s.contains(":") ? new ResourceLocation(s) : new ResourceLocation("vision_goggles", s);
             } else if (s.contains(":")) {
                 String[] parts = s.split(":", 2);
                 shader = new ResourceLocation(parts[0], "shaders/post/" + parts[1] + ".json");
@@ -80,6 +81,15 @@ public class LuaCustomModule {
     }
 
     private boolean wasActive = false;
+    private long lastErrorLogMs = 0L;
+
+    private void logCallbackError(String hook, Throwable t) {
+        long now = System.currentTimeMillis();
+        if (now - lastErrorLogMs >= 5000L) {
+            lastErrorLogMs = now;
+            Vision_goggles.LOGGER.error("[Vision Goggles Lua Error] Module '{}' in {}: {}", id, hook, t.getMessage());
+        }
+    }
 
     public void updateActiveState(boolean isRunning) {
         if (isRunning && !wasActive) {
@@ -124,28 +134,28 @@ public class LuaCustomModule {
     public void callOnEnable() {
         SandboxedDebugLib.resetInstructionCount();
         if (onEnable != null) {
-            try { onEnable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Throwable ignored) {}
+            try { onEnable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Throwable t) { logCallbackError("onEnable", t); }
         }
     }
 
     public void callOnDisable() {
         SandboxedDebugLib.resetInstructionCount();
         if (onDisable != null) {
-            try { onDisable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Throwable ignored) {}
+            try { onDisable.call(LuaScriptEngine.getGlobals().get("player")); } catch (Throwable t) { logCallbackError("onDisable", t); }
         }
     }
 
     public void callOnTick(float batteryPct) {
         SandboxedDebugLib.resetInstructionCount();
         if (onTick != null) {
-            try { onTick.call(LuaScriptEngine.getGlobals().get("player"), LuaValue.valueOf(batteryPct)); } catch (Throwable ignored) {}
+            try { onTick.call(LuaScriptEngine.getGlobals().get("player"), LuaValue.valueOf(batteryPct)); } catch (Throwable t) { logCallbackError("onTick", t); }
         }
     }
 
     public void callOnRenderHud() {
         SandboxedDebugLib.resetInstructionCount();
         if (onRenderHud != null) {
-            try { onRenderHud.call(LuaScriptEngine.getGlobals().get("hud")); } catch (Throwable ignored) {}
+            try { onRenderHud.call(LuaScriptEngine.getGlobals().get("hud")); } catch (Throwable t) { logCallbackError("onRenderHud", t); }
         }
     }
 
@@ -154,7 +164,9 @@ public class LuaCustomModule {
         if (onUpdateUniforms != null && uniforms != null) {
             try {
                 onUpdateUniforms.call(LuaScriptEngine.getGlobals().get("player"), uniforms);
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                logCallbackError("onUpdateUniforms", t);
+            }
         }
     }
 
@@ -168,7 +180,9 @@ public class LuaCustomModule {
                 } else if (result.isnumber()) {
                     return result.toint();
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                logCallbackError("onThermalColor", t);
+            }
         }
         return null;
     }

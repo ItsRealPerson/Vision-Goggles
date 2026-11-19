@@ -30,7 +30,7 @@ public class LuaHudCanvas {
         void execute(GuiGraphics g, Minecraft mc);
     }
 
-    public static final int MAX_FRAME_COMMANDS = 500;
+    public static final int MAX_FRAME_COMMANDS = 1000;
     private static final List<DrawCommand> FRAME_COMMANDS = new ArrayList<>();
 
     private static boolean queueCommand(DrawCommand cmd) {
@@ -239,7 +239,7 @@ public class LuaHudCanvas {
             }
         });
 
-        // Draw a filled circle (disc)
+        // Draw a filled circle (disc) as a single 32-segment triangle batch
         hud.set("drawDisc", new VarArgFunction() {
             @Override
             public Varargs invoke(Varargs args) {
@@ -250,12 +250,51 @@ public class LuaHudCanvas {
                 final int color = parseColor(args.optjstring(4, "#FFFFFF"));
 
                 queueCommand((g, mc) -> {
-                    for (int dy2 = -radius; dy2 <= radius; dy2++) {
-                        int halfW = (int) Math.round(Math.sqrt(radius * radius - dy2 * dy2));
-                        g.fill(cx - halfW, cy + dy2, cx + halfW + 1, cy + dy2 + 1, color);
+                    final int segments = 32;
+                    final double step = (2.0 * Math.PI) / segments;
+
+                    int a = (color >> 24) & 0xFF;
+                    int red = (color >> 16) & 0xFF;
+                    int gr = (color >> 8) & 0xFF;
+                    int b = color & 0xFF;
+
+                    Matrix4f matrix = g.pose().last().pose();
+                    RenderSystem.enableBlend();
+                    RenderSystem.defaultBlendFunc();
+                    RenderSystem.disableCull();
+                    RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+                    Tesselator tesselator = Tesselator.getInstance();
+                    BufferBuilder builder = tesselator.getBuilder();
+                    builder.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+                    for (int i = 0; i < segments; i++) {
+                        double a1 = i * step;
+                        double a2 = (i + 1) * step;
+                        float x1 = cx + (float) Math.cos(a1) * radius;
+                        float y1 = cy + (float) Math.sin(a1) * radius;
+                        float x2 = cx + (float) Math.cos(a2) * radius;
+                        float y2 = cy + (float) Math.sin(a2) * radius;
+
+                        builder.vertex(matrix, cx, cy, 0).color(red, gr, b, a).endVertex();
+                        builder.vertex(matrix, x1, y1, 0).color(red, gr, b, a).endVertex();
+                        builder.vertex(matrix, x2, y2, 0).color(red, gr, b, a).endVertex();
                     }
+                    tesselator.end();
+
+                    RenderSystem.enableCull();
+                    RenderSystem.disableBlend();
                 });
                 return LuaValue.NIL;
+            }
+        });
+
+        hud.set("getTextWidth", new VarArgFunction() {
+            @Override
+            public Varargs invoke(Varargs args) {
+                String text = args.checkjstring(1);
+                float scale = (float) args.optdouble(2, 1.0);
+                Minecraft mc = Minecraft.getInstance();
+                return LuaValue.valueOf(mc.font.width(text) * scale);
             }
         });
 

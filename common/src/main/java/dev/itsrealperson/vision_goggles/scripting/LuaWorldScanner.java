@@ -20,8 +20,11 @@ import net.minecraft.world.phys.Vec3;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.OneArgFunction;
+import org.luaj.vm2.lib.ThreeArgFunction;
 import org.luaj.vm2.lib.TwoArgFunction;
+import org.luaj.vm2.lib.VarArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 
 import net.fabricmc.api.EnvType;
@@ -35,23 +38,36 @@ public class LuaWorldScanner {
     public static void register(Globals globals) {
         LuaTable world = new LuaTable();
 
-        world.set("getTargetEntity", new OneArgFunction() {
+        world.set("getTargetEntity", new VarArgFunction() {
             @Override
-            public LuaValue call(LuaValue arg) {
-                double range = arg.isnumber() ? arg.todouble() : 30.0;
+            public Varargs invoke(Varargs args) {
+                double range = args.isnumber(1) ? args.todouble(1) : 30.0;
                 range = Math.min(64.0, Math.max(1.0, range));
+                boolean throughWalls = args.optboolean(2, false);
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null || mc.level == null) return LuaValue.NIL;
 
                 Vec3 eyePos = mc.player.getEyePosition(1.0f);
                 Vec3 look = mc.player.getViewVector(1.0f);
                 Vec3 target = eyePos.add(look.scale(range));
-                AABB box = mc.player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0);
+                double maxDist = range;
+
+                if (!throughWalls) {
+                    BlockHitResult blockHit = mc.level.clip(new ClipContext(
+                            eyePos, target, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, mc.player
+                    ));
+                    if (blockHit.getType() == HitResult.Type.BLOCK) {
+                        maxDist = eyePos.distanceTo(blockHit.getLocation());
+                        target = blockHit.getLocation();
+                    }
+                }
+
+                AABB box = mc.player.getBoundingBox().expandTowards(look.scale(maxDist)).inflate(1.0);
 
                 EntityHitResult hit = ProjectileUtil.getEntityHitResult(
                         mc.player, eyePos, target, box,
                         e -> !e.isSpectator() && e.isPickable() && e instanceof LivingEntity,
-                        range * range
+                        maxDist * maxDist
                 );
 
                 if (hit != null && hit.getEntity() instanceof LivingEntity living) {
@@ -111,6 +127,7 @@ public class LuaWorldScanner {
 
                     LuaTable res = new LuaTable();
                     res.set("name", blockId);
+                    res.set("id", blockId);
                     res.set("x", pos.getX());
                     res.set("y", pos.getY());
                     res.set("z", pos.getZ());
@@ -123,7 +140,7 @@ public class LuaWorldScanner {
             }
         });
 
-        world.set("worldToScreen", new org.luaj.vm2.lib.ThreeArgFunction() {
+        world.set("worldToScreen", new ThreeArgFunction() {
             @Override
             public LuaValue call(LuaValue argX, LuaValue argY, LuaValue argZ) {
                 if (!argX.isnumber() || !argY.isnumber() || !argZ.isnumber()) return LuaValue.NIL;
@@ -140,27 +157,32 @@ public class LuaWorldScanner {
                 double relY = y - camPos.y;
                 double relZ = z - camPos.z;
 
-                org.joml.Vector3f pos = new org.joml.Vector3f((float) relX, (float) relY, (float) relZ);
-                org.joml.Quaternionf rot = new org.joml.Quaternionf(camera.rotation());
-                rot.conjugate().transform(pos);
+                org.joml.Vector3f look = camera.getLookVector();
+                org.joml.Vector3f upVec = camera.getUpVector();
+                org.joml.Vector3f leftVec = camera.getLeftVector();
 
-                float forward = -pos.z;
+                float forward = (float) (relX * look.x + relY * look.y + relZ * look.z);
+                double totalDist = Math.sqrt(relX * relX + relY * relY + relZ * relZ);
                 if (forward <= 0.05f) {
                     LuaTable res = new LuaTable();
                     res.set("x", LuaValue.valueOf(-1000));
                     res.set("y", LuaValue.valueOf(-1000));
                     res.set("visible", LuaValue.valueOf(false));
-                    res.set("distance", LuaValue.valueOf(Math.sqrt(relX * relX + relY * relY + relZ * relZ)));
+                    res.set("behind", LuaValue.valueOf(true));
+                    res.set("distance", LuaValue.valueOf(totalDist));
                     return res;
                 }
+
+                float up = (float) (relX * upVec.x + relY * upVec.y + relZ * upVec.z);
+                float right = -(float) (relX * leftVec.x + relY * leftVec.y + relZ * leftVec.z);
 
                 float fov = (float) Math.toRadians(((GameRendererAccessor) mc.gameRenderer).vision_goggles$getFov(camera, mc.getFrameTime(), true));
                 float halfHeight = (float) Math.tan(fov * 0.5f);
                 float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) mc.getWindow().getScreenHeight();
                 float halfWidth = halfHeight * aspectRatio;
 
-                float ndcX = pos.x / (forward * halfWidth);
-                float ndcY = pos.y / (forward * halfHeight);
+                float ndcX = right / (forward * halfWidth);
+                float ndcY = up / (forward * halfHeight);
 
                 float screenWidth = (float) mc.getWindow().getGuiScaledWidth();
                 float screenHeight = (float) mc.getWindow().getGuiScaledHeight();
@@ -174,8 +196,34 @@ public class LuaWorldScanner {
                 res.set("x", LuaValue.valueOf(screenX));
                 res.set("y", LuaValue.valueOf(screenY));
                 res.set("visible", LuaValue.valueOf(onScreen));
-                res.set("distance", LuaValue.valueOf(Math.sqrt(relX * relX + relY * relY + relZ * relZ)));
+                res.set("behind", LuaValue.valueOf(false));
+                res.set("distance", LuaValue.valueOf(totalDist));
                 return res;
+            }
+        });
+
+        world.set("getBlock", new ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaValue argX, LuaValue argY, LuaValue argZ) {
+                if (!argX.isnumber() || !argY.isnumber() || !argZ.isnumber()) return LuaValue.valueOf("minecraft:air");
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.level == null) return LuaValue.valueOf("minecraft:air");
+                BlockPos pos = BlockPos.containing(argX.todouble(), argY.todouble(), argZ.todouble());
+                if (!mc.level.isLoaded(pos)) return LuaValue.valueOf("minecraft:air");
+                BlockState state = mc.level.getBlockState(pos);
+                return LuaValue.valueOf(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
+            }
+        });
+
+        world.set("getLightAt", new ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaValue argX, LuaValue argY, LuaValue argZ) {
+                if (!argX.isnumber() || !argY.isnumber() || !argZ.isnumber()) return LuaValue.valueOf(0);
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.level == null) return LuaValue.valueOf(0);
+                BlockPos pos = BlockPos.containing(argX.todouble(), argY.todouble(), argZ.todouble());
+                if (!mc.level.isLoaded(pos)) return LuaValue.valueOf(0);
+                return LuaValue.valueOf(mc.level.getMaxLocalRawBrightness(pos));
             }
         });
 
@@ -365,7 +413,7 @@ public class LuaWorldScanner {
         playerTable.set("getOxygen", new ZeroArgFunction() {
             @Override public LuaValue call() {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.player == null) return LuaValue.valueOf(300);
+                if (mc.player == null) return LuaValue.valueOf(100.0);
                 int air = mc.player.getAirSupply();
                 int max = mc.player.getMaxAirSupply();
                 return LuaValue.valueOf(Math.max(0, air) * 100.0 / Math.max(1, max));
@@ -453,7 +501,7 @@ public class LuaWorldScanner {
         playerTable.set("isFlying", new ZeroArgFunction() {
             @Override public LuaValue call() {
                 Minecraft mc = Minecraft.getInstance();
-                return LuaValue.valueOf(mc.player != null && mc.player.getAbilities().flying);
+                return LuaValue.valueOf(mc.player != null && (mc.player.getAbilities().flying || mc.player.isFallFlying()));
             }
         });
 
@@ -462,8 +510,8 @@ public class LuaWorldScanner {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null) return LuaValue.valueOf(0.0);
                 net.minecraft.world.phys.Vec3 vel = mc.player.getDeltaMovement();
-                double horizontal = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-                return LuaValue.valueOf(Math.round(horizontal * 1000.0) / 1000.0);
+                double horizontalPerTick = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+                return LuaValue.valueOf(Math.round(horizontalPerTick * 20.0 * 100.0) / 100.0);
             }
         });
 
@@ -502,6 +550,8 @@ public class LuaWorldScanner {
 
     private static LuaTable wrapEntity(LivingEntity living, double dist) {
         LuaTable t = new LuaTable();
+        float pt = Minecraft.getInstance().getFrameTime();
+        Vec3 interp = living.getPosition(pt);
         double roundedHealth = Math.round(living.getHealth() * 10.0) / 10.0;
         double roundedMaxHealth = Math.round(living.getMaxHealth() * 10.0) / 10.0;
         double roundedDist = Math.round(dist * 10.0) / 10.0;
@@ -511,10 +561,11 @@ public class LuaWorldScanner {
         t.set("health", roundedHealth);
         t.set("max_health", roundedMaxHealth);
         t.set("armor", living.getArmorValue());
-        t.set("x", Math.round(living.getX() * 10.0) / 10.0);
-        t.set("y", Math.round(living.getY() * 10.0) / 10.0);
-        t.set("z", Math.round(living.getZ() * 10.0) / 10.0);
-        t.set("eye_y", Math.round(living.getEyeY() * 10.0) / 10.0);
+        t.set("x", Math.round(interp.x * 1000.0) / 1000.0);
+        t.set("y", Math.round(interp.y * 1000.0) / 1000.0);
+        t.set("z", Math.round(interp.z * 1000.0) / 1000.0);
+        t.set("eye_y", Math.round((interp.y + living.getEyeHeight()) * 1000.0) / 1000.0);
+        t.set("height", Math.round(living.getBbHeight() * 100.0) / 100.0);
         t.set("pitch", Math.round(living.getXRot() * 10.0) / 10.0);
         t.set("yaw", Math.round(living.getYRot() * 10.0) / 10.0);
         t.set("distance", roundedDist);
