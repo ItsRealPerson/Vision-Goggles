@@ -113,7 +113,13 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                         dev.itsrealperson.vision_goggles.scripting.LuaCustomModule luaMod =
                             dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.findModuleByIdOrPath(modId);
                         if (luaMod != null && luaMod.getBatteryDrain() > 0 && luaMod.isHardwareInstalled(stack, modular)) {
-                            baseDrain += luaMod.getBatteryDrain();
+                            String req = luaMod.getRequiredModule();
+                            VisionMode reqMode = (req != null && !req.isEmpty())
+                                    ? ModularGogglesItem.resolveHardwareVisionMode(req)
+                                    : null;
+                            if (reqMode == null || mode == null || reqMode == mode) {
+                                baseDrain += luaMod.getBatteryDrain();
+                            }
                         }
                     }
                 }

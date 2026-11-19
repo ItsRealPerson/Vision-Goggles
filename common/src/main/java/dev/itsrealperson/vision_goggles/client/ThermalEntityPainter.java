@@ -86,10 +86,19 @@ public class ThermalEntityPainter {
     // Entity buffer
     private static BufferBuilder maskBuffer = null;
     private static MultiBufferSource.BufferSource maskBufferSource = null;
-    
-    // Dummy buffer to discard unwanted rendering (armor, items, etc)
-    private static BufferBuilder dummyBuffer = null;
-    private static MultiBufferSource.BufferSource dummyBufferSource = null;
+
+    // True no-op consumer so held items, emissive eyes, glints, capes, and elytras are discarded cleanly
+    private static final VertexConsumer DISCARD_VERTEX_CONSUMER = new VertexConsumer() {
+        @Override public VertexConsumer vertex(double x, double y, double z) { return this; }
+        @Override public VertexConsumer color(int r, int g, int b, int a) { return this; }
+        @Override public VertexConsumer uv(float u, float v) { return this; }
+        @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
+        @Override public VertexConsumer uv2(int u, int v) { return this; }
+        @Override public VertexConsumer normal(float x, float y, float z) { return this; }
+        @Override public void endVertex() {}
+        @Override public void defaultColor(int r, int g, int b, int a) {}
+        @Override public void unsetDefaultColor() {}
+    };
 
     private static boolean initialized = false;
     private static boolean active = false;
@@ -119,19 +128,17 @@ public class ThermalEntityPainter {
         if (initialized) return;
         try {
             Minecraft mc = Minecraft.getInstance();
-            int w = mc.getWindow().getWidth();
-            int h = mc.getWindow().getHeight();
+            int w = Math.max(1, mc.getWindow().getWidth());
+            int h = Math.max(1, mc.getWindow().getHeight());
             createFBO(w, h);
             createShader();
             createQuad();
             maskBuffer = new BufferBuilder(262144);
             maskBufferSource = MultiBufferSource.immediate(maskBuffer);
-            
-            dummyBuffer = new BufferBuilder(262144);
-            dummyBufferSource = MultiBufferSource.immediate(dummyBuffer);
-            
+
             initialized = true;
         } catch (Exception e) {
+            cleanup();
             Vision_goggles.LOGGER.error("[ThermalEntityPainter] Failed to initialize: " + e.getMessage());
         }
     }
@@ -165,6 +172,28 @@ public class ThermalEntityPainter {
         }
     }
 
+    public static boolean emitsThermalHeat(LivingEntity living) {
+        if (living == null) return false;
+        // Undead: no body heat
+        if (living.getMobType() == MobType.UNDEAD
+                || living instanceof net.minecraft.world.entity.monster.Zombie
+                || living.getType().getDescriptionId().toLowerCase(java.util.Locale.ROOT).contains("zombie")) {
+            return false;
+        }
+        // Cold-blooded / constructs / spirits
+        if (living instanceof Slime && !(living instanceof MagmaCube)) return false; // Slime = cold, MagmaCube = hot
+        if (living instanceof Spider) return false;      // Arthropod, cold-blooded
+        if (living instanceof Silverfish) return false;  // Insect, cold-blooded
+        if (living instanceof Endermite) return false;   // Cold-blooded parasite
+        if (living instanceof Shulker) return false;     // Shell creature, no warm blood
+        if (living instanceof Vex) return false;         // Spirit, no physical body
+        if (living instanceof Guardian) return false;    // Fish, cold-blooded
+        if (living instanceof Squid) return false;       // Cephalopod, cold-blooded
+        if (living instanceof IronGolem) return false;   // Metal construct, no organic heat
+        if (living instanceof SnowGolem) return false;   // Made of snow
+        return true;
+    }
+
     /** Call from RenderLevelStageEvent.AFTER_ENTITIES */
     public static void captureAndComposite(PoseStack poseStack) {
         Minecraft mc = Minecraft.getInstance();
@@ -188,21 +217,9 @@ public class ThermalEntityPainter {
         Map<Integer, List<ThermalRenderEntry>> buckets = new LinkedHashMap<>();
 
         for (Entity entity : mc.level.entitiesForRendering()) {
-            // Skip non-living, undead (they don't emit heat), and self in first person
+            // Skip non-living, non-thermal mobs (undead, cold-blooded, constructs), and self in first person
             if (!(entity instanceof LivingEntity living)) continue;
-            // Undead: no body heat
-            if (living.getMobType() == MobType.UNDEAD || living instanceof net.minecraft.world.entity.monster.Zombie || living.getType().getDescriptionId().toLowerCase().contains("zombie")) continue;
-            // Cold-blooded / constructs / spirits
-            if (living instanceof Slime && !(living instanceof MagmaCube)) continue; // Slime = cold, MagmaCube = hot
-            if (living instanceof Spider) continue;      // Arthropod, cold-blooded
-            if (living instanceof Silverfish) continue;  // Insect, cold-blooded
-            if (living instanceof Endermite) continue;   // Cold-blooded parasite
-            if (living instanceof Shulker) continue;     // Shell creature, no warm blood
-            if (living instanceof Vex) continue;         // Spirit, no physical body
-            if (living instanceof Guardian) continue;    // Fish, cold-blooded
-            if (living instanceof Squid) continue;       // Cephalopod, cold-blooded
-            if (living instanceof IronGolem) continue;   // Metal construct, no organic heat
-            if (living instanceof SnowGolem) continue;   // Made of snow
+            if (!emitsThermalHeat(living)) continue;
             if (entity == mc.player && mc.options.getCameraType() == CameraType.FIRST_PERSON) continue;
 
             double lerpX = entity.xOld + (entity.getX() - entity.xOld) * partialTick;
@@ -250,11 +267,11 @@ public class ThermalEntityPainter {
         }
 
         // Resize FBO if window changed
-        int w = mc.getMainRenderTarget().width;
-        int h = mc.getMainRenderTarget().height;
-        if (w != fboWidth || h != fboHeight) resizeFBO(w, h);
+        int mainW = mc.getMainRenderTarget().width;
+        int mainH = mc.getMainRenderTarget().height;
+        if (mainW != fboWidth || mainH != fboHeight) resizeFBO(mainW, mainH);
 
-        // Save currently-bound FBO & GL clear color (Xenon/Sodium manages its own FBOs)
+        // Save currently-bound FBO & GL clear color (Xenon/Sodium/Iris/Fabulous manages its own FBOs)
         int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         float[] prevClearColor = new float[4];
@@ -283,8 +300,7 @@ public class ThermalEntityPainter {
                     renderEntityMask(dispatcher, poseStack, entry, partialTick);
                 }
 
-                mc.getMainRenderTarget().bindWrite(false);
-                GlStateManager._viewport(0, 0, mc.getMainRenderTarget().width, mc.getMainRenderTarget().height);
+                bindCompositeTarget(mc, prevDrawFbo, mainW, mainH);
                 doComposite(single.getKey());
             } else {
                 // Multi-bucket: 1) depth pre-pass across all thermal entities so occlusion across colors is exact,
@@ -321,8 +337,7 @@ public class ThermalEntityPainter {
                         renderEntityMask(dispatcher, poseStack, entry, partialTick);
                     }
 
-                    mc.getMainRenderTarget().bindWrite(false);
-                    GlStateManager._viewport(0, 0, mc.getMainRenderTarget().width, mc.getMainRenderTarget().height);
+                    bindCompositeTarget(mc, prevDrawFbo, mainW, mainH);
                     doComposite(bucket.getKey());
                 }
             }
@@ -332,13 +347,27 @@ public class ThermalEntityPainter {
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.clearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
             dispatcher.setRenderShadow(oldShadow);
-            // Restore the previously-bound FBO so Xenon/Sodium can continue with its own pipeline
+            // Restore the previously-bound FBO so Xenon/Sodium/Fabulous can continue with its own pipeline
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
         }
     }
 
+    private static void bindCompositeTarget(Minecraft mc, int prevDrawFbo, int mainW, int mainH) {
+        if (prevDrawFbo > 0) {
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, prevDrawFbo);
+            GlStateManager._viewport(0, 0, mainW, mainH);
+        } else {
+            mc.getMainRenderTarget().bindWrite(false);
+            GlStateManager._viewport(0, 0, mainW, mainH);
+        }
+    }
+
     private static void renderEntityMask(EntityRenderDispatcher dispatcher, PoseStack poseStack, ThermalRenderEntry entry, float partialTick) {
+        // Re-assert fboId before each entity so any custom RenderType output state cannot redirect subsequent entities
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+        GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+
         PoseStack entityPoseStack = new PoseStack();
         entityPoseStack.last().pose().set(poseStack.last().pose());
         entityPoseStack.last().normal().set(poseStack.last().normal());
@@ -352,25 +381,20 @@ public class ThermalEntityPainter {
 
         try {
             float lerpYaw = entry.entity.yRotO + (entry.entity.getYRot() - entry.entity.yRotO) * partialTick;
-            net.minecraft.resources.ResourceLocation primaryTex = dispatcher.getRenderer(entry.entity).getTextureLocation(entry.entity);
-            final String primaryPath = primaryTex != null ? primaryTex.getPath().toLowerCase() : "unknown_texture";
 
             MultiBufferSource wrappedSource = type -> {
-                String name = type.toString().toLowerCase();
-                // Ocultar items (usualmente blocks atlas) y otros accesorios que no deben verse
+                String name = type.toString().toLowerCase(java.util.Locale.ROOT);
+                // Discard held items, glowing eyes, glints, capes, elytras, and block overlays completely
                 if (name.contains("item") || name.contains("eyes") || name.contains("glint") || name.contains("cape") || name.contains("elytra") || name.contains("blocks")) {
-                    return dummyBufferSource.getBuffer(type);
+                    return DISCARD_VERTEX_CONSUMER;
                 }
 
-                // Si la textura es la textura PRINCIPAL de la entidad (su piel), es el cuerpo; otras texturas son armadura/accesorios.
-                boolean isBody = primaryTex != null && name.contains(primaryPath);
-
-                if (isBody) {
-                    // Cuerpo -> Calor con gradiente vertical
+                // Organic body/fur/robe layers carry full body heat; armor acts as moderate thermal insulation
+                boolean isArmor = name.contains("armor");
+                if (!isArmor) {
                     return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int) (finalHeat * 255), finalDy, entityHeight, true, null);
                 } else {
-                    // Armadura / Custom Mods -> Frío (Aislante térmico, alpha = 38)
-                    return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), 38, finalDy, entityHeight, false, null);
+                    return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int) (finalHeat * 110), finalDy, entityHeight, false, null);
                 }
             };
 
@@ -378,7 +402,6 @@ public class ThermalEntityPainter {
         } catch (Throwable ignored) {
         } finally {
             try { maskBufferSource.endBatch(); } catch (Throwable ignored) {}
-            try { dummyBufferSource.endBatch(); } catch (Throwable ignored) {}
         }
     }
 
@@ -421,8 +444,6 @@ public class ThermalEntityPainter {
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
         GlStateManager._bindTexture(0);
-
-        Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
     }
 
     // ── Internals ──────────────────────────────────────────────────────────
@@ -628,7 +649,7 @@ public class ThermalEntityPainter {
         @Override
         public com.mojang.blaze3d.vertex.VertexConsumer color(int r, int g, int b, int a) { 
             double relY = (entityHeight > 0.01f) ? Math.max(0.0, Math.min(1.0, (this.lastY - dy) / entityHeight)) : 0.5;
-            float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.45f;
+            float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.65f;
             int zonedAlpha = Math.min(255, Math.max(0, Math.round(this.baseAlpha * zoneLum)));
             if (customColor != null) {
                 int cr = (customColor >> 16) & 0xFF;

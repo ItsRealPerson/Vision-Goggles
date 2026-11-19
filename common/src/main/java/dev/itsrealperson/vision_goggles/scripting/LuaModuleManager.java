@@ -165,12 +165,36 @@ public class LuaModuleManager {
         }
     }
 
+    private static final String BUNDLED_VERSION_MARKER = "-- [VG-BUNDLED v34]";
+
+    private static boolean shouldUpgradeBundledScript(File target) {
+        try {
+            String content = Files.readString(target.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+            if (content.contains("-- [CUSTOM]") || content.contains("-- [USER-CUSTOM]")) {
+                return false;
+            }
+            String header = content.length() > 600 ? content.substring(0, 600) : content;
+            if (header.contains(BUNDLED_VERSION_MARKER)) {
+                return false;
+            }
+            if (header.contains("-- [VG-BUNDLED ")) {
+                return true;
+            }
+            return (header.startsWith("-- ============================================================================")
+                    || header.startsWith("\uFEFF-- ============================================================================"))
+                    && header.contains("-- EJEMPLO ");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static void generateExampleScripts(File dir) {
         try {
             for (String fileName : DEFAULT_RESOURCE_FILES) {
                 File target = new File(dir, fileName);
                 boolean isGuide = "00_GUIA_PASO_A_PASO.txt".equals(fileName);
-                if (target.exists() && !isGuide) {
+                boolean isUpgrading = target.exists() && !isGuide && shouldUpgradeBundledScript(target);
+                if (target.exists() && !isGuide && !isUpgrading) {
                     continue;
                 }
                 String resourcePath = "/assets/vision_goggles/lua_examples/" + fileName;
@@ -180,6 +204,9 @@ public class LuaModuleManager {
                         continue;
                     }
                     Files.copy(in, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    if (isUpgrading) {
+                        Vision_goggles.LOGGER.info("[Vision Goggles] Upgraded bundled Lua example to v34: " + fileName);
+                    }
                 }
             }
         } catch (Exception e) {

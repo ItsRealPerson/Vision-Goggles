@@ -19,7 +19,18 @@ public class SonarRadarModule implements IHudModule {
     public boolean shouldRender(Player player, ItemStack goggles) {
         if (goggles.isEmpty() || !(goggles.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem vgItem)) return false;
         CompoundTag nbt = goggles.getTag();
-        return nbt != null && nbt.getBoolean(ModConstants.TAG_ACTIVE) && vgItem.hasModule(goggles, ModConstants.ID_SONAR);
+        if (nbt == null || !nbt.getBoolean(ModConstants.TAG_ACTIVE) || !vgItem.hasModule(goggles, ModConstants.ID_SONAR)) {
+            return false;
+        }
+        // Yield the HUD to the Lua Sonar Pro 360 DSP upgrade when installed to avoid two overlapping radars
+        if (vgItem instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem modular) {
+            dev.itsrealperson.vision_goggles.scripting.LuaCustomModule radarUpgrade =
+                    dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.findModuleByIdOrPath("radar_amenazas");
+            if (radarUpgrade != null && radarUpgrade.isHardwareInstalled(goggles, modular)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
