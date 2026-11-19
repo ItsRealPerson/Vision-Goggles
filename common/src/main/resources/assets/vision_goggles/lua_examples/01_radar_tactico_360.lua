@@ -1,16 +1,17 @@
+-- [VG-BUNDLED v34]
 -- ============================================================================
--- EJEMPLO 1: RADAR TACTICO CIRCULAR 360° CON SONAR DE PROXIMIDAD
+-- EJEMPLO 1: RADAR TACTICO CIRCULAR 360° (UPGRADE DSP PARA SONAR)
 -- ============================================================================
 -- QUE APRENDERAS CON ESTE SCRIPT:
---   1. Usar variables 'local' para no contaminar otros scripts cargados.
---   2. Escaneo eficiente de entidades en onTick (20 TPS) + dibujo fluido en
---      onRenderHud (a los FPS del juego) sin superar el limite de instrucciones.
---   3. Trigonometria de rotacion relativa al jugador (player.getYaw) para
---      proyectar contactos reales en un radar giratorio de 360 grados.
---   4. Audio adaptativo (sound.playBeep / sound.playAlert) segun distancia.
+--   1. Requerir el modulo fisico de Sonar ('required_module = "sonar"') para
+--      ampliar el sonar basico cuadrado a un radar tactico 360° continuo sin
+--      duplicar interfaces (SonarRadarModule cede automaticamente el HUD).
+--   2. Leer player.getSonarMode() para respetar el filtro elegido en el menu
+--      radial (0 = Todos, 1 = Solo Jugadores, 2 = Solo No-Muertos).
+--   3. Proyectar contactos 3D respecto a player.getYaw() + sonar acustico.
 --
--- HARDWARE: Autonomo (funciona en cualquier Gafa Modular sin modulo previo).
--- FLASHEO:  /vg givescript radar_amenazas "Radar Tactico 360" #00FFAA
+-- HARDWARE: Requiere modulo "sonar" instalado en Gafas Modulares.
+-- FLASHEO:  /vg givescript radar_amenazas "Sonar Pro 360" #00FFAA
 -- ============================================================================
 
 local RANGE = 36.0
@@ -24,10 +25,10 @@ local CRITICAL_TYPES = {
     ["minecraft:ender_dragon"] = true
 }
 
--- Cache compartida entre onTick y onRenderHud (siempre 'local')
 local cachedContacts = {}
 local hostileCount = 0
 local criticalCount = 0
+local activeFilterMode = 0
 local closestHostileDist = nil
 local nextPingTime = 0
 local nextCriticalAlert = 0
@@ -40,12 +41,14 @@ end
 
 module = {
     id = "vision_goggles:radar_amenazas",
-    name = "Radar Tactico 360",
+    name = "Sonar Pro 360",
     type = "UTILITY",
-    battery_drain = 0.05,
+    required_module = "sonar",
+    battery_drain = 0.25,
 
     onEnable = function(p)
         cachedContacts = {}
+        activeFilterMode = p.getSonarMode()
         nextPingTime = getTime()
         sound.playBeep(1.4)
     end,
@@ -57,8 +60,10 @@ module = {
         closestHostileDist = nil
     end,
 
-    -- El escaneo pesado se hace en onTick (20 veces/seg), nunca en onRenderHud
     onTick = function(p, batteryPct)
+        local sonarMode = p.getSonarMode()
+        activeFilterMode = sonarMode
+
         local nearby = world.getEntitiesInRadius(RANGE)
         if nearby == nil then
             cachedContacts = {}
@@ -77,44 +82,51 @@ module = {
 
         for i = 1, #nearby do
             local e = nearby[i]
-            local isCrit = CRITICAL_TYPES[e.type] == true
-            if e.is_hostile or isCrit then
-                hCount = hCount + 1
-                if minHostile == nil or e.distance < minHostile then
-                    minHostile = e.distance
-                end
-            end
-            if isCrit then
-                cCount = cCount + 1
-                if minCritical == nil or e.distance < minCritical then
-                    minCritical = e.distance
-                    critName = e.name
-                end
+            local include = true
+            if sonarMode == 1 then
+                include = (e.is_player == true)
+            elseif sonarMode == 2 then
+                include = (e.is_undead == true)
             end
 
-            -- Prioridad visual: criticos (3) > jugadores (2) > hostiles (1) > pasivos (0)
-            local prio = 0
-            if isCrit then
-                prio = 3
-            elseif e.is_player then
-                prio = 2
-            elseif e.is_hostile then
-                prio = 1
-            end
+            if include then
+                local isCrit = CRITICAL_TYPES[e.type] == true
+                if e.is_hostile or isCrit then
+                    hCount = hCount + 1
+                    if minHostile == nil or e.distance < minHostile then
+                        minHostile = e.distance
+                    end
+                end
+                if isCrit then
+                    cCount = cCount + 1
+                    if minCritical == nil or e.distance < minCritical then
+                        minCritical = e.distance
+                        critName = e.name
+                    end
+                end
 
-            list[#list + 1] = {
-                x = e.x,
-                y = e.y,
-                z = e.z,
-                distance = e.distance,
-                is_hostile = e.is_hostile,
-                is_player = e.is_player,
-                is_critical = isCrit,
-                prio = prio
-            }
+                local prio = 0
+                if isCrit then
+                    prio = 3
+                elseif e.is_player then
+                    prio = 2
+                elseif e.is_hostile then
+                    prio = 1
+                end
+
+                list[#list + 1] = {
+                    x = e.x,
+                    y = e.y,
+                    z = e.z,
+                    distance = e.distance,
+                    is_hostile = e.is_hostile,
+                    is_player = e.is_player,
+                    is_critical = isCrit,
+                    prio = prio
+                }
+            end
         end
 
-        -- Ordenar primero por prioridad y luego por cercania
         table.sort(list, function(a, b)
             if a.prio ~= b.prio then
                 return a.prio > b.prio
@@ -133,19 +145,17 @@ module = {
         criticalCount = cCount
         closestHostileDist = minHostile
 
-        -- Sonar acustico proporcional a la cercania del enemigo
         local now = getTime()
         if minHostile ~= nil and minHostile <= 16.0 then
             local proximity = clamp((16.0 - minHostile) / 16.0, 0.0, 1.0)
-            local interval = 1.5 - proximity * 1.15 -- de 1.50s a 0.35s
-            local pitch = 0.90 + proximity * 0.95   -- de 0.90 a 1.85
+            local interval = 1.5 - proximity * 1.15
+            local pitch = 0.90 + proximity * 0.95
             if now >= nextPingTime then
                 sound.playBeep(pitch)
                 nextPingTime = now + interval
             end
         end
 
-        -- Alarma critica si un Creeper o Warden entra en zona mortal
         if minCritical ~= nil and minCritical <= 7.5 and now >= nextCriticalAlert then
             sound.playAlert()
             hud.showAlert("PROXIMIDAD: " .. string.upper(critName) .. " (" .. string.format("%.1f", minCritical) .. "m)", "#FF2244", 1.8)
@@ -155,41 +165,35 @@ module = {
 
     onRenderHud = function(h)
         local screenH = h.getHeight()
-        local cx = 48
+        local cx = 50
         local cy = screenH - 56
         local now = getTime()
 
-        -- 1. Chasis circular del radar y anillos concentricos (12m, 24m, 36m)
         h.drawDisc(cx, cy, RADIUS + 2, "#B8071018")
         h.drawCircle(cx, cy, RADIUS, "#DD00FFAA")
         h.drawCircle(cx, cy, math.floor(RADIUS * 0.66), "#4400CC88")
         h.drawCircle(cx, cy, math.floor(RADIUS * 0.33), "#3300CC88")
 
-        -- Cruz de ejes tacticos
         h.drawLine(cx - RADIUS, cy, cx + RADIUS, cy, "#3300FFAA")
         h.drawLine(cx, cy - RADIUS, cx, cy + RADIUS, "#3300FFAA")
 
-        -- 2. Haz de barrido rotatorio animado con getTime()
         local sweepAngle = (now * 2.4) % (2.0 * math.pi)
         local sx = cx + math.floor(math.cos(sweepAngle) * (RADIUS - 1) + 0.5)
         local sy = cy + math.floor(math.sin(sweepAngle) * (RADIUS - 1) + 0.5)
         h.drawLine(cx, cy, sx, sy, "#8800FFCC")
 
-        -- 3. Base trigonometrica del jugador (ARRIBA en radar = hacia donde miras)
         local yawRad = math.rad(player.getYaw())
         local fx = -math.sin(yawRad)
         local fz = math.cos(yawRad)
         local rx = -math.cos(yawRad)
         local rz = -math.sin(yawRad)
 
-        -- Marcador cardinal Norte ('N') orbitando el borde del radar
         local northFwd = -fz
         local northRight = -rz
         local nx = cx + math.floor(northRight * (RADIUS - 4) + 0.5)
         local ny = cy - math.floor(northFwd * (RADIUS - 4) + 0.5)
         h.drawText(nx - 2, ny - 3, "N", "#FFCC33", 0.65)
 
-        -- 4. Proyectar blips guardados
         local px = player.getX()
         local py = player.getY()
         local pz = player.getZ()
@@ -208,7 +212,6 @@ module = {
             local bx = cx + math.floor((right / RANGE) * innerR + 0.5)
             local by = cy - math.floor((fwd / RANGE) * innerR + 0.5)
 
-            -- Clamping radial si el objetivo roza el borde
             local ox = bx - cx
             local oy = by - cy
             local mag = math.sqrt(ox * ox + oy * oy)
@@ -229,7 +232,6 @@ module = {
                 h.drawDisc(bx, by, 1, "#55DD77")
             end
 
-            -- Indicador sutil de desnivel vertical (>= 4 bloques arriba o abajo)
             if dy >= 4.0 then
                 h.drawLine(bx, by - 3, bx, by - 5, "#AAFFFFFF")
             elseif dy <= -4.0 then
@@ -237,15 +239,18 @@ module = {
             end
         end
 
-        -- 5. Triangulo central del jugador apuntando hacia arriba
         h.drawLine(cx, cy - 3, cx - 2, cy + 2, "#FFFFFF")
         h.drawLine(cx, cy - 3, cx + 2, cy + 2, "#FFFFFF")
         h.drawLine(cx - 2, cy + 2, cx + 2, cy + 2, "#FFFFFF")
 
-        -- 6. Telemetria inferior compacta
         local labelColor = criticalCount > 0 and "#FF4466" or (hostileCount > 0 and "#FFAA33" or "#00FFAA")
         local clsText = closestHostileDist ~= nil and string.format("%.1fm", closestHostileDist) or "--"
-        h.drawRect(cx - 38, cy + RADIUS + 3, 76, 12, "#99071018")
-        h.drawText(cx - 35, cy + RADIUS + 5, string.format("H:%d  CLS:%s", hostileCount, clsText), labelColor, 0.72)
+        local modeTag = (activeFilterMode == 1) and "PLY" or ((activeFilterMode == 2) and "UND" or "ALL")
+        local infoStr = string.format("%s H:%d %s", modeTag, hostileCount, clsText)
+        local textScale = 0.68
+        local boxW = math.max(78, math.floor(h.getTextWidth(infoStr, textScale) + 10))
+        local boxX = math.max(4, cx - math.floor(boxW / 2))
+        h.drawRect(boxX, cy + RADIUS + 3, boxW, 12, "#99071018")
+        h.drawText(boxX + math.floor((boxW - h.getTextWidth(infoStr, textScale)) / 2), cy + RADIUS + 5, infoStr, labelColor, textScale)
     end
 }

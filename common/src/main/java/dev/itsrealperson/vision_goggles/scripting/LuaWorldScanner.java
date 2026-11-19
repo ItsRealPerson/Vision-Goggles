@@ -4,13 +4,17 @@ import net.minecraft.client.Minecraft;
 import dev.itsrealperson.vision_goggles.mixin.client.GameRendererAccessor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -29,8 +33,14 @@ import org.luaj.vm2.lib.ZeroArgFunction;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 @Environment(EnvType.CLIENT)
 public class LuaWorldScanner {
@@ -256,6 +266,157 @@ public class LuaWorldScanner {
                 if (mc.player == null || mc.level == null) return LuaValue.valueOf(0);
                 BlockPos pos = mc.player.blockPosition();
                 return LuaValue.valueOf(mc.level.getMaxLocalRawBrightness(pos));
+            }
+        });
+
+        world.set("scanBlocks", new VarArgFunction() {
+            @Override
+            public Varargs invoke(Varargs args) {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player == null || mc.level == null || !args.istable(2)) {
+                    return new LuaTable();
+                }
+
+                int radius = Math.min(16, Math.max(1, args.isnumber(1) ? args.toint(1) : 12));
+                int maxResults = Math.min(32, Math.max(1, args.isnumber(3) ? args.toint(3) : 12));
+                LuaTable tbl = args.checktable(2);
+
+                Set<Block> targetBlocks = Collections.newSetFromMap(new IdentityHashMap<>());
+                LuaValue k = LuaValue.NIL;
+                while (true) {
+                    Varargs next = tbl.next(k);
+                    k = next.arg1();
+                    if (k.isnil()) break;
+                    LuaValue v = next.arg(2);
+                    String idStr = null;
+                    if (v.isstring()) {
+                        idStr = v.tojstring();
+                    } else if (k.isstring() && v.toboolean()) {
+                        idStr = k.tojstring();
+                    }
+                    if (idStr != null && !idStr.isEmpty()) {
+                        ResourceLocation rl = ResourceLocation.tryParse(idStr);
+                        if (rl != null) {
+                            BuiltInRegistries.BLOCK.getOptional(rl).ifPresent(targetBlocks::add);
+                        }
+                    }
+                }
+                if (targetBlocks.isEmpty()) {
+                    return new LuaTable();
+                }
+
+                int px = mc.player.getBlockX();
+                int py = mc.player.getBlockY();
+                int pz = mc.player.getBlockZ();
+                int minY = mc.level.getMinBuildHeight();
+                int maxY = mc.level.getMaxBuildHeight() - 1;
+                int yStart = Math.max(minY, py - radius);
+                int yEnd = Math.min(maxY, py + radius);
+                int rSq = radius * radius;
+
+                // Bounded max-heap keeps only the exact closest maxResults blocks in O(maxResults) memory
+                PriorityQueue<ScannedBlock> closestHeap = new PriorityQueue<>(maxResults, (a, b) -> Integer.compare(b.distSq, a.distSq));
+                BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+                for (int dx = -radius; dx <= radius; dx++) {
+                    int bx = px + dx;
+                    int dxSq = dx * dx;
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        int xzSq = dxSq + dz * dz;
+                        if (xzSq > rSq) continue;
+                        int bz = pz + dz;
+                        if (!mc.level.hasChunk(bx >> 4, bz >> 4)) continue;
+
+                        for (int by = yStart; by <= yEnd; by++) {
+                            int dy = by - py;
+                            int distSq = xzSq + dy * dy;
+                            if (distSq > rSq) continue;
+
+                            pos.set(bx, by, bz);
+                            BlockState state = mc.level.getBlockState(pos);
+                            Block block = state.getBlock();
+                            if (targetBlocks.contains(block)) {
+                                if (closestHeap.size() < maxResults) {
+                                    closestHeap.offer(new ScannedBlock(block, bx, by, bz, distSq));
+                                } else if (distSq < closestHeap.peek().distSq) {
+                                    closestHeap.poll();
+                                    closestHeap.offer(new ScannedBlock(block, bx, by, bz, distSq));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (closestHeap.isEmpty()) {
+                    return new LuaTable();
+                }
+
+                List<ScannedBlock> matches = new ArrayList<>(closestHeap);
+                matches.sort(Comparator.comparingInt(m -> m.distSq));
+                LuaTable result = new LuaTable();
+                for (int i = 0; i < matches.size(); i++) {
+                    ScannedBlock m = matches.get(i);
+                    LuaTable entry = new LuaTable();
+                    entry.set("id", BuiltInRegistries.BLOCK.getKey(m.block).toString());
+                    entry.set("x", m.x);
+                    entry.set("y", m.y);
+                    entry.set("z", m.z);
+                    entry.set("distance", Math.round(Math.sqrt(m.distSq) * 10.0) / 10.0);
+                    result.set(i + 1, entry);
+                }
+                return result;
+            }
+        });
+
+        world.set("getProjectilesInRadius", new OneArgFunction() {
+            @Override
+            public LuaValue call(LuaValue arg) {
+                double radius = arg.isnumber() ? arg.todouble() : 24.0;
+                if (Double.isNaN(radius) || Double.isInfinite(radius)) radius = 24.0;
+                radius = Math.min(48.0, Math.max(1.0, radius));
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player == null || mc.level == null) return LuaValue.NIL;
+
+                Vec3 playerPos = mc.player.position();
+                Vec3 playerEye = mc.player.getEyePosition(1.0f);
+                AABB searchBox = new AABB(
+                        playerPos.x - radius, playerPos.y - radius, playerPos.z - radius,
+                        playerPos.x + radius, playerPos.y + radius, playerPos.z + radius
+                );
+
+                List<Projectile> projectiles = mc.level.getEntitiesOfClass(Projectile.class, searchBox);
+                LuaTable list = new LuaTable();
+                int idx = 1;
+                float pt = mc.getFrameTime();
+
+                for (Projectile proj : projectiles) {
+                    if (proj.getOwner() == mc.player || proj.onGround()) continue;
+                    Vec3 vel = proj.getDeltaMovement();
+                    if (vel.lengthSqr() < 0.0025) continue;
+
+                    Vec3 interp = proj.getPosition(pt);
+                    double dist = playerEye.distanceTo(interp);
+                    if (dist > radius) continue;
+
+                    Vec3 toPlayer = playerEye.subtract(interp);
+                    boolean approaching = false;
+                    if (toPlayer.lengthSqr() > 1.0E-4) {
+                        approaching = vel.normalize().dot(toPlayer.normalize()) > 0.55;
+                    }
+
+                    LuaTable entry = new LuaTable();
+                    entry.set("type", BuiltInRegistries.ENTITY_TYPE.getKey(proj.getType()).toString());
+                    entry.set("x", Math.round(interp.x * 1000.0) / 1000.0);
+                    entry.set("y", Math.round(interp.y * 1000.0) / 1000.0);
+                    entry.set("z", Math.round(interp.z * 1000.0) / 1000.0);
+                    entry.set("vx", Math.round(vel.x * 1000.0) / 1000.0);
+                    entry.set("vy", Math.round(vel.y * 1000.0) / 1000.0);
+                    entry.set("vz", Math.round(vel.z * 1000.0) / 1000.0);
+                    entry.set("distance", Math.round(dist * 10.0) / 10.0);
+                    entry.set("approaching", LuaValue.valueOf(approaching));
+                    list.set(idx++, entry);
+                }
+                return list;
             }
         });
 
@@ -516,6 +677,44 @@ public class LuaWorldScanner {
             }
         });
 
+        playerTable.set("getSonarMode", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player == null) return LuaValue.valueOf(0);
+                net.minecraft.world.item.ItemStack goggles = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(mc.player);
+                if (!goggles.isEmpty() && goggles.hasTag()
+                        && goggles.getTag().contains(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_SONAR_MODE)) {
+                    return LuaValue.valueOf(goggles.getTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_SONAR_MODE));
+                }
+                return LuaValue.valueOf(0);
+            }
+        });
+
+        playerTable.set("getAbsorption", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                Minecraft mc = Minecraft.getInstance();
+                return LuaValue.valueOf(mc.player != null ? (double) mc.player.getAbsorptionAmount() : 0.0);
+            }
+        });
+
+        playerTable.set("getArmorDurabilityPct", new ZeroArgFunction() {
+            @Override public LuaValue call() {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player == null) return LuaValue.valueOf(-1.0);
+                double minPct = -1.0;
+                for (net.minecraft.world.item.ItemStack piece : mc.player.getArmorSlots()) {
+                    if (!piece.isEmpty() && piece.isDamageableItem() && piece.getMaxDamage() > 0) {
+                        double pct = (double) (piece.getMaxDamage() - piece.getDamageValue()) / (double) piece.getMaxDamage();
+                        pct = Math.max(0.0, Math.min(1.0, pct));
+                        if (minPct < 0.0 || pct < minPct) {
+                            minPct = pct;
+                        }
+                    }
+                }
+                return LuaValue.valueOf(minPct);
+            }
+        });
+
         globals.set("player", playerTable);
 
         LuaTable gogglesTable = new LuaTable();
@@ -572,6 +771,24 @@ public class LuaWorldScanner {
         t.set("distance", roundedDist);
         t.set("is_hostile", LuaValue.valueOf(living instanceof net.minecraft.world.entity.monster.Enemy || living instanceof Monster));
         t.set("is_player", LuaValue.valueOf(living instanceof Player));
+        t.set("emits_heat", LuaValue.valueOf(dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.emitsThermalHeat(living)));
+        t.set("is_undead", LuaValue.valueOf(living.getMobType() == MobType.UNDEAD));
         return t;
+    }
+
+    private static class ScannedBlock {
+        final Block block;
+        final int x;
+        final int y;
+        final int z;
+        final int distSq;
+
+        ScannedBlock(Block block, int x, int y, int z, int distSq) {
+            this.block = block;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.distSq = distSq;
+        }
     }
 }

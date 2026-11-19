@@ -48,6 +48,7 @@ module = {
 * `"thermal"`: Requiere el modulo de **Visor Termico**.
 * `"bio"`: Requiere el modulo **Biometrico**.
 * `"hydro"`: Requiere el modulo **Hydro**.
+* `"sonar"`: Requiere el modulo **Sonar** (util para upgrades DSP del radar sin reemplazar al modulo fisico).
 * `nil` (u omitido): Modulo **autonomo**. Puede instalarse en cualquier Gafa Modular libremente sin requerir un modulo base previo.
 
 ### Drenaje de Bateria (`battery_drain`):
@@ -96,15 +97,17 @@ onRenderHud = function(hud)
     hud.drawText(10, 10, "ESTADO OK", "#00FF88", 1.0)
 end,
 
--- 6. Se ejecuta en modo Termico para cada entidad viva cercana
+-- 6. Se ejecuta en modo Termico para cada entidad viva con firma termica
 -- Permite asignar la firma cromatica que entra al pipeline Ironbow de thermal.fsh
+-- NOTA: Evita tonos azules puros (ej. #1144FF), ya que thermal.fsh interpreta
+--       azul dominante como fuente criogenica (coldSignal -> negro/azul marino).
 onThermalColor = function(entityType, isHostile)
     if entityType == "minecraft:player" or entityType == "minecraft:creeper" then
         return "#00FFFF" -- Firma blanca incandescente maxima en Ironbow
     elseif isHostile then
-        return "#FF8800" -- Firma caliente naranja/amarilla
+        return "#FFBB00" -- Firma caliente amarillo-oro intenso
     else
-        return "#1144FF" -- Supresion criogenica fria para animales pasivos
+        return "#FF8800" -- Firma calida naranja para animales de sangre caliente
     end
 end
 ```
@@ -119,10 +122,13 @@ La tabla `player` proporciona telemetria en tiempo real sobre el jugador local:
 | :--- | :--- | :--- |
 | `player.getHealth()` | `number` | Salud actual en medio-corazones (ej. `20.0`). |
 | `player.getMaxHealth()` | `number` | Salud maxima del jugador (ej. `20.0`). |
+| `player.getAbsorption()` | `number` | Corazones dorados de absorcion actuales (ej. `4.0`). |
 | `player.getFoodLevel()` | `number` | Nivel de hambre entre `0` y `20`. |
 | `player.getSaturation()` | `number` | Nivel de saturacion exacta (ej. `5.0`). |
 | `player.getArmor()` | `number` | Puntos de armadura fisica (`0` a `20+`). |
+| `player.getArmorDurabilityPct()` | `number` | Durabilidad minima normalizada (`0.0..1.0`) entre las piezas de armadura equipadas, o `-1.0` si no lleva armadura dañable. |
 | `player.getOxygen()` | `number` | Oxigeno restante en porcentaje (`0.0` a `100.0`). |
+| `player.getSonarMode()` | `number` | Filtro actual del modulo Sonar hardware en NBT (`0` = Todos, `1` = Jugadores, `2` = No-Muertos). |
 | `player.getX()` | `number` | Coordenada X exacta en el mundo. |
 | `player.getY()` | `number` | Coordenada Y (altura / capa) en el mundo. |
 | `player.getZ()` | `number` | Coordenada Z exacta en el mundo. |
@@ -172,11 +178,36 @@ if target ~= nil then
     -- target.distance    (number: distancia al jugador en bloques)
     -- target.is_hostile  (boolean: true si es monstruo hostil)
     -- target.is_player   (boolean: true si es otro jugador)
+    -- target.emits_heat  (boolean: true si tiene firma termica real; false en no-muertos/aranas/slimes/golems)
+    -- target.is_undead   (boolean: true si pertenece a MobType.UNDEAD)
 end
 ```
 
 ### `world.getEntitiesInRadius(radius?)`
 Devuelve un array Lua (1-indexado) con todas las entidades vivas (excepto el jugador local) dentro de una esfera de `radius` bloques (por defecto `16.0`, maximo `64.0`). Cada elemento contiene exactamente los mismos campos listados arriba.
+
+### `world.getProjectilesInRadius(radius?)`
+Devuelve un array Lua (1-indexado) con proyectiles en vuelo activos (excepto los disparados por el propio jugador y proyectiles detenidos en el suelo) dentro de `radius` bloques (por defecto `24.0`, maximo `48.0`):
+```lua
+local projs = world.getProjectilesInRadius(24.0)
+for i = 1, #projs do
+    local p = projs[i]
+    -- p.type, p.x, p.y, p.z, p.vx, p.vy, p.vz, p.distance, p.approaching
+    if p.approaching then
+        hud.showAlert("¡PROYECTIL ENTRANTE!", "#FFCC00", 1.0)
+    end
+end
+```
+
+### `world.scanBlocks(radius, blockIdsTable, maxResults?)`
+Realiza un escaneo esferico rapido en codigo nativo Java (`O(1)` por bloque mediante `IdentityHashMap<Block>`, hasta radio `16` y `32` resultados) devolviendo los bloques coincidentes mas cercanos ordenados por distancia:
+```lua
+local targets = { "minecraft:diamond_ore", "minecraft:deepslate_diamond_ore", "minecraft:ancient_debris" }
+local hits = world.scanBlocks(14, targets, 24)
+for i = 1, #hits do
+    -- hits[i].id, hits[i].x, hits[i].y, hits[i].z, hits[i].distance
+end
+```
 
 ### `world.worldToScreen(x, y, z)`
 Proyecta una coordenada 3D del mundo `(x, y, z)` a coordenadas 2D de la pantalla GUI escalada usando la matriz y el FOV real de la camara:
@@ -325,7 +356,7 @@ Todos los shaders del mod utilizan **OpenGL 3.2 Core Profile (`#version 150`)**:
 
 Los modulos programables son **chips fisicos de hardware** que se graban en la Estacion de Modificacion:
 
-1. **Escribir o Editar el Script**: Coloca tu archivo `.lua` en `config/vision_goggles/modules/` o editalo desde `/vg`.
+1. **Escribir o Editar el Script**: Coloca tu archivo `.lua` en `config/vision_goggles/modules/` o editalo desde `/vg`. *(Si modificas uno de los 6 ejemplos oficiales, agrega `-- [CUSTOM]` en la primera linea para conservar tus cambios entre actualizaciones del mod).*
 2. **Obtener el Script de Instalacion**:
    * Abre la terminal con `/vg` o `/vg gui`, selecciona tu archivo y pulsa **`Obtener Script`**.
    * O usa el comando: `/vg givescript <id_modulo> [nombre] [color_hex]`.
@@ -413,9 +444,9 @@ module = {
 
 | Archivo | ID (`module.id`) | Tipo / Req. | Que implementa y enseña |
 | :--- | :--- | :--- | :--- |
-| `01_radar_tactico_360.lua` | `vision_goggles:radar_amenazas` | `UTILITY` (Autonomo) | **Radar circular rotatorio 360°** con matriz de rotacion 2D (`player.getYaw`), anillos de distancia, barrido animado, blips por prioridad, indicador de desnivel vertical y sonar acustico progresivo. |
+| `01_radar_tactico_360.lua` | `vision_goggles:radar_amenazas` | `UTILITY` (Req: `"sonar"`) | **Upgrade DSP Sonar Pro 360°**: amplifica el modulo hardware `Sonar` (`SonarRadarModule` cede el HUD automaticamente), respeta `player.getSonarMode()` (`ALL`/`PLY`/`UND`), barrido 20 TPS hasta 36m, desnivel vertical y sonar acustico progresivo. |
 | `02_visor_ar_objetivos.lua` | `vision_goggles:threat_scanner` | `UTILITY` (Req: `"bio"`) | **Realidad Aumentada 3D (`world.worldToScreen`)** con corchetes `[  ]` sobre enemigos en el mundo, chevrones laterales fuera de pantalla (`<`/`>`) y tarjeta IFF de fijacion en mira (`world.getTargetEntity`). |
-| `03_visor_combate_reactivo.lua` | `vision_goggles:cyber_visor` | `VISION_MODE` (Req: `"nvg"`) | **Shader GLSL reactivo (`onUpdateUniforms`)** con adaptacion cromatica suave por entorno (Agua, Nether, End, Cueva P45), destello rojo + `Glare` al recibir dano, pulso cardiaco doble y **osciloscopio ECG en vivo**. |
+| `03_visor_combate_reactivo.lua` | `vision_goggles:cyber_visor` | `VISION_MODE` (Req: `"nvg"`) | **Visor Combate Gen-3 Auto-Gate**: activa `u_DSPActive = 1.0` en `nvg.fsh` (75% menos grano y Smart Auto-Gating anti-ceguera), detector de proyectiles entrantes (`world.getProjectilesInRadius`), anillo direccional 360° alrededor de la mira, alerta de armadura critica y telemetria de dano. |
 | `04_hud_piloto_avionica.lua` | `vision_goggles:tactical_hud` | `HUD` (Autonomo) | **HUD de avionica y vuelo** con cinta de brujula deslizante (`000°=Norte`), escalera de cabeceo (*Pitch Ladder*), velocimetro `m/s`, variometro `VSI` (`dy/dt`), alarma GPWS `¡PULL UP!`, reloj solar 24h, clima y efectos de pocion. |
-| `05_escaner_geologico_entorno.lua` | `vision_goggles:geo_scanner` | `UTILITY` (Autonomo) | **Escaner subterraneo por *Time-Slicing*** (`world.getBlock` escaneando `9x7x9 = 567` bloques en 7 ticks sin afectar FPS), marcadores AR 3D sobre menas de diamante/escombros/spawners, detector de lava bajo los pies y analizador de bloque en mira. |
-| `06_suite_termica_flir.lua` | `vision_goggles:thermal_palette` | `UTILITY` (Req: `"thermal"`) | **Clasificador termico IFF para el pipeline Ironbow** (`onThermalColor`), estabilizador criogenico que reduce `Interference` en el Nether (`onUpdateUniforms`), barra de calibracion FLIR de 6 bandas, temperatura `°C` estimada y etiquetas termicas 3D. |
+| `05_escaner_geologico_entorno.lua` | `vision_goggles:geo_scanner` | `UTILITY` (Autonomo) | **Prospector Geologico AR de 14m**: escaneo rapido en Java (`world.scanBlocks`) con agrupacion automatica de vetas (`DIAMANTE x4 10.2m`), rombos AR 3D + flechas direccionales, Geiger progresivo y alerta de lava bajo los pies y frente a la mira. |
+| `06_suite_termica_flir.lua` | `vision_goggles:thermal_palette` | `UTILITY` (Req: `"thermal"`) | **Clasificador termico IFF Ironbow calibrado** (`#00FFFF` / `#FFBB00` / `#FF8800`), filtrado por `e.emits_heat` para evitar etiquetas `[HOT]` sobre mobs frios/no-muertos, estabilizador criogenico en Nether, barra FLIR y temperatura `°C`. |

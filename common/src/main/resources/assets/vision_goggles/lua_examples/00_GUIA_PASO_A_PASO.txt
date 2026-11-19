@@ -6,6 +6,10 @@ Bienvenido al sistema de scripting en Lua de Vision Goggles (LuaJ 3.0.1 / Lua 5.
 Todos los archivos '.lua' en esta carpeta (config/vision_goggles/modules/) se
 cargan al iniciar el juego y pueden editarse en vivo con '/vg reload' o '/vg'.
 
+IMPORTANTE SOBRE EDICION DE EJEMPLOS:
+  Si modificas uno de los 6 scripts oficiales, agrega "-- [CUSTOM]" en la
+  primera linea para evitar que futuras actualizaciones del mod lo sobreescriban.
+
 --------------------------------------------------------------------------------
 1. ESTRUCTURA BASICA Y METADATOS DE 'module'
 --------------------------------------------------------------------------------
@@ -14,11 +18,11 @@ todas tus variables y funciones auxiliares con 'local' para no chocar con otros
 scripts (el entorno Lua comparte una sola instancia global entre scripts).
 
 module = {
-    id = "vision_goggles:mi_modulo",            -- ID unico (sin comillas en comentario)
+    id = "vision_goggles:mi_modulo",            -- ID unico
     name = "Mi Modulo Tactico",                 -- Nombre visible en chip y GUI
     type = "UTILITY",                           -- "VISION_MODE", "HUD" o "UTILITY"
     shader = "vision_goggles:shaders/post/nvg.json", -- Opcional (o corto: "nvg")
-    required_module = "nvg",                    -- Opcional: "nvg", "thermal", "bio", etc.
+    required_module = "nvg",                    -- Opcional: "nvg", "thermal", "bio", "sonar", etc.
     battery_drain = 0.05,                       -- Drenaje EXTRA por TICK (20 ticks = 1s)
 
     onEnable = function(player) end,            -- 1 vez al activar visor con chip puesto
@@ -31,7 +35,8 @@ module = {
 
 NOTA SOBRE 'battery_drain':
   La bateria base de las Gafas Modulares es 6000 unidades (NVG = 1.0/tick,
-  Thermal = 2.0/tick). Un script UTILITY ligero suele usar 0.05 - 0.10/tick.
+  Thermal = 2.0/tick, Sonar = 0.5-1.5/tick). Un script UTILITY ligero suele usar
+  0.05 - 0.15/tick; un upgrade tactico o VISION_MODE avanzado suele usar 0.20 - 0.25/tick.
 
 --------------------------------------------------------------------------------
 2. REFERENCIA DE APIS REALES
@@ -52,11 +57,16 @@ NOTA SOBRE 'battery_drain':
 * hud.drawDisc(cx, cy, radio, color?)
 * hud.showAlert(texto, color?, duracionSeg?)
 
-[ world ] (escaneos acotados a max 64 bloques)
+[ world ] (escaneos acotados por seguridad)
 * world.getTargetEntity(rango?, atraviesaMuros?) -> table | nil
-* world.getEntitiesInRadius(radio?)               -> array de entidades
+* world.getEntitiesInRadius(radio?)               -> array de entidades (max 64)
   Campos entidad: name, type, health, max_health, armor, x, y, z, eye_y,
-                  height, pitch, yaw, distance, is_hostile, is_player
+                  height, pitch, yaw, distance, is_hostile, is_player,
+                  emits_heat, is_undead
+* world.getProjectilesInRadius(radio?)            -> array de proyectiles activos (max 48)
+  Campos proyectil: type, x, y, z, vx, vy, vz, distance, approaching
+* world.scanBlocks(radio, tablaBloques, maxResultados?) -> array { id, x, y, z, distance }
+  (Escaneo esferico rapido en Java; radio max 16 bloques, maxResultados max 32)
 * world.raycastBlock(rango?)                      -> table | nil
   Campos bloque: name, id, x, y, z, light_level, can_see_sky, distance
 * world.worldToScreen(x, y, z) -> { x, y, visible, behind, distance }
@@ -68,7 +78,8 @@ NOTA SOBRE 'battery_drain':
 
 [ player ]
 * getX(), getY(), getZ(), getYaw(), getPitch()
-* getHealth(), getMaxHealth(), getArmor(), getFoodLevel(), getSaturation(), getOxygen()
+* getHealth(), getMaxHealth(), getAbsorption(), getArmor(), getArmorDurabilityPct()
+* getFoodLevel(), getSaturation(), getOxygen(), getSonarMode()
 * getSpeed()      -> velocidad horizontal en bloques/segundo (m/s)
 * getBiome(), getDimension(), getLightLevel()
 * isInWater(), isDay(), onGround(), isSprinting(), isCrouching(), isFlying()
@@ -91,21 +102,22 @@ NOTA SOBRE 'battery_drain':
 --------------------------------------------------------------------------------
 1. Sintaxis Lua 5.2 (LuaJ 3.0.1): NO uses '//', '&', '|' ni '>>' de Lua 5.3+.
    Usa math.floor(a / b) y la libreria bit32 si necesitas operaciones de bits.
-2. Limite de 100,000 instrucciones por callback: haz escaneos de entidades o
-   bloques en onTick() usando caches 'local' (y time-slicing si recorres muchos
-   bloques) y deja onRenderHud() solo para proyectar y dibujar.
+   Tampoco existe 'continue': usa bloques 'if ... then ... end'.
+2. Limite de 100,000 instrucciones por callback: usa world.scanBlocks(...) o
+   escaneos espaciados en onTick() con caches 'local' y deja onRenderHud()
+   solo para proyectar y dibujar.
 3. Sandbox activo: io, package, require, loadfile, dofile, luajava y debug
    estan deshabilitados. Usa os.clock/time/difftime/date con seguridad.
 
 --------------------------------------------------------------------------------
 4. CATALOGO DE LOS 6 SCRIPTS INCLUIDOS Y COMANDOS DE FLASHEO
 --------------------------------------------------------------------------------
-1) 01_radar_tactico_360.lua        (Autonomo)  /vg givescript radar_amenazas "Radar 360" #00FFAA
-2) 02_visor_ar_objetivos.lua       (Req: bio)  /vg givescript threat_scanner "Visor AR IFF" #FF4444
-3) 03_visor_combate_reactivo.lua   (Req: nvg)  /vg givescript cyber_visor "Visor Combate" #00FFAA
-4) 04_hud_piloto_avionica.lua      (Autonomo)  /vg givescript tactical_hud "HUD Avionica" #00FFCC
-5) 05_escaner_geologico_entorno.lua(Autonomo)  /vg givescript geo_scanner "Escaner Geo" #33DDFF
-6) 06_suite_termica_flir.lua       (Req: therm)/vg givescript thermal_palette "Suite FLIR" #FF8800
+1) 01_radar_tactico_360.lua        (Req: sonar)  /vg givescript radar_amenazas "Sonar Pro 360" #00FFAA
+2) 02_visor_ar_objetivos.lua       (Req: bio)    /vg givescript threat_scanner "Visor AR IFF" #FF4444
+3) 03_visor_combate_reactivo.lua   (Req: nvg)    /vg givescript cyber_visor "Visor Combate Gen-3" #00FFAA
+4) 04_hud_piloto_avionica.lua      (Autonomo)    /vg givescript tactical_hud "HUD Avionica" #00FFCC
+5) 05_escaner_geologico_entorno.lua(Autonomo)    /vg givescript geo_scanner "Prospector Geo AR" #33DDFF
+6) 06_suite_termica_flir.lua       (Req: therm)  /vg givescript thermal_palette "Suite FLIR" #FF8800
 
 FLASHEO EN ESTACION DE MODIFICACION:
   Slot Izq: Modulo Programable | Slot Centro: Script de Instalacion | Slot Der: Chip Listo

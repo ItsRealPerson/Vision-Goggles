@@ -1,15 +1,16 @@
+-- [VG-BUNDLED v34]
 -- ============================================================================
 -- EJEMPLO 6: SUITE TERMICA FLIR (IFF IRONBOW + ESTABILIZADOR CRIOGENICO)
 -- ============================================================================
 -- QUE APRENDERAS CON ESTE SCRIPT:
 --   1. Como funciona onThermalColor(entityType, isHostile) con el shader real
---      'thermal.fsh': las entidades pasan por la rampa Ironbow FLIR segun su
---      dominancia de canal cian/verde/azul (cian puro #00FFFF = blanco maximo,
---      naranja #FF8800 = calor medio-alto, azul #1144FF = firma fria).
---   2. Reducir el uniform 'Interference' en onUpdateUniforms cuando entras al
---      Nether o a biomas calidos (actuando como enfriador criogenico DSP).
---   3. Dibujar una escala calibrada Ironbow FLIR + censo termico y etiquetas
---      3D via world.worldToScreen.
+--      'thermal.fsh': evita colores azules puros (disparan coldSignal -> negro)
+--      y usa la escala calida Ironbow (#00FFFF blanco critico, #FFBB00
+--      amarillo-oro hostil, #FF8800 naranja calido para fauna de sangre caliente).
+--   2. Filtrar entidades no-termicas (no-muertos, aranas, slimes) usando
+--      e.emits_heat para no mostrar etiquetas [HOT] fantasmas.
+--   3. Reducir 'Interference' en onUpdateUniforms en Nether/biomas calidos
+--      y dibujar la barra calibrada Ironbow + etiquetas AR 3D.
 --
 -- HARDWARE: Requiere modulo "thermal" (Termico) instalado en Gafas Modulares.
 -- FLASHEO:  /vg givescript thermal_palette "Suite Termica FLIR" #FF8800
@@ -19,8 +20,9 @@ local CRITICAL_MOBS = {
     ["minecraft:player"] = true,
     ["minecraft:creeper"] = true,
     ["minecraft:warden"] = true,
-    ["minecraft:wither"] = true,
     ["minecraft:ender_dragon"] = true,
+    ["minecraft:blaze"] = true,
+    ["minecraft:magma_cube"] = true,
     ["minecraft:evoker"] = true,
     ["minecraft:ravager"] = true
 }
@@ -31,12 +33,13 @@ local IRONBOW_SCALE = {
     "#FF8C00", --  65% Caliente (Naranja)
     "#D91926", --  45% Tibio (Rojo)
     "#47008C", --  25% Templado (Purpura)
-    "#050820"  --   0% Frio / Criogenico (Azul marino)
+    "#050820"  --   0% Fondo frio (Azul marino)
 }
 
 local critCount = 0
 local hostCount = 0
 local passCount = 0
+local coldCount = 0
 local priorityTargets = {}
 local cryoActive = false
 
@@ -85,23 +88,22 @@ module = {
     battery_drain = 0.08,
 
     onEnable = function(p)
-        critCount, hostCount, passCount = 0, 0, 0
+        critCount, hostCount, passCount, coldCount = 0, 0, 0, 0
         priorityTargets = {}
         sound.playBeep(1.2)
     end,
 
-    -- Clasificador IFF adaptado al mapeo Ironbow de thermal.fsh
+    -- Paleta IFF calida Ironbow verificada contra thermal.fsh (sin tonos azules que apaguen animales)
     onThermalColor = function(entityType, isHostile)
         if CRITICAL_MOBS[entityType] then
-            return "#00FFFF" -- Activa canal cian -> Blanco Incandescente maximo
+            return "#00FFFF" -- Activa cyanBias -> Blanco Incandescente maximo
         elseif isHostile then
-            return "#FF8800" -- Firma caliente naranja/amarillo diferenciada
+            return "#FFBB00" -- Hostil de sangre caliente -> Amarillo-oro intenso
         else
-            return "#1144FF" -- Supresion criogenica: animales quedan en tono frio
+            return "#FF8800" -- Pasivo de sangre caliente -> Naranja calido bien visible incluso tras 1 cristal/madera
         end
     end,
 
-    -- Estabilizador criogenico contra interferencia en Nether y biomas calidos
     onUpdateUniforms = function(p, uniforms)
         if isHotEnvironment(p.getDimension(), p.getBiome()) then
             cryoActive = true
@@ -114,34 +116,38 @@ module = {
     onTick = function(p, batteryPct)
         local nearby = world.getEntitiesInRadius(40.0)
         if nearby == nil then
-            critCount, hostCount, passCount = 0, 0, 0
+            critCount, hostCount, passCount, coldCount = 0, 0, 0, 0
             priorityTargets = {}
             return
         end
 
-        local cCnt, hCnt, pCnt = 0, 0, 0
+        local cCnt, hCnt, pCnt, fCnt = 0, 0, 0, 0
         local list = {}
 
         for i = 1, #nearby do
             local e = nearby[i]
-            local isCrit = CRITICAL_MOBS[e.type] == true
-            if isCrit then
-                cCnt = cCnt + 1
-            elseif e.is_hostile then
-                hCnt = hCnt + 1
+            if e.emits_heat == false then
+                fCnt = fCnt + 1
             else
-                pCnt = pCnt + 1
-            end
+                local isCrit = CRITICAL_MOBS[e.type] == true
+                if isCrit then
+                    cCnt = cCnt + 1
+                elseif e.is_hostile then
+                    hCnt = hCnt + 1
+                else
+                    pCnt = pCnt + 1
+                end
 
-            if isCrit or e.is_hostile then
-                list[#list + 1] = {
-                    x = e.x,
-                    y = e.y,
-                    z = e.z,
-                    height = e.height or 1.8,
-                    distance = e.distance,
-                    is_crit = isCrit
-                }
+                if isCrit or e.is_hostile then
+                    list[#list + 1] = {
+                        x = e.x,
+                        y = e.y,
+                        z = e.z,
+                        height = e.height or 1.8,
+                        distance = e.distance,
+                        is_crit = isCrit
+                    }
+                end
             end
         end
 
@@ -160,6 +166,7 @@ module = {
         critCount = cCnt
         hostCount = hCnt
         passCount = pCnt
+        coldCount = fCnt
         priorityTargets = top
     end,
 
@@ -168,18 +175,21 @@ module = {
         local tempC = estimateAmbientTempC(player)
 
         -- 1. Panel superior derecho de telemetria FLIR
-        local boxX = w - 122
+        local boxX = w - 126
         local boxY = 8
-        h.drawRect(boxX, boxY, 114, 28, "#AA0A0814")
+        h.drawRect(boxX, boxY, 118, 29, "#AA0A0814")
         local cryoTxt = cryoActive and "CRYO-DSP: ACTIVO" or "FLIR IRONBOW: OK"
         local cryoCol = cryoActive and "#00EEFF" or "#FFAA33"
         h.drawText(boxX + 5, boxY + 4, cryoTxt, cryoCol, 0.68)
         h.drawText(boxX + 5, boxY + 13, string.format("AMB: %+d C", tempC), "#FFFFFF", 0.68)
-        h.drawText(boxX + 5, boxY + 21, string.format("C:%d  H:%d  P:%d", critCount, hostCount, passCount), "#FFCC66", 0.65)
+        local censusStr = coldCount > 0
+                and string.format("C:%d H:%d P:%d | F:%d", critCount, hostCount, passCount, coldCount)
+                or string.format("C:%d H:%d P:%d", critCount, hostCount, passCount)
+        h.drawText(boxX + 5, boxY + 21, censusStr, "#FFCC66", 0.64)
 
         -- 2. Barra vertical calibrada Ironbow FLIR en el borde derecho
         local barX = w - 16
-        local barY = 40
+        local barY = 41
         local segH = 8
         h.drawRect(barX - 1, barY - 1, 10, (#IRONBOW_SCALE * segH) + 2, "#CC000000")
         for i = 1, #IRONBOW_SCALE do
@@ -188,7 +198,7 @@ module = {
         h.drawText(barX - 24, barY, "+95C", "#FFFFFF", 0.58)
         h.drawText(barX - 24, barY + (#IRONBOW_SCALE - 1) * segH, string.format("%+dC", tempC), "#77AAFF", 0.58)
 
-        -- 3. Etiquetas AR 3D sobre los 4 blancos termicos principales
+        -- 3. Etiquetas AR 3D solo sobre entidades que realmente emiten firma termica
         for i = 1, #priorityTargets do
             local t = priorityTargets[i]
             local proj = world.worldToScreen(t.x, t.y + t.height + 0.35, t.z)
@@ -196,7 +206,7 @@ module = {
                 local sx = math.floor(proj.x + 0.5)
                 local sy = math.floor(proj.y + 0.5)
                 local tag = t.is_crit and "[CRIT]" or "[HOT]"
-                local col = t.is_crit and "#FFFFFF" or "#FF9922"
+                local col = t.is_crit and "#FFFFFF" or "#FFBB33"
                 h.drawText(sx - math.floor(h.getTextWidth(tag, 0.62) / 2), sy, tag, col, 0.62)
             end
         end
