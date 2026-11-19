@@ -1,8 +1,8 @@
 # Manual de Referencia de la API de Scripting Lua - Vision Goggles v2.0
 
-Bienvenido al manual oficial y completo para la creacion de modulos, HUDs tacticos y control de shaders en **Vision Goggles**.
+Bienvenido al manual oficial y completo para la creacion de modulos, HUDs tacticos, realidad aumentada 3D y control de shaders en **Vision Goggles**.
 
-Este documento detalla el 100% de las funciones, estructuras, tablas globales y ciclo de vida expuestos por el motor de Lua en Java para Minecraft 1.20.1.
+Este documento detalla el **100% de las funciones, estructuras, tablas globales, uniforms reales y ciclo de vida** expuestos por el motor de Lua (**LuaJ 3.0.1 / Lua 5.2**) en Java para Minecraft 1.20.1.
 
 ---
 
@@ -10,78 +10,102 @@ Este documento detalla el 100% de las funciones, estructuras, tablas globales y 
 1. [Estructura Basica de un Script](#1-estructura-basica-de-un-script)
 2. [Ciclo de Vida del Modulo](#2-ciclo-de-vida-del-modulo)
 3. [Tabla Global player](#3-tabla-global-player)
-4. [Tabla Global world](#4-tabla-global-world)
-5. [Tabla Global hud (Lienzo Tactico)](#5-tabla-global-hud-lienzo-tactico)
+4. [Tabla Global world (Escaneo y Proyeccion AR 3D)](#4-tabla-global-world-escaneo-y-proyeccion-ar-3d)
+5. [Tabla Global hud (Lienzo Tactico Vectorial)](#5-tabla-global-hud-lienzo-tactico-vectorial)
 6. [Tabla Global sound](#6-tabla-global-sound)
-7. [Puente de Shaders: Tabla uniforms](#7-puente-de-shaders-tabla-uniforms)
-8. [Funciones Globales Auxiliares](#8-funciones-globales-auxiliares)
+7. [Tabla Global goggles](#7-tabla-global-goggles)
+8. [Puente de Shaders: Tabla uniforms](#8-puente-de-shaders-tabla-uniforms)
 9. [Guia de Shaders GLSL y Post-Processing JSON](#9-guia-de-shaders-glsl-y-post-processing-json)
 10. [Flujo de Flasheo Fisico en el Juego](#10-flujo-de-flasheo-fisico-en-el-juego)
 11. [Plantilla Limpia (Boilerplate)](#11-plantilla-limpia-boilerplate)
+12. [Limites del Sandbox, Buenas Practicas y Catalogo de Scripts](#12-limites-del-sandbox-buenas-practicas-y-catalogo-de-scripts)
 
 ---
 
 ## 1. Estructura Basica de un Script
 
-Cada archivo `.lua` ubicado en la carpeta `config/vision_goggles/modules/` debe declarar una tabla global obligatoria llamada `module`:
+Cada archivo `.lua` ubicado en la carpeta `config/vision_goggles/modules/` debe declarar una tabla global obligatoria llamada `module`. **Todas las variables y funciones auxiliares fuera de `module` deben declararse con `local`** (porque todos los scripts comparten un mismo entorno global en LuaJ):
 
 ```lua
+local estadoLocal = 0
+
 module = {
-    id              = "vision_goggles:mi_modulo_tactico",  -- Identificador unico (namespaced)
+    id              = "vision_goggles:mi_modulo_tactico",  -- Identificador unico (namespaced, sin comillas en el comentario)
     name            = "Mi Modulo Tactico",                 -- Nombre visible en el juego y en el chip
-    type            = "VISION_MODE",                     -- Tipo: "VISION_MODE" (controla shaders) o "UTILITY" (solo HUD)
-    shader          = "shaders/post/nvg.json",             -- Archivo JSON de shader a cargar (opcional si es UTILITY)
-    required_module = "nvg",                             -- Hardware requerido: "nvg", "thermal", "bio", o nil (autonomo)
-    battery_drain   = 0.5,                                 -- Drenaje adicional de bateria por segundo
+    type            = "VISION_MODE",                       -- Tipo: "VISION_MODE", "HUD" o "UTILITY"
+    shader          = "vision_goggles:shaders/post/nvg.json", -- Ruta JSON o nombre corto ("nvg", "thermal", "bio", "hydro")
+    required_module = "nvg",                               -- Hardware requerido: "nvg", "thermal", "bio", "hydro" o nil (autonomo)
+    battery_drain   = 0.10,                                -- Drenaje adicional de bateria POR TICK (20 ticks = 1 segundo)
 }
 ```
 
 ### Tipos de Modulo (`type`):
-* **`"VISION_MODE"`**: Se comporta como un modo de vision completo. Al activarse, monta el pipeline de shaders indicado en `shader` y permite ajustar variables dinamicas mediante `onUpdateUniforms`.
-* **`"UTILITY"`**: Funciona en segundo plano como modulo de utilidad tactica (HUD, alertas de proximidad, radar, etc.) sin cambiar el shader de vision del jugador.
+* **`"VISION_MODE"`**: Se comporta como un modo de vision o procesador optico. Permite cargar el pipeline de shaders indicado en `shader` y ajustar variables dinamicas de GPU en tiempo real mediante `onUpdateUniforms`.
+* **`"HUD"` / `"UTILITY"`**: Funciona en segundo plano como modulo de interfaz o utilidad tactica (HUD de avionica, alertas de proximidad, radar 360°, visor AR 3D, etc.).
 
 ### Dependencia de Hardware (`required_module`):
-* `"nvg"`: Requiere que las gafas modulares tengan instalado el modulo de **Vision Nocturna**.
+* `"nvg"`: Requiere que las Gafas Modulares (o Pro) tengan instalado el modulo de **Vision Nocturna**.
 * `"thermal"`: Requiere el modulo de **Visor Termico**.
 * `"bio"`: Requiere el modulo **Biometrico**.
-* `nil` (o omitido): Modulo **autonomo**. Puede instalarse en cualquier gafa modular libremente (ideal para radares, brujulas o HUDs de supervivencia).
+* `"hydro"`: Requiere el modulo **Hydro**.
+* `nil` (u omitido): Modulo **autonomo**. Puede instalarse en cualquier Gafa Modular libremente sin requerir un modulo base previo.
+
+### Drenaje de Bateria (`battery_drain`):
+* Se expresa en **unidades de bateria por tick** (`20 ticks = 1 segundo`).
+* Referencia base de las Gafas Modulares (`6000` unidades de capacidad base):
+  * Vision Nocturna / Bio / Hydro base = `1.0` por tick (`5 minutos` de autonomia base).
+  * Visor Termico base = `2.0` por tick.
+  * Un script `UTILITY` ligero suele usar entre `0.0` y `0.10` por tick; un `VISION_MODE` avanzado suele usar `0.15` a `0.30` por tick.
+* Solo se descuenta cuando el visor esta encendido y el chip cumple su `required_module`.
 
 ---
 
 ## 2. Ciclo de Vida del Modulo
 
-El mod invoca funciones callback en momentos clave de la partida:
+El motor invoca hasta **6 funciones callback** opcionales dentro de `module` (todas ejecutadas en el hilo del cliente):
 
 ```lua
--- Se ejecuta una sola vez cuando el jugador enciende el visor o activa el modo
+-- 1. Se ejecuta una sola vez cuando el jugador enciende el visor con el chip activo
 onEnable = function(player)
     sound.playBeep(1.5)
     hud.showAlert("SISTEMA INICIADO", "#00FFAA", 2.0)
 end,
 
--- Se ejecuta una sola vez cuando el jugador apaga el visor o cambia a otro modo
+-- 2. Se ejecuta una sola vez cuando el jugador apaga el visor, se quita las gafas o recarga (/vg reload)
 onDisable = function(player)
     sound.playBeep(0.8)
 end,
 
--- Se ejecuta en cada tick del cliente (20 veces por segundo)
--- Ideal para escanear entidades cercanas, timers y alertas
+-- 3. Se ejecuta en cada tick del cliente (20 veces por segundo)
+-- IDEAL para escanear entidades cercanas, consultar bloques, timers y alertas sonoras
 onTick = function(player, batteryPct)
     -- batteryPct: Float entre 0.0 (vacia) y 1.0 (100% llena)
 end,
 
--- Se ejecuta en cada fotograma antes de dibujar el shader de pantalla
--- Ideal para cambiar colores, contraste, calor infrarrojo o aberracion cromatica
+-- 4. Se ejecuta en cada fotograma antes de dibujar el shader de post-procesado activo
+-- IDEAL para cambiar tintes cromaticos, deslumbramiento (Glare) o interferencia termica
 onUpdateUniforms = function(player, uniforms)
     uniforms.setVec3("colorFilter", 0.2, 1.0, 0.4)
 end,
 
--- Se ejecuta en cada fotograma durante el pase de renderizado del HUD de Minecraft
--- Permite dibujar figuras geometricas, texto, barras y radares
+-- 5. Se ejecuta en cada fotograma durante el pase de renderizado del HUD de Minecraft
+-- Permite dibujar figuras vectoriales, texto, barras, radares y marcadores AR 3D
 onRenderHud = function(hud)
     local w = hud.getWidth()
     local h = hud.getHeight()
     hud.drawText(10, 10, "ESTADO OK", "#00FF88", 1.0)
+end,
+
+-- 6. Se ejecuta en modo Termico para cada entidad viva cercana
+-- Permite asignar la firma cromatica que entra al pipeline Ironbow de thermal.fsh
+onThermalColor = function(entityType, isHostile)
+    if entityType == "minecraft:player" or entityType == "minecraft:creeper" then
+        return "#00FFFF" -- Firma blanca incandescente maxima en Ironbow
+    elseif isHostile then
+        return "#FF8800" -- Firma caliente naranja/amarilla
+    else
+        return "#1144FF" -- Supresion criogenica fria para animales pasivos
+    end
 end
 ```
 
@@ -94,147 +118,175 @@ La tabla `player` proporciona telemetria en tiempo real sobre el jugador local:
 | Funcion | Retorno | Descripcion |
 | :--- | :--- | :--- |
 | `player.getHealth()` | `number` | Salud actual en medio-corazones (ej. `20.0`). |
-| `player.getMaxHealth()` | `number` | Salud maxima del jugador (ej. `20.0` o mas con absorcion/vida extra). |
+| `player.getMaxHealth()` | `number` | Salud maxima del jugador (ej. `20.0`). |
 | `player.getFoodLevel()` | `number` | Nivel de hambre entre `0` y `20`. |
 | `player.getSaturation()` | `number` | Nivel de saturacion exacta (ej. `5.0`). |
 | `player.getArmor()` | `number` | Puntos de armadura fisica (`0` a `20+`). |
 | `player.getOxygen()` | `number` | Oxigeno restante en porcentaje (`0.0` a `100.0`). |
-| `player.getX()` | `number` | Coordenada X absoluta en el mundo. |
+| `player.getX()` | `number` | Coordenada X exacta en el mundo. |
 | `player.getY()` | `number` | Coordenada Y (altura / capa) en el mundo. |
-| `player.getZ()` | `number` | Coordenada Z absoluta en el mundo. |
-| `player.getYaw()` | `number` | Rotacion horizontal de la mirada (en grados `-180` a `180` o `0` a `360`). |
-| `player.getPitch()` | `number` | Inclinacion vertical de la mirada (`-90` arriba, `+90` abajo). |
-| `player.getSpeed()` | `number` | Velocidad de movimiento horizontal en bloques por segundo. |
-| `player.getDimension()` | `string` | Identificador de la dimension (`"overworld"`, `"the_nether"`, `"the_end"`). |
-| `player.getBiome()` | `string` | Nombre del bioma actual (ej. `"minecraft:plains"`, `"desert"`). |
-| `player.getLightLevel()` | `number` | Nivel de luz en la posicion del jugador (`0` a `15`). |
-| `player.isFlying()` | `boolean` | `true` si el jugador esta volando (creativo o elytras). |
+| `player.getZ()` | `number` | Coordenada Z exacta en el mundo. |
+| `player.getYaw()` | `number` | Rotacion horizontal de la mirada en grados (`0° = Sur`, `90° = Oeste`, `180° = Norte`, `270° = Este`). Para rumbo de brujula norte: `((yaw + 180) % 360 + 360) % 360`. |
+| `player.getPitch()` | `number` | Inclinacion vertical de la mirada (`-90°` arriba, `+90°` abajo). |
+| `player.getSpeed()` | `number` | Velocidad de movimiento horizontal en **bloques por segundo (`m/s`)**. |
+| `player.getDimension()` | `string` | Path de la dimension (`"overworld"`, `"the_nether"`, `"the_end"`). |
+| `player.getBiome()` | `string` | ID de registro del bioma actual (ej. `"minecraft:plains"`, `"minecraft:deep_dark"`). |
+| `player.getLightLevel()` | `number` | Nivel de luz combinado en la posicion del jugador (`0` a `15`). |
+| `player.onGround()` | `boolean` | `true` si el jugador apoya los pies sobre suelo firme. |
+| `player.isFlying()` | `boolean` | `true` si el jugador esta volando (vuelo creativo o planeando con **Elytras**). |
 | `player.isSprinting()` | `boolean` | `true` si el jugador esta corriendo. |
-| `player.isCrouching()` | `boolean` | `true` si el jugador esta agachado (sneak). |
-| `player.isInWater()` | `boolean` | `true` si el jugador tiene la cabeza o cuerpo en agua. |
-| `player.isDay()` | `boolean` | `true` si es de dia en la superficie del Overworld. |
+| `player.isCrouching()` | `boolean` | `true` si el jugador esta agachado (sigilo). |
+| `player.isInWater()` | `boolean` | `true` si el jugador esta en agua. |
+| `player.isDay()` | `boolean` | `true` si es de dia en el mundo actual. |
 | `player.getBattery()` | `number` | Nivel de bateria de las gafas (`0.0` a `1.0`). |
-| `player.hasGoggles()` | `boolean` | `true` si el jugador tiene puestas unas gafas de Vision Goggles. |
-| `player.isGogglesActive()`| `boolean` | `true` si el visor esta encendido. |
-| `player.hasModule(name)` | `boolean` | `true` si las gafas tienen instalado el modulo dado (ej. `"nvg"`, `"thermal"`). |
-| `player.getEffects()` | `table` | Lista de efectos de pocion activos con `{ id, duration, amplifier, is_beneficial }`. |
+| `player.hasGoggles()` | `boolean` | `true` si lleva puestas unas gafas de Vision Goggles (casco o slot Curios/Accessories). |
+| `player.isGogglesActive()`| `boolean` | `true` si el visor esta completamente desplegado y encendido. |
+| `player.hasModule(name)` | `boolean` | `true` si las gafas tienen instalado el modulo dado (ej. `"nvg"`, `"thermal"`, `"bio"`). |
+| `player.isProGoggles()` | `boolean` | `true` si las gafas equipadas son **Gafas Modulares Pro**. |
+| `player.getMaxModules()` | `number` | Cantidad maxima de ranuras de las gafas equipadas (`2` en Modular, `4` en Pro). |
+| `player.getGogglesType()` | `string` | ID del item de gafas equipado (ej. `"modular_goggles"`, `"pro_modular_goggles"`, `"none"`). |
+| `player.getInstalledModules()` | `table` | Lista indexada desde `1` con los IDs en texto de todos los modulos instalados en las gafas. |
+| `player.getEffects()` | `table` | Lista de efectos de pocion activos con `{ id, name, duration, amplifier, is_beneficial }`. (`duration` en ticks; `-1` si es infinito). |
 
 ---
 
-## 4. Tabla Global `world`
+## 4. Tabla Global `world` (Escaneo y Proyeccion AR 3D)
 
-Permite escanear el entorno, detectar entidades y realizar trazado de rayos (*raycasting*):
+Permite escanear el entorno, detectar entidades, consultar bloques y proyectar coordenadas 3D del mundo a la pantalla 2D. Todos los rangos de busqueda estan acotados por seguridad a un maximo de **`64.0` bloques**.
 
-### `world.getTargetEntity(range)`
-Lanza un rayo desde los ojos del jugador hacia donde apunta la mira y devuelve la entidad impactada (hasta `range` bloques, por defecto `30`):
+### `world.getTargetEntity(range?, throughWalls?)`
+Lanza un rayo desde los ojos del jugador hacia donde apunta la mira (por defecto `30.0` bloques, `throughWalls = false` para respetar muros solidos):
 ```lua
-local target = world.getTargetEntity(25)
+local target = world.getTargetEntity(32.0, false)
 if target ~= nil then
-    print(target.name)          -- Nombre del mob (ej. "Zombie")
-    print(target.health)        -- Vida actual
-    print(target.max_health)    -- Vida maxima
-    print(target.distance)      -- Distancia al jugador en bloques
-    print(target.armor)         -- Puntos de armadura del mob
-    print(target.is_hostile)    -- true si es monstruo agresivo
-    print(target.is_player)     -- true si es otro jugador
+    -- Campos disponibles en toda tabla de entidad:
+    -- target.name        (string: nombre traducido, ej. "Creeper")
+    -- target.type        (string: ID de registro, ej. "minecraft:creeper")
+    -- target.health      (number: vida actual)
+    -- target.max_health  (number: vida maxima)
+    -- target.armor       (number: puntos de armadura)
+    -- target.x, y, z     (number: posicion 3D interpolada por frame)
+    -- target.eye_y       (number: altura exacta de los ojos)
+    -- target.height      (number: altura de la hitbox en bloques)
+    -- target.yaw, pitch  (number: orientacion de la entidad)
+    -- target.distance    (number: distancia al jugador en bloques)
+    -- target.is_hostile  (boolean: true si es monstruo hostil)
+    -- target.is_player   (boolean: true si es otro jugador)
 end
 ```
 
-### `world.getEntitiesInRadius(radius)`
-Devuelve una lista de todas las entidades vivas en una esfera de `radius` bloques alrededor del jugador:
+### `world.getEntitiesInRadius(radius?)`
+Devuelve un array Lua (1-indexado) con todas las entidades vivas (excepto el jugador local) dentro de una esfera de `radius` bloques (por defecto `16.0`, maximo `64.0`). Cada elemento contiene exactamente los mismos campos listados arriba.
+
+### `world.worldToScreen(x, y, z)`
+Proyecta una coordenada 3D del mundo `(x, y, z)` a coordenadas 2D de la pantalla GUI escalada usando la matriz y el FOV real de la camara:
 ```lua
-local nearby = world.getEntitiesInRadius(16)
-for i = 1, #nearby do
-    local e = nearby[i]
-    if e.is_hostile then
-        -- Procesar enemigo
-    end
+local proj = world.worldToScreen(ent.x, ent.y + ent.height * 0.5, ent.z)
+if proj ~= nil and proj.visible and not proj.behind then
+    -- proj.x        (number: coordenada X en pixeles GUI)
+    -- proj.y        (number: coordenada Y en pixeles GUI)
+    -- proj.visible  (boolean: true si cae dentro del recuadro de pantalla)
+    -- proj.behind   (boolean: true si el punto queda detras de la camara)
+    -- proj.distance (number: distancia euclidiana 3D a la camara)
+    hud.drawCircle(math.floor(proj.x), math.floor(proj.y), 10, "#00FFAA")
 end
 ```
 
-### `world.raycastBlock(range)`
-Lanza un rayo hacia el bloque al que apunta la mira del jugador:
+### `world.raycastBlock(range?)`
+Lanza un rayo hacia el bloque solido al que apunta la mira (por defecto `10.0`, maximo `64.0`):
 ```lua
-local hit = world.raycastBlock(10)
+local hit = world.raycastBlock(24.0)
 if hit ~= nil then
-    print(hit.id)        -- ID de registro (ej. "minecraft:diamond_ore")
-    print(hit.x, hit.y, hit.z) -- Coordenadas del bloque
-    print(hit.distance)  -- Distancia exacta al bloque
+    printLog(hit.name)        -- ID de registro (ej. "minecraft:diamond_ore")
+    printLog(hit.id)          -- Alias identico a hit.name
+    printLog(hit.x .. "," .. hit.y .. "," .. hit.z) -- Coordenadas enteras del bloque
+    printLog(hit.light_level) -- Nivel de luz en el bloque (0 a 15)
+    printLog(hit.can_see_sky) -- true si tiene vista directa al cielo
+    printLog(hit.distance)    -- Distancia exacta en bloques
 end
 ```
 
 ### `world.getBlock(x, y, z)`
-Devuelve el ID de bloque (`string`) en las coordenadas especificadas (ej. `"minecraft:lava"`).
+Devuelve el ID de registro del bloque (`string`, ej. `"minecraft:lava"` o `"minecraft:air"` si el chunk no esta cargado) en las coordenadas dadas.
 
-### `world.getLightAt(x, y, z)`
-Devuelve el nivel de luz combinado (`0` a `15`) en una posicion del mundo.
+### `world.getLightAt(x, y, z)` y `world.getLightAtPlayer()`
+Devuelven el nivel de luz combinado (`0` a `15`) en `(x, y, z)` o en la posicion actual del jugador.
+
+### `world.getTimeOfDay()`, `world.isRaining()`, `world.isThundering()`
+* `world.getTimeOfDay()`: Tick solar del dia entre `0` (`06:00 AM`) y `23999`.
+* `world.isRaining()`: `true` si esta lloviendo o nevando.
+* `world.isThundering()`: `true` si hay tormenta electrica activa.
 
 ---
 
-## 5. Tabla Global `hud` (Lienzo Tactico)
+## 5. Tabla Global `hud` (Lienzo Tactico Vectorial)
 
-Disponible exclusivamente dentro de la funcion `onRenderHud(h)`. Todos los colores se especifican en formato hexadecimal `#RRGGBB` o `#AARRGGBB`:
+Disponible para encolar comandos de dibujo dentro de `onRenderHud(h)` (`showAlert` tambien puede llamarse desde `onEnable` u `onTick`). Todos los colores aceptan formato hexadecimal `"#RRGGBB"` (opaco) o `"#AARRGGBB"` (con canal alfa):
 
 | Funcion | Parametros | Descripcion |
 | :--- | :--- | :--- |
-| `h.getWidth()` | *ninguno* | Ancho de la pantalla escalada en pixeles. |
-| `h.getHeight()` | *ninguno* | Alto de la pantalla escalada en pixeles. |
-| `h.drawText(x, y, text, color, scale)` | `(int, int, string, string, float)` | Dibuja texto con escala configurable (`0.5` a `2.0`). |
-| `h.drawRect(x, y, w, h, color)` | `(int, int, int, int, string)` | Dibuja un rectangulo solido o semitransparente. |
-| `h.drawProgressBar(x, y, w, h, pct, color)` | `(int, int, int, int, float, string)` | Dibuja una barra de progreso con fondo oscuro y relleno proporcional (`pct` de 0.0 a 1.0). |
-| `h.drawLine(x1, y1, x2, y2, color)` | `(int, int, int, int, string)` | Traza una linea recta entre dos puntos. |
-| `h.drawCircle(cx, cy, radius, color)` | `(int, int, int, string)` | Dibuja la circunferencia vacia de un circulo (ideal para radares y reticulas). |
-| `h.drawDisc(cx, cy, radius, color)` | `(int, int, int, string)` | Dibuja un circulo relleno / disco solido (ideal para puntos de radar). |
-| `h.showAlert(msg, color, duration)` | `(string, string, float)` | Muestra un cartel de alerta tactica parpadeante en pantalla durante `duration` segundos. |
+| `h.getWidth()` | *ninguno* | Ancho de la pantalla GUI escalada en pixeles. |
+| `h.getHeight()` | *ninguno* | Alto de la pantalla GUI escalada en pixeles. |
+| `h.getTextWidth(text, scale?)` | `(string, float=1.0)` | Devuelve el ancho exacto en pixeles que ocupara `text` a la escala indicada. |
+| `h.drawText(x, y, text, color?, scale?)` | `(int, int, string, string="#00FF00", float=1.0)` | Dibuja texto con escala configurable. |
+| `h.drawRect(x, y, w, h, color?)` | `(int, int, int, int, string="#FFFFFF")` | Dibuja un rectangulo solido o semitransparente (`#AARRGGBB`). |
+| `h.drawProgressBar(x, y, w, h, pct, color?)` | `(int, int, int, int, float, string="#00FF88")` | Dibuja una barra de progreso con fondo oscuro (`#88111111`) y relleno proporcional (`0.0` a `1.0`). |
+| `h.drawLine(x1, y1, x2, y2, color?)` | `(int, int, int, int, string="#FFFFFF")` | Traza una linea vectorial orientada de 1px de grosor entre dos puntos. |
+| `h.drawCircle(cx, cy, radius, color?)` | `(int, int, int, string="#FFFFFF")` | Dibuja la circunferencia vacia de un circulo de 32 segmentos (radio `1..512`). |
+| `h.drawDisc(cx, cy, radius, color?)` | `(int, int, int, string="#FFFFFF")` | Dibuja un circulo relleno acelerado por GPU (ideal para fondos de radar y blips). |
+| `h.showAlert(msg, color?, durationSec?)` | `(string, string="#FF3333", float=2.5)` | Muestra un cartel de alerta tactica parpadeante en la parte superior central durante `durationSec` segundos. |
 
 ---
 
 ## 6. Tabla Global `sound`
 
-Permite emitir efectos de sonido tacticos del visor:
+Permite reproducir efectos de sonido tacticos locales (UI):
 
-* `sound.playBeep(pitch)`: Emite un pitido electronico. `pitch` modula el tono (`0.5` grave, `1.0` normal, `2.0` agudo).
-* `sound.playAlert()`: Emite una alarma tactica de advertencia militar.
-* `sound.playClick()`: Clic mecanico de boton o cambio de modo.
-* `sound.playHum()`: Zumbido de condensador de encendido.
+* `sound.playBeep(pitch?)`: Emite el pitido electronico del visor (`vision_goggles:blip`). `pitch` modula el tono (`0.5` grave, `1.0` normal, `2.0` agudo).
+* `sound.playAlert()`: Emite una alarma tactica aguda (`block.note_block.pling`, tono `1.8`).
+* `sound.playClick()`: Clic mecanico de fijacion (`ui.button.click`).
+* `sound.play(soundId, pitch?, volume?)`: Reproduce cualquier sonido registrado en Minecraft por su `ResourceLocation` (ej. `sound.play("minecraft:block.beacon.activate", 1.5, 0.6)`).
 
 ---
 
-## 7. Puente de Shaders: Tabla `uniforms`
+## 7. Tabla Global `goggles`
 
-Disponible exclusivamente dentro de la funcion `onUpdateUniforms(player, uniforms)`. Permite enviar variables numericas y vectoriales en tiempo real a los shaders GLSL:
+Permite consultar o ajustar en cliente el limite de ranuras de las Gafas Modulares:
+
+* `goggles.getMaxModules(type)`: Devuelve el maximo de ranuras para `"modular"` (por defecto `2`) o `"pro"` (por defecto `4`).
+* `goggles.setMaxModules(type, count)`: Ajusta la capacidad de ranuras en cliente para `"modular"` o `"pro"`. *(Para sincronizar en servidor multijugador, usa el comando de administrador `/vg slots modular|pro <cantidad>`).*
+
+---
+
+## 8. Puente de Shaders: Tabla `uniforms`
+
+Disponible exclusivamente dentro de `onUpdateUniforms(player, uniforms)`. Sobrescribe en tiempo real las variables uniformes del shader `PostChain` activo:
 
 * `uniforms.setFloat("nombreUniform", floatVal)`
 * `uniforms.setVec2("nombreUniform", x, y)`
 * `uniforms.setVec3("nombreUniform", r, g, b)`
 * `uniforms.setVec4("nombreUniform", r, g, b, a)`
-* `uniforms.setInt("nombreUniform", intVal)`
 
-### Uniforms Nativos en los Shaders de Vision Goggles:
-* **`colorFilter` (vec3)**: Multiplicador RGB aplicado a la pantalla.
-  * NVG Verde clasico: `(0.1, 1.0, 0.4)`
-  * Fosforo Blanco Militar: `(0.80, 0.95, 1.12)`
-  * Termico Predador Infrarrojo: `(1.10, 0.50, 0.15)`
-  * Hydro Abisal: `(0.15, 0.90, 0.95)`
-* **`gain` / `exposure` (float)**: Amplificacion luminica digital.
-* **`time` (float)**: Tiempo continuo del juego para animaciones de ruido o estatica.
-* **`battery` (float)**: Carga de la bateria transmitida al shader.
+### Uniforms Reales Declarados en los Shaders Nativos de Vision Goggles:
 
----
+| Shader JSON | Uniforms modificables desde Lua |
+| :--- | :--- |
+| `vision_goggles:shaders/post/nvg.json` | `colorFilter` (`vec3`), `Glare` (`float` `0.0..1.0`), `focus` (`float` `0.0..1.0`), `battery` (`float`), `time` (`float`), `u_DSPActive` (`float`) |
+| `vision_goggles:shaders/post/thermal.json` | `Interference` (`float` `0.0..1.0`), `focus` (`float`), `battery` (`float`), `time` (`float`), `u_DSPActive` (`float`) |
+| `vision_goggles:shaders/post/bio.json` | `focus` (`float`), `battery` (`float`), `time` (`float`), `u_DSPActive` (`float`) |
+| `vision_goggles:shaders/post/hydro.json` | `focus` (`float`), `battery` (`float`), `time` (`float`), `u_DSPActive` (`float`) |
 
-## 8. Funciones Globales Auxiliares
-
-* `getTime()`: Devuelve el tiempo transcurrido en segundos (`double`) con precision de submilisegundo para animaciones de rotacion, pulsos u ondas sinusoidales (`math.sin(getTime() * velocidad)`).
-* `printLog(mensaje)`: Imprime un mensaje en la consola de Minecraft y en el archivo `latest.log` con el prefijo `[Vision Goggles Lua]`.
+### Funciones Globales Auxiliares:
+* `getTime()`: Devuelve el tiempo continuo del juego en **segundos** (`double`, con precision sub-tick en mundo). Ideal para osciladores (`math.sin(getTime() * velocidad)`) y cooldowns (`now - lastAlert >= 3.0`).
+* `printLog(mensaje)`: Imprime un mensaje en la consola y en `latest.log` con el prefijo `[Vision Goggles Lua]`.
 
 ---
 
 ## 9. Guia de Shaders GLSL y Post-Processing JSON
 
-Para crear un efecto de post-procesamiento totalmente personalizado:
+Todos los shaders del mod utilizan **OpenGL 3.2 Core Profile (`#version 150`)**:
 
 1. **Archivo PostChain JSON (`assets/vision_goggles/shaders/post/mi_shader.json`)**:
-   Define los pases de renderizado y el programa GLSL asociado:
    ```json
    {
      "targets": [ "swap" ],
@@ -263,7 +315,7 @@ Para crear un efecto de post-procesamiento totalmente personalizado:
 
    void main() {
        vec4 base = texture(DiffuseSampler, texCoord);
-       fragColor = vec4(base.rgb * colorFilter, base.a);
+       fragColor = vec4(base.rgb * colorFilter, 1.0);
    }
    ```
 
@@ -271,18 +323,99 @@ Para crear un efecto de post-procesamiento totalmente personalizado:
 
 ## 10. Flujo de Flasheo Fisico en el Juego
 
-Los modulos programables no son comandos virtuales; son **chips fisicos de hardware** que se integran en el inventario y en las gafas:
+Los modulos programables son **chips fisicos de hardware** que se graban en la Estacion de Modificacion:
 
-1. **Escribir el Script**: Crea o edita tu archivo `.lua` en `config/vision_goggles/modules/`.
+1. **Escribir o Editar el Script**: Coloca tu archivo `.lua` en `config/vision_goggles/modules/` o editalo desde `/vg`.
 2. **Obtener el Script de Instalacion**:
-   * Abre la terminal con `/vg` o `/vg gui`.
-   * Selecciona tu archivo y haz clic en el boton **`Obtener Script`**.
+   * Abre la terminal con `/vg` o `/vg gui`, selecciona tu archivo y pulsa **`Obtener Script`**.
    * O usa el comando: `/vg givescript <id_modulo> [nombre] [color_hex]`.
 3. **Quemar el Chip en la Estacion de Modificacion**:
-   * **Ranura Izquierda**: Coloca un `Modulo Programable` (en blanco).
-   * **Ranura Central**: Coloca el `Script de Instalacion`.
-   * **Ranura Derecha**: Retira el `Modulo Programado` con tu script grabado fisicamente en su NBT.
+   * **Ranura Izquierda**: `Modulo Programable` (en blanco).
+   * **Ranura Central**: `Script de Instalacion` (no se consume al grabar).
+   * **Ranura Derecha**: Retira el `Modulo Programado` con el firmware grabado en su NBT.
 4. **Instalacion en las Gafas**:
-   * Coloca tus **Gafas Modulares** en la estacion.
-   * Inserta el chip programado en una ranura libre de modulo.
-   * ¡Enciende el visor y disfruta de tu interfaz tactica personalizada!
+   * Coloca tus **Gafas Modulares** (2 ranuras) o **Gafas Modulares Pro** (4 ranuras) en la estacion e inserta el chip programado.
+
+---
+
+## 11. Plantilla Limpia (Boilerplate)
+
+Copia esta plantilla como punto de partida seguro para tus propios scripts:
+
+```lua
+-- ============================================================================
+-- PLANTILLA OFICIAL DE MODULO LUA - VISION GOGGLES v2.0
+-- ============================================================================
+
+-- 1. Variables de estado SIEMPRE locales al archivo
+local ultimoEscaneo = 0
+local amenazasCache = 0
+
+module = {
+    id = "vision_goggles:mi_modulo_personalizado",
+    name = "Mi Modulo Personalizado",
+    type = "UTILITY",
+    -- required_module = "nvg", -- Descomenta si requiere "nvg", "thermal", "bio" o "hydro"
+    battery_drain = 0.05,
+
+    onEnable = function(p)
+        ultimoEscaneo = getTime()
+        sound.playBeep(1.5)
+        hud.showAlert("MODULO PERSONALIZADO ACTIVO", "#00FFAA", 2.0)
+    end,
+
+    onDisable = function(p)
+        amenazasCache = 0
+        sound.playBeep(0.8)
+    end,
+
+    onTick = function(p, batteryPct)
+        local ahora = getTime()
+        if (ahora - ultimoEscaneo) >= 0.5 then
+            ultimoEscaneo = ahora
+            local cercanos = world.getEntitiesInRadius(20.0)
+            local cuenta = 0
+            if cercanos ~= nil then
+                for i = 1, #cercanos do
+                    if cercanos[i].is_hostile then
+                        cuenta = cuenta + 1
+                    end
+                end
+            end
+            amenazasCache = cuenta
+        end
+    end,
+
+    onRenderHud = function(h)
+        local x = 12
+        local y = 44
+        local color = amenazasCache > 0 and "#FF4444" or "#00FFAA"
+        h.drawRect(x, y, 108, 18, "#AA081018")
+        h.drawRect(x, y, 2, 18, color)
+        h.drawText(x + 6, y + 5, "HOSTILES (20m): " .. amenazasCache, color, 0.75)
+    end
+}
+```
+
+---
+
+## 12. Limites del Sandbox, Buenas Practicas y Catalogo de Scripts
+
+### Reglas del Sandbox y Rendimiento:
+1. **Compatibilidad Lua 5.2 (LuaJ 3.0.1)**: No utilices operadores exclusivos de Lua 5.3+ como `//` (division entera) ni operadores bitwise nativos (`&`, `|`, `>>`). Usa `math.floor(a / b)` y la libreria estandar `bit32`.
+2. **Aislamiento con `local`**: Todos los scripts se cargan sobre una misma instancia de `Globals`. Cualquier variable o funcion auxiliar sin `local` puede ser sobrescrita por otro script.
+3. **Presupuesto de CPU (`100,000` instrucciones por callback)**: `SandboxedDebugLib` aborta automaticamente cualquier bucle infinito o funcion que supere 100,000 instrucciones bytecode.
+   * **Patron recomendado**: Ejecuta `world.getEntitiesInRadius` o barridos `world.getBlock` dentro de `onTick` (20 veces/seg) o mediante *time-slicing* (una capa por tick), guarda los resultados en una tabla `local`, y usa `onRenderHud` solo para proyectar y dibujar.
+4. **Presupuesto de GPU (`1,000` comandos HUD por fotograma)**: `LuaHudCanvas` admite hasta 1,000 primitivas `draw*` por frame entre todos los modulos activos.
+5. **Seguridad del Sandbox**: Las librerias `io`, `package`, `require`, `luajava`, `debug`, `loadfile` y `dofile` estan anuladas; `os` conserva unicamente `clock`, `time`, `difftime` y `date`.
+
+### Catalogo de los 6 Scripts Oficiales Incluidos (`assets/vision_goggles/lua_examples/`):
+
+| Archivo | ID (`module.id`) | Tipo / Req. | Que implementa y enseña |
+| :--- | :--- | :--- | :--- |
+| `01_radar_tactico_360.lua` | `vision_goggles:radar_amenazas` | `UTILITY` (Autonomo) | **Radar circular rotatorio 360°** con matriz de rotacion 2D (`player.getYaw`), anillos de distancia, barrido animado, blips por prioridad, indicador de desnivel vertical y sonar acustico progresivo. |
+| `02_visor_ar_objetivos.lua` | `vision_goggles:threat_scanner` | `UTILITY` (Req: `"bio"`) | **Realidad Aumentada 3D (`world.worldToScreen`)** con corchetes `[  ]` sobre enemigos en el mundo, chevrones laterales fuera de pantalla (`<`/`>`) y tarjeta IFF de fijacion en mira (`world.getTargetEntity`). |
+| `03_visor_combate_reactivo.lua` | `vision_goggles:cyber_visor` | `VISION_MODE` (Req: `"nvg"`) | **Shader GLSL reactivo (`onUpdateUniforms`)** con adaptacion cromatica suave por entorno (Agua, Nether, End, Cueva P45), destello rojo + `Glare` al recibir dano, pulso cardiaco doble y **osciloscopio ECG en vivo**. |
+| `04_hud_piloto_avionica.lua` | `vision_goggles:tactical_hud` | `HUD` (Autonomo) | **HUD de avionica y vuelo** con cinta de brujula deslizante (`000°=Norte`), escalera de cabeceo (*Pitch Ladder*), velocimetro `m/s`, variometro `VSI` (`dy/dt`), alarma GPWS `¡PULL UP!`, reloj solar 24h, clima y efectos de pocion. |
+| `05_escaner_geologico_entorno.lua` | `vision_goggles:geo_scanner` | `UTILITY` (Autonomo) | **Escaner subterraneo por *Time-Slicing*** (`world.getBlock` escaneando `9x7x9 = 567` bloques en 7 ticks sin afectar FPS), marcadores AR 3D sobre menas de diamante/escombros/spawners, detector de lava bajo los pies y analizador de bloque en mira. |
+| `06_suite_termica_flir.lua` | `vision_goggles:thermal_palette` | `UTILITY` (Req: `"thermal"`) | **Clasificador termico IFF para el pipeline Ironbow** (`onThermalColor`), estabilizador criogenico que reduce `Interference` en el Nether (`onUpdateUniforms`), barra de calibracion FLIR de 6 bandas, temperatura `°C` estimada y etiquetas termicas 3D. |

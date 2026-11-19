@@ -42,12 +42,16 @@ public class ModularGogglesItem extends VisionGogglesItem {
         }
 
         // Standby drain if any module is installed and active mode is OFF
-        if (!stack.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
+        CompoundTag nbt = stack.getOrCreateTag();
+        if (!nbt.contains(ModConstants.TAG_BATTERY)) {
+            nbt.putFloat(ModConstants.TAG_BATTERY, (float) getBatteryCapacity(stack));
+        }
+        if (!nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
             if (!getModes(stack).isEmpty() || !utils.isEmpty()) {
-                float currentBattery = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+                float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
                 if (currentBattery > 0) {
                     float newBattery = Math.max(0, currentBattery - ModConfig.getBatteryStandbyDrain());
-                    stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, newBattery);
+                    nbt.putFloat(ModConstants.TAG_BATTERY, newBattery);
                     
                     // If battery just died, force sync to tracking clients so flashlights turn off
                     if (currentBattery > 0 && newBattery == 0) {
@@ -362,11 +366,11 @@ public class ModularGogglesItem extends VisionGogglesItem {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
         // Battery Info
-        int current = 0;
+        int max = getBatteryCapacity(stack);
+        int current = max;
         if (stack.hasTag() && stack.getTag().contains(ModConstants.TAG_BATTERY)) {
             current = (int) stack.getTag().getFloat(ModConstants.TAG_BATTERY);
         }
-        int max = getBatteryCapacity(stack);
         int percent = (int) (((float)current / (float)max) * 100);
         
         tooltipComponents.add(Component.translatable("tooltip.vision_goggles.battery_info", current, max)
