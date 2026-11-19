@@ -27,7 +27,7 @@ public class LuaClientBridge {
     public static double getClientTime() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
-            return (double) mc.level.getGameTime() + (double) mc.getFrameTime();
+            return ((double) mc.level.getGameTime() + (double) mc.getFrameTime()) / 20.0;
         }
         return System.currentTimeMillis() / 1000.0;
     }

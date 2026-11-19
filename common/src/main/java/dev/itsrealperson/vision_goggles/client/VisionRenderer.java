@@ -86,13 +86,17 @@ public class VisionRenderer {
         dev.architectury.event.events.common.PlayerEvent.PLAYER_QUIT.register(player -> {
             if (player.level().isClientSide) {
                 Minecraft mc = Minecraft.getInstance();
+                GogglesEquipAnimator.reset();
                 cleanup(mc);
             }
         });
     }
 
     public static void onClientTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null) return;
+        if (mc.player == null || mc.level == null) {
+            GogglesEquipAnimator.reset();
+            return;
+        }
 
         if (mc.player.hurtTime == 9 && visorActive) {
             damageFlickerTimer = 10;
@@ -412,29 +416,34 @@ public class VisionRenderer {
                 if (isFirstPerson) {
                     org.joml.Vector3f camDir = headRot.transform(new org.joml.Vector3f(0, 0, 1));
                     org.joml.Vector3f camUp = headRot.transform(new org.joml.Vector3f(0, 1, 0));
-                    org.joml.Vector3f camRight = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+                    // In Minecraft's right-handed world space (yaw=0 -> +Z South, +Y Up),
+                    // headRot(+1,0,0) points LEFT (+X East) and headRot(-1,0,0) points RIGHT (-X West).
+                    org.joml.Vector3f camLeft = headRot.transform(new org.joml.Vector3f(1, 0, 0));
+                    org.joml.Vector3f camRight = headRot.transform(new org.joml.Vector3f(-1, 0, 0));
 
                     switch (src.slot) {
                         case HEAD_GOGGLES -> {
-                            originWorld = camPos.add(camUp.x * 0.08 + camRight.x * 0.12,
-                                                     camUp.y * 0.08 + camRight.y * 0.12,
-                                                     camUp.z * 0.08 + camRight.z * 0.12);
+                            originWorld = camPos.add(camUp.x * 0.08 + camLeft.x * 0.12,
+                                                     camUp.y * 0.08 + camLeft.y * 0.12,
+                                                     camUp.z * 0.08 + camLeft.z * 0.12);
                             dir = new org.joml.Vector3f(camDir);
                             up = new org.joml.Vector3f(camUp);
                             right = new org.joml.Vector3f(camRight);
                         }
                         case TORSO_CHEST -> {
-                            originWorld = camPos.add(-camUp.x * 0.35 + camRight.x * 0.18 + camDir.x * 0.15,
-                                                     -camUp.y * 0.35 + camRight.y * 0.18 + camDir.y * 0.15,
-                                                     -camUp.z * 0.35 + camRight.z * 0.18 + camDir.z * 0.15);
+                            originWorld = camPos.add(-camUp.x * 0.35 + camLeft.x * 0.18 + camDir.x * 0.15,
+                                                     -camUp.y * 0.35 + camLeft.y * 0.18 + camDir.y * 0.15,
+                                                     -camUp.z * 0.35 + camLeft.z * 0.18 + camDir.z * 0.15);
                             dir = new org.joml.Vector3f(camDir);
                             up = new org.joml.Vector3f(camUp);
                             right = new org.joml.Vector3f(camRight);
                         }
                         case MAIN_HAND -> {
-                            originWorld = camPos.add(-camUp.x * 0.25 + camRight.x * 0.32 + camDir.x * 0.35,
-                                                     -camUp.y * 0.25 + camRight.y * 0.32 + camDir.y * 0.35,
-                                                     -camUp.z * 0.25 + camRight.z * 0.32 + camDir.z * 0.35);
+                            boolean isRightArm = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT;
+                            float handSide = isRightArm ? 1.0f : -1.0f;
+                            originWorld = camPos.add(-camUp.x * 0.25 + camRight.x * (0.32 * handSide) + camDir.x * 0.35,
+                                                     -camUp.y * 0.25 + camRight.y * (0.32 * handSide) + camDir.y * 0.35,
+                                                     -camUp.z * 0.25 + camRight.z * (0.32 * handSide) + camDir.z * 0.35);
                             net.minecraft.world.phys.Vec3 target = camPos.add(camDir.x * 30.0, camDir.y * 30.0, camDir.z * 30.0);
                             net.minecraft.world.phys.Vec3 delta = target.subtract(originWorld).normalize();
                             dir = new org.joml.Vector3f((float) delta.x, (float) delta.y, (float) delta.z);
@@ -442,9 +451,11 @@ public class VisionRenderer {
                             right = new org.joml.Vector3f(camRight);
                         }
                         case OFF_HAND -> {
-                            originWorld = camPos.add(-camUp.x * 0.25 - camRight.x * 0.32 + camDir.x * 0.35,
-                                                     -camUp.y * 0.25 - camRight.y * 0.32 + camDir.y * 0.35,
-                                                     -camUp.z * 0.25 - camRight.z * 0.32 + camDir.z * 0.35);
+                            boolean isRightArm = player.getMainArm() != net.minecraft.world.entity.HumanoidArm.RIGHT;
+                            float handSide = isRightArm ? 1.0f : -1.0f;
+                            originWorld = camPos.add(-camUp.x * 0.25 + camRight.x * (0.32 * handSide) + camDir.x * 0.35,
+                                                     -camUp.y * 0.25 + camRight.y * (0.32 * handSide) + camDir.y * 0.35,
+                                                     -camUp.z * 0.25 + camRight.z * (0.32 * handSide) + camDir.z * 0.35);
                             net.minecraft.world.phys.Vec3 target = camPos.add(camDir.x * 30.0, camDir.y * 30.0, camDir.z * 30.0);
                             net.minecraft.world.phys.Vec3 delta = target.subtract(originWorld).normalize();
                             dir = new org.joml.Vector3f((float) delta.x, (float) delta.y, (float) delta.z);
@@ -529,7 +540,8 @@ public class VisionRenderer {
 
     private static net.minecraft.world.phys.Vec3 computeArmHandWorldPos(Player player, double px, double py, double pz, float bodyYaw, org.joml.Quaternionf headRot, boolean rightArm, float partialTick) {
         double shoulderY = py + (player.isCrouching() ? 1.05 : 1.25);
-        float sideSign = rightArm ? 1.0f : -1.0f;
+        // With bodyRot = rotationY(-bodyYaw), (+X) maps to the player's LEFT shoulder and (-X) maps to the RIGHT shoulder.
+        float sideSign = rightArm ? -1.0f : 1.0f;
 
         org.joml.Quaternionf bodyRot = new org.joml.Quaternionf().rotationY((float) Math.toRadians(-bodyYaw));
         org.joml.Vector3f shoulderOffset = bodyRot.transform(new org.joml.Vector3f(sideSign * 0.35f, 0.0f, 0.0f));

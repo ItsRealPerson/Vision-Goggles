@@ -1,0 +1,29 @@
+# Caché de compilación (Gradle / Maven) y transformadores
+.gradle/
+build/
+**/build/
+target/
+**/target/
+out/
+.architectury-transformer/
+
+# Entornos de ejecución local (Clientes, Servidores Paper/Folia, Mundos y Logs)
+run/
+**/run/
+server/
+crash-reports/
+logs/
+debug/
+timings/
+spark/
+
+# Binarios, regiones y recursos pesados
+*.jar
+*.class
+*.nbt
+*.mca
+*.dat
+*.png
+*.ogg
+*.bbmodel
+*.zip

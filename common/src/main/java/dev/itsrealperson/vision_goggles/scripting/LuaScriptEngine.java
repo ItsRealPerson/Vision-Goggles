@@ -26,6 +26,7 @@ public class LuaScriptEngine {
             // Sanitize globals: nullify dangerous tables and functions
             globals.set("luajava", LuaValue.NIL);
             globals.set("package", LuaValue.NIL);
+            globals.set("require", LuaValue.NIL);
             globals.set("io", LuaValue.NIL);
             globals.set("loadfile", LuaValue.NIL);
             globals.set("dofile", LuaValue.NIL);

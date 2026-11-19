@@ -7,19 +7,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Animates the player's main arm (and sleeve via PlayerModel.setupAnim) reaching
- * up to the helmet brow/mount during the Vision Goggles flip-down or flip-up transition.
+ * Animates the player's arms reaching up to the forehead while equipping goggles
+ * in 3rd-person/multiplayer, and animates the main arm during visor flip-down / flip-up.
  */
 @Mixin(HumanoidModel.class)
 public abstract class MixinHumanoidModel<T extends LivingEntity> {
@@ -44,6 +46,42 @@ public abstract class MixinHumanoidModel<T extends LivingEntity> {
             return;
         }
 
+        // PlayerRenderer#renderHand invokes setupAnim(player, 0, 0, 0, 0, 0) and only resets xRot;
+        // skip pose modifications in that synthetic call so bare first-person hands stay unaffected.
+        if (ageInTicks == 0.0f && limbSwing == 0.0f && limbSwingAmount == 0.0f && netHeadYaw == 0.0f && headPitch == 0.0f) {
+            return;
+        }
+
+        float headPitchRad = headPitch * ((float) Math.PI / 180.0f);
+
+        if (player.isUsingItem() && player.getUseItem().getItem() instanceof VisionGogglesItem) {
+            ItemStack useStack = player.getUseItem();
+            int duration = Math.max(1, useStack.getUseDuration());
+            float rawProgress = Mth.clamp(
+                    (float) (duration - player.getUseItemRemainingTicks()) / (float) duration,
+                    0.0f,
+                    1.0f
+            );
+            float t = Mth.clamp(rawProgress / 0.65f, 0.0f, 1.0f);
+            float reach = t * t * (3.0f - 2.0f * t);
+
+            InteractionHand usedHand = player.getUsedItemHand();
+            HumanoidArm mainArm = player.getMainArm();
+            HumanoidArm usedArmSide = (usedHand == InteractionHand.MAIN_HAND) ? mainArm : mainArm.getOpposite();
+            ModelPart usedArm = (usedArmSide == HumanoidArm.RIGHT) ? this.rightArm : this.leftArm;
+            visionGoggles$lerpArmToBrow(usedArm, usedArmSide, headPitchRad, reach);
+
+            InteractionHand oppositeHand = (usedHand == InteractionHand.MAIN_HAND)
+                    ? InteractionHand.OFF_HAND
+                    : InteractionHand.MAIN_HAND;
+            if (player.getItemInHand(oppositeHand).isEmpty()) {
+                HumanoidArm oppositeArmSide = usedArmSide.getOpposite();
+                ModelPart oppositeArm = (oppositeArmSide == HumanoidArm.RIGHT) ? this.rightArm : this.leftArm;
+                visionGoggles$lerpArmToBrow(oppositeArm, oppositeArmSide, headPitchRad, reach * 0.90f);
+            }
+            return;
+        }
+
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
         if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem)) {
             return;
@@ -56,14 +94,26 @@ public abstract class MixinHumanoidModel<T extends LivingEntity> {
         }
         HumanoidArm mainArm = player.getMainArm();
         ModelPart arm = (mainArm == HumanoidArm.RIGHT) ? this.rightArm : this.leftArm;
-        float sideSign = (mainArm == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
+        visionGoggles$lerpArmPose(arm, mainArm, -2.05f + (headPitchRad * 0.45f), -0.35f, -0.22f, reach);
+    }
 
-        float targetXRot = -2.05f + (headPitch * ((float) Math.PI / 180.0f) * 0.45f);
-        float targetYRot = -0.35f * sideSign;
-        float targetZRot = -0.22f * sideSign;
+    @Unique
+    private static void visionGoggles$lerpArmToBrow(ModelPart arm, HumanoidArm armSide, float headPitchRad, float weight) {
+        visionGoggles$lerpArmPose(arm, armSide, -2.20f + (headPitchRad * 0.55f), -0.38f, -0.18f, weight);
+    }
 
-        arm.xRot = Mth.lerp(reach, arm.xRot, targetXRot);
-        arm.yRot = Mth.lerp(reach, arm.yRot, targetYRot);
-        arm.zRot = Mth.lerp(reach, arm.zRot, targetZRot);
+    @Unique
+    private static void visionGoggles$lerpArmPose(
+            ModelPart arm,
+            HumanoidArm armSide,
+            float targetXRot,
+            float targetYBase,
+            float targetZBase,
+            float weight
+    ) {
+        float sideSign = (armSide == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
+        arm.xRot = Mth.lerp(weight, arm.xRot, targetXRot);
+        arm.yRot = Mth.lerp(weight, arm.yRot, targetYBase * sideSign);
+        arm.zRot = Mth.lerp(weight, arm.zRot, targetZBase * sideSign);
     }
 }

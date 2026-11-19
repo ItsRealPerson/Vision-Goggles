@@ -1,0 +1,113 @@
+================================================================================
+          GUÍA Y MANUAL DE SCRIPTING EN LUA - VISION GOGGLES v2.0
+================================================================================
+
+Bienvenido al sistema de scripting en Lua de Vision Goggles (LuaJ 3.0.1 / Lua 5.2).
+Todos los archivos '.lua' en esta carpeta (config/vision_goggles/modules/) se
+cargan al iniciar el juego y pueden editarse en vivo con '/vg reload' o '/vg'.
+
+--------------------------------------------------------------------------------
+1. ESTRUCTURA BASICA Y METADATOS DE 'module'
+--------------------------------------------------------------------------------
+Cada script debe declarar una tabla global llamada 'module'. IMPORTANTE: declara
+todas tus variables y funciones auxiliares con 'local' para no chocar con otros
+scripts (el entorno Lua comparte una sola instancia global entre scripts).
+
+module = {
+    id = "vision_goggles:mi_modulo",            -- ID unico (sin comillas en comentario)
+    name = "Mi Modulo Tactico",                 -- Nombre visible en chip y GUI
+    type = "UTILITY",                           -- "VISION_MODE", "HUD" o "UTILITY"
+    shader = "vision_goggles:shaders/post/nvg.json", -- Opcional (o corto: "nvg")
+    required_module = "nvg",                    -- Opcional: "nvg", "thermal", "bio", etc.
+    battery_drain = 0.05,                       -- Drenaje EXTRA por TICK (20 ticks = 1s)
+
+    onEnable = function(player) end,            -- 1 vez al activar visor con chip puesto
+    onDisable = function(player) end,           -- 1 vez al desactivar o recargar
+    onTick = function(player, batteryPct) end,  -- 20 veces/seg (ideal para escaneos)
+    onRenderHud = function(hud) end,            -- Cada frame (dibujo 2D/AR ligero)
+    onUpdateUniforms = function(player, uniforms) end, -- Cada frame si hay shader activo
+    onThermalColor = function(entityType, isHostile) end -- Color termico por entidad
+}
+
+NOTA SOBRE 'battery_drain':
+  La bateria base de las Gafas Modulares es 6000 unidades (NVG = 1.0/tick,
+  Thermal = 2.0/tick). Un script UTILITY ligero suele usar 0.05 - 0.10/tick.
+
+--------------------------------------------------------------------------------
+2. REFERENCIA DE APIS REALES
+--------------------------------------------------------------------------------
+
+[ Global ]
+* getTime()           -> Segundos continuos (en mundo: gameTime / 20.0)
+* printLog(texto)     -> Imprime en consola/latest.log con prefijo Lua
+
+[ hud ] (dibujo en coordenadas GUI escaladas; tope: 1000 comandos/frame)
+* hud.getWidth(), hud.getHeight()
+* hud.getTextWidth(texto, escala?)
+* hud.drawText(x, y, texto, "#RRGGBB" | "#AARRGGBB", escala?)
+* hud.drawRect(x, y, ancho, alto, color?)
+* hud.drawProgressBar(x, y, ancho, alto, progreso_0_a_1, color?)
+* hud.drawLine(x1, y1, x2, y2, color?)
+* hud.drawCircle(cx, cy, radio, color?)
+* hud.drawDisc(cx, cy, radio, color?)
+* hud.showAlert(texto, color?, duracionSeg?)
+
+[ world ] (escaneos acotados a max 64 bloques)
+* world.getTargetEntity(rango?, atraviesaMuros?) -> table | nil
+* world.getEntitiesInRadius(radio?)               -> array de entidades
+  Campos entidad: name, type, health, max_health, armor, x, y, z, eye_y,
+                  height, pitch, yaw, distance, is_hostile, is_player
+* world.raycastBlock(rango?)                      -> table | nil
+  Campos bloque: name, id, x, y, z, light_level, can_see_sky, distance
+* world.worldToScreen(x, y, z) -> { x, y, visible, behind, distance }
+* world.getBlock(x, y, z)      -> string ("minecraft:diamond_ore", etc.)
+* world.getLightAt(x, y, z)    -> int (0..15)
+* world.getLightAtPlayer()     -> int (0..15)
+* world.getTimeOfDay()         -> 0..23999 (0 = 06:00 AM, 6000 = mediodia)
+* world.isRaining(), world.isThundering()
+
+[ player ]
+* getX(), getY(), getZ(), getYaw(), getPitch()
+* getHealth(), getMaxHealth(), getArmor(), getFoodLevel(), getSaturation(), getOxygen()
+* getSpeed()      -> velocidad horizontal en bloques/segundo (m/s)
+* getBiome(), getDimension(), getLightLevel()
+* isInWater(), isDay(), onGround(), isSprinting(), isCrouching(), isFlying()
+* hasGoggles(), isGogglesActive(), getBattery(), hasModule(nombre)
+* isProGoggles(), getMaxModules(), getGogglesType(), getInstalledModules()
+* getEffects()    -> array { id, name, amplifier, duration, is_beneficial }
+
+[ sound ]
+* sound.playBeep(tono), sound.playAlert(), sound.playClick()
+* sound.play("minecraft:sonido", tono?, volumen?)
+
+[ uniforms ] (solo dentro de onUpdateUniforms)
+* uniforms.setFloat(nombre, val)
+* uniforms.setVec2(nombre, x, y) / setVec3(r,g,b) / setVec4(r,g,b,a)
+  - nvg.fsh: colorFilter (vec3), Glare (float), focus, battery, time, u_DSPActive
+  - thermal.fsh: Interference (float), focus, battery, time, u_DSPActive
+
+--------------------------------------------------------------------------------
+3. BUENAS PRACTICAS Y LIMITE DE SANDBOX
+--------------------------------------------------------------------------------
+1. Sintaxis Lua 5.2 (LuaJ 3.0.1): NO uses '//', '&', '|' ni '>>' de Lua 5.3+.
+   Usa math.floor(a / b) y la libreria bit32 si necesitas operaciones de bits.
+2. Limite de 100,000 instrucciones por callback: haz escaneos de entidades o
+   bloques en onTick() usando caches 'local' (y time-slicing si recorres muchos
+   bloques) y deja onRenderHud() solo para proyectar y dibujar.
+3. Sandbox activo: io, package, require, loadfile, dofile, luajava y debug
+   estan deshabilitados. Usa os.clock/time/difftime/date con seguridad.
+
+--------------------------------------------------------------------------------
+4. CATALOGO DE LOS 6 SCRIPTS INCLUIDOS Y COMANDOS DE FLASHEO
+--------------------------------------------------------------------------------
+1) 01_radar_tactico_360.lua        (Autonomo)  /vg givescript radar_amenazas "Radar 360" #00FFAA
+2) 02_visor_ar_objetivos.lua       (Req: bio)  /vg givescript threat_scanner "Visor AR IFF" #FF4444
+3) 03_visor_combate_reactivo.lua   (Req: nvg)  /vg givescript cyber_visor "Visor Combate" #00FFAA
+4) 04_hud_piloto_avionica.lua      (Autonomo)  /vg givescript tactical_hud "HUD Avionica" #00FFCC
+5) 05_escaner_geologico_entorno.lua(Autonomo)  /vg givescript geo_scanner "Escaner Geo" #33DDFF
+6) 06_suite_termica_flir.lua       (Req: therm)/vg givescript thermal_palette "Suite FLIR" #FF8800
+
+FLASHEO EN ESTACION DE MODIFICACION:
+  Slot Izq: Modulo Programable | Slot Centro: Script de Instalacion | Slot Der: Chip Listo
+  Luego inserta el chip en tus Gafas Modulares (o Pro) y enciende el visor.
+================================================================================

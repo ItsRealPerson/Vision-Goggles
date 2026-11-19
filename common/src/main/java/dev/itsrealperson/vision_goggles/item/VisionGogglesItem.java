@@ -112,7 +112,7 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                     for (String modId : modular.getModules(stack)) {
                         dev.itsrealperson.vision_goggles.scripting.LuaCustomModule luaMod =
                             dev.itsrealperson.vision_goggles.scripting.LuaModuleManager.findModuleByIdOrPath(modId);
-                        if (luaMod != null && luaMod.getBatteryDrain() > 0) {
+                        if (luaMod != null && luaMod.getBatteryDrain() > 0 && luaMod.isHardwareInstalled(stack, modular)) {
                             baseDrain += luaMod.getBatteryDrain();
                         }
                     }
@@ -165,19 +165,21 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity) {
         if (entity instanceof Player player && level.isClientSide) {
-            NetworkManager.INSTANCE.sendToServer(new EquipPacket());
+            InteractionHand usedHand = player.getUsedItemHand();
+            dev.itsrealperson.vision_goggles.client.GogglesEquipAnimator.onLocalEquipCompleted(usedHand, stack);
+            NetworkManager.INSTANCE.sendToServer(new EquipPacket(usedHand));
         }
         return stack;
     }
 
     @Override
     public int getUseDuration(ItemStack stack) {
-        return 10; // 0.5 segundos
+        return 14; // 0.70 seconds
     }
 
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.BOW;
+        return UseAnim.NONE;
     }
 
     private static final RawAnimation IDLE_DOWN = RawAnimation.begin().thenLoop("idle_down");
