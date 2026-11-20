@@ -34,6 +34,14 @@ public class VisionRenderer {
     private static boolean lastFullyDown = false;
     private static boolean lastWasUnderwater = false;
 
+    private static boolean cachedHasHelmet = false;
+    private static net.minecraft.resources.ResourceLocation cachedExpectedShader = null;
+    private static VisionMode cachedExpectedVisionMode = null;
+    private static net.minecraft.resources.ResourceLocation cachedCustomLuaShader = null;
+    private static int cachedNbtModeId = -1;
+    private static boolean lastOpticsEngaged = false;
+    private static boolean opticsSyncedThisFrame = false;
+
     private static boolean zoomActive = false;
     private static boolean zoomLocked = false;
     public static boolean isZoomLocked() { return zoomLocked; }
@@ -86,13 +94,48 @@ public class VisionRenderer {
             renderHUD(guiGraphics, partialTicks);
         });
 
-        dev.architectury.event.events.common.PlayerEvent.PLAYER_QUIT.register(player -> {
-            if (player.level().isClientSide) {
-                Minecraft mc = Minecraft.getInstance();
-                GogglesEquipAnimator.reset();
-                cleanup(mc);
-            }
+        dev.architectury.event.events.client.ClientPlayerEvent.CLIENT_PLAYER_QUIT.register(player -> {
+            Minecraft mc = Minecraft.getInstance();
+            GogglesEquipAnimator.reset();
+            cleanup(mc);
         });
+    }
+
+    public static void syncOpticsForRenderFrame(Minecraft mc) {
+        opticsSyncedThisFrame = true;
+        if (mc == null || mc.player == null || mc.level == null || !cachedHasHelmet) {
+            return;
+        }
+        GogglesFlipAnimator.tickFrame();
+        boolean opticsEngaged = GogglesFlipAnimator.isOpticsEngaged();
+        boolean shaderNeeded = (cachedExpectedShader != null);
+
+        visorActive = opticsEngaged;
+        visionModeActive = opticsEngaged && shaderNeeded;
+        grayscaleEnabled = visionModeActive;
+
+        if (opticsEngaged && !lastOpticsEngaged) {
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
+            if (cachedExpectedShader != null) {
+                if (cachedExpectedVisionMode != null) {
+                    VisionShaderManager.enableShader(mc, cachedExpectedVisionMode);
+                } else if (cachedCustomLuaShader != null) {
+                    VisionShaderManager.enableCustomShader(mc, cachedCustomLuaShader);
+                }
+                lastShaderLocation = cachedExpectedShader;
+                lastModeId = cachedNbtModeId;
+            }
+            VisionShaderManager.update(cachedExpectedVisionMode, currentBatteryPct, damageFlickerTimer > 0);
+        } else if (!opticsEngaged && lastOpticsEngaged) {
+            zoomLocked = false;
+            zoomActive = false;
+            lastShaderLocation = null;
+            lastModeId = -1;
+            VisionShaderManager.disableShader(mc);
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
+        }
+
+        lastOpticsEngaged = opticsEngaged;
     }
 
     public static void onClientTick(Minecraft mc) {
@@ -186,7 +229,6 @@ public class VisionRenderer {
 
             // Update flip-down / flip-up animation state machine
             GogglesFlipAnimator.updateLocal(isServerActive, true);
-            boolean isFullyDown = isServerActive && GogglesFlipAnimator.isLocalFullyDown();
             boolean shaderNeeded = (currentVisionMode != null || customLuaShader != null);
             boolean isUnderwater = mc.player.isUnderWater();
 
@@ -199,29 +241,27 @@ public class VisionRenderer {
                 expectedShader = customLuaShader;
             }
 
-            visionModeActive = isFullyDown && shaderNeeded;
-            visorActive = isFullyDown;
+            cachedHasHelmet = true;
+            cachedExpectedShader = expectedShader;
+            cachedExpectedVisionMode = currentVisionMode;
+            cachedCustomLuaShader = customLuaShader;
+            cachedNbtModeId = nbtModeId;
 
-            // Delayed Shader & Sound Lifecycle Management
+            // Delayed Shader & Sound Lifecycle Management (actual optics engage/disengage happens frame-exact at OPTICS_HANDOFF_T)
             if (isServerActive && !lastServerActive) {
                 // Flip-down just started: play mechanical hinge/mount sound only, keep shader/HUD off
                 lastModeId = -1;
                 lastShaderLocation = null;
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON, 1.25F));
             } else if (!isServerActive && lastServerActive) {
-                // Deactivation: immediately disable shader/HUD/zoom and start flip-up animation
-                grayscaleEnabled = false;
-                lastModeId = -1;
-                lastShaderLocation = null;
+                // Flip-up just started: play hinge unlatch sound; shader/HUD stay active until eyecup seal closes at OPTICS_HANDOFF_T
                 zoomLocked = false;
-                VisionShaderManager.disableShader(mc);
-                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_OFF.get(), 1.0F));
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.85F));
             }
 
-            if (isFullyDown && !lastFullyDown) {
-                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.VISOR_ON.get(), 1.0F));
-            }
+            syncOpticsForRenderFrame(mc);
+            boolean isOpticsOn = GogglesFlipAnimator.isOpticsEngaged();
+            boolean isOpticsActiveAndPowered = isServerActive && isOpticsOn;
 
             lastServerActive = isServerActive;
             int flashlightModeId = nbt.contains(ModConstants.TAG_FLASHLIGHT_MODE) ? nbt.getInt(ModConstants.TAG_FLASHLIGHT_MODE) : 0;
@@ -242,9 +282,9 @@ public class VisionRenderer {
             }
 
             // Update Grayscale state for tick updates
-            grayscaleEnabled = isFullyDown && shaderNeeded;
+            grayscaleEnabled = isOpticsOn && shaderNeeded;
 
-            if (isFullyDown && hasSonar) {
+            if (isOpticsActiveAndPowered && hasSonar) {
                 if (sonarPulseTimer > 0) sonarPulseTimer--;
                 else sonarPulseTimer = SONAR_PULSE_INTERVAL;
             } else {
@@ -252,12 +292,12 @@ public class VisionRenderer {
             }
 
             // Battery Alert
-            if (isFullyDown && currentBatteryPct <= 0.10f && mc.level.getGameTime() % 40 == 0) {
+            if (isOpticsActiveAndPowered && currentBatteryPct <= 0.10f && mc.level.getGameTime() % 40 == 0) {
                 mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 1.0f);
             }
 
             // Oxygen Alert
-            if (isFullyDown && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
+            if (isOpticsActiveAndPowered && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
                 int air = mc.player.getAirSupply();
                 int maxAir = mc.player.getMaxAirSupply();
                 if (air < maxAir * 0.20 && mc.level.getGameTime() % 20 == 0) {
@@ -265,7 +305,7 @@ public class VisionRenderer {
                 }
             }
 
-            if (isFullyDown && hasZoom && (ModKeyMappings.zoomKey.isDown() || zoomLocked)) {
+            if (isOpticsActiveAndPowered && hasZoom && (ModKeyMappings.zoomKey.isDown() || zoomLocked)) {
                 zoomActive = true;
                 if (targetZoomFactor < 1.2f) {
                     targetZoomFactor = 2.5f; // Default starting magnification
@@ -282,8 +322,8 @@ public class VisionRenderer {
             }
             currentZoom = 1.0f / currentZoomFactor;
 
-            // Deterministic shader synchronization (handles initial enable, mode switch, Hydro wet/dry swap, Lua reload/removal)
-            if (isFullyDown && expectedShader != null) {
+            // Deterministic shader synchronization (handles mode switch, Hydro wet/dry swap, Lua reload/removal while optics engaged)
+            if (isOpticsOn && expectedShader != null) {
                 boolean needsShaderEnable = !lastFullyDown
                         || !expectedShader.equals(lastShaderLocation)
                         || !VisionShaderManager.isShaderActive()
@@ -298,14 +338,14 @@ public class VisionRenderer {
                     lastModeId = nbtModeId;
                 }
                 VisionShaderManager.update(currentVisionMode, currentBatteryPct, damageFlickerTimer > 0);
-            } else if (isFullyDown) {
+            } else if (isOpticsOn) {
                 if (VisionShaderManager.isShaderActive() || lastShaderLocation != null) {
                     VisionShaderManager.disableShader(mc);
                     lastShaderLocation = null;
                     lastModeId = -1;
                 }
             }
-            lastFullyDown = isFullyDown;
+            lastFullyDown = isOpticsOn;
             lastWasUnderwater = isUnderwater;
 
             try {
@@ -313,6 +353,12 @@ public class VisionRenderer {
             } catch (Throwable ignored) {}
         } else {
             // Check handheld tactical flashlight when not wearing goggles
+            cachedHasHelmet = false;
+            cachedExpectedShader = null;
+            cachedExpectedVisionMode = null;
+            cachedCustomLuaShader = null;
+            cachedNbtModeId = -1;
+            lastOpticsEngaged = false;
             GogglesFlipAnimator.resetLocal();
             currentVisionMode = null;
             visionModeActive = false;
@@ -339,7 +385,7 @@ public class VisionRenderer {
                 currentBatteryPct = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getBattery(heldFlashlight) / dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.MAX_BATTERY;
             }
 
-            if (grayscaleEnabled || lastServerActive) {
+            if (grayscaleEnabled || lastServerActive || VisionShaderManager.isShaderActive()) {
                 cleanup(mc);
             }
         }
@@ -582,6 +628,12 @@ public class VisionRenderer {
         lastFullyDown = false;
         lastModeId = -1;
         lastShaderLocation = null;
+        cachedHasHelmet = false;
+        cachedExpectedShader = null;
+        cachedExpectedVisionMode = null;
+        cachedCustomLuaShader = null;
+        cachedNbtModeId = -1;
+        lastOpticsEngaged = false;
         GogglesFlipAnimator.resetLocal();
         sonarPulseTimer = 0;
         damageFlickerTimer = 0;
@@ -622,19 +674,24 @@ public class VisionRenderer {
     }
 
     public static void renderHUD(GuiGraphics g, float partialTicks) {
-        FirstPersonVisorRenderer.render(g, partialTicks);
-        if (!visorActive) return;
-        
-        // Delegar al nuevo sistema modular
-        VisionHUDOverlay.render(g, partialTicks);
-
-        // Renderizar Sonar Pulse (Legacy, pendiente de mover a módulo en v2.1.0)
-        if (sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION) {
-            int width = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-            int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-            float progress = 1.0f - ((float)sonarPulseTimer / (float)SONAR_PULSE_DURATION);
-            renderSonarPulse(g, width, height, progress);
+        if (!opticsSyncedThisFrame) {
+            syncOpticsForRenderFrame(Minecraft.getInstance());
         }
+        opticsSyncedThisFrame = false;
+
+        if (visorActive) {
+            // Render HUD before the first-person visor & eyecup seal so both shader and HUD cross-fade smoothly
+            VisionHUDOverlay.render(g, partialTicks);
+
+            // Renderizar Sonar Pulse (Legacy, pendiente de mover a módulo en v2.1.0)
+            if (sonarPulseTimer > 0 && sonarPulseTimer < SONAR_PULSE_DURATION) {
+                int width = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+                int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+                float progress = 1.0f - ((float)sonarPulseTimer / (float)SONAR_PULSE_DURATION);
+                renderSonarPulse(g, width, height, progress);
+            }
+        }
+        FirstPersonVisorRenderer.render(g, partialTicks);
     }
 
     private static void renderSonarPulse(GuiGraphics g, int width, int height, float progress) {

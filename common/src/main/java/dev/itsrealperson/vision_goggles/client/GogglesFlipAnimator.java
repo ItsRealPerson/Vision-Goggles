@@ -21,8 +21,10 @@ public final class GogglesFlipAnimator {
         FLIPPING_UP
     }
 
-    private static final float TRANSITION_DURATION_SECONDS = 0.72f;
-    private static final float REACH_PHASE_END = 0.35f;
+    private static final float TRANSITION_DURATION_SECONDS = 0.78f;
+    private static final float REACH_PHASE_END = 0.28f;
+    private static final float VISOR_PHASE_END = 0.84f;
+    private static final float OPTICS_HANDOFF_T = 0.85f;
     private static final float MAX_DT_SECONDS = 0.05f;
     private static final long PRUNE_INTERVAL_NANOS = 10_000_000_000L;
     private static final long PRUNE_MAX_AGE_NANOS = 10_000_000_000L;
@@ -55,22 +57,26 @@ public final class GogglesFlipAnimator {
     }
 
     /**
-     * Phase 1 ({@code 0.0 -> REACH_PHASE_END}): visor stays UP while the hand rises.
-     * Phase 2 ({@code REACH_PHASE_END -> 1.0}): visor flips down smoothly.
+     * Phase 1 ({@code 0.0 -> REACH_PHASE_END}): visor tucks from above edge to brow while the hand rises.
+     * Phase 2 ({@code REACH_PHASE_END -> VISOR_PHASE_END}): visor flips down smoothly over eyes.
+     * Phase 3 ({@code VISOR_PHASE_END -> 1.0}): visor rests sealed while hand retracts cleanly.
      */
     private static float computeVisorProgress(float rawT) {
         if (rawT <= REACH_PHASE_END) {
             return 0.0f;
         }
-        return easeSmoothstep((rawT - REACH_PHASE_END) / (1.0f - REACH_PHASE_END));
+        if (rawT >= VISOR_PHASE_END) {
+            return 1.0f;
+        }
+        return easeSmoothstep((rawT - REACH_PHASE_END) / (VISOR_PHASE_END - REACH_PHASE_END));
     }
 
     /**
      * Two-phase arm reach envelope:
      * <ul>
-     *   <li>{@code 0.0 -> 0.35}: arm rises smoothly to the brow</li>
-     *   <li>{@code 0.35 -> 0.88}: arm grips and pulls/pushes the goggles</li>
-     *   <li>{@code 0.88 -> 1.0}: arm lowers back down cleanly</li>
+     *   <li>{@code 0.0 -> 0.28}: arm rises smoothly to the brow</li>
+     *   <li>{@code 0.28 -> 0.84}: arm grips and pulls/pushes the goggles</li>
+     *   <li>{@code 0.84 -> 1.0}: arm lowers back down cleanly off-screen</li>
      * </ul>
      */
     private static float computeArmReach(float rawT) {
@@ -80,10 +86,10 @@ public final class GogglesFlipAnimator {
         if (rawT <= REACH_PHASE_END) {
             return easeSmoothstep(rawT / REACH_PHASE_END);
         }
-        if (rawT <= 0.88f) {
+        if (rawT <= VISOR_PHASE_END) {
             return 1.0f;
         }
-        return 1.0f - easeSmoothstep((rawT - 0.88f) / 0.12f);
+        return 1.0f - easeSmoothstep((rawT - VISOR_PHASE_END) / (1.0f - VISOR_PHASE_END));
     }
 
     private static float computeDeltaSeconds(long nowNanos, long prevNanos) {
@@ -139,14 +145,20 @@ public final class GogglesFlipAnimator {
         }
 
         if (targetActive) {
-            if (state == FlipState.UP || state == FlipState.FLIPPING_UP) {
+            if (state == FlipState.UP) {
+                state = FlipState.FLIPPING_DOWN;
+                lastLocalNanos = System.nanoTime();
+            } else if (state == FlipState.FLIPPING_UP) {
                 state = FlipState.FLIPPING_DOWN;
                 if (lastLocalNanos == 0L) {
                     lastLocalNanos = System.nanoTime();
                 }
             }
         } else {
-            if (state == FlipState.DOWN_ACTIVE || state == FlipState.FLIPPING_DOWN) {
+            if (state == FlipState.DOWN_ACTIVE) {
+                state = FlipState.FLIPPING_UP;
+                lastLocalNanos = System.nanoTime();
+            } else if (state == FlipState.FLIPPING_DOWN) {
                 state = FlipState.FLIPPING_UP;
                 if (lastLocalNanos == 0L) {
                     lastLocalNanos = System.nanoTime();
@@ -175,6 +187,10 @@ public final class GogglesFlipAnimator {
         return linearProgress;
     }
 
+    public static float peekLocalLinearProgress() {
+        return linearProgress;
+    }
+
     /**
      * Returns the eased local visor flip progress in {@code [0.0f, 1.0f]},
      * advancing sub-tick interpolation on every render call.
@@ -184,12 +200,32 @@ public final class GogglesFlipAnimator {
         return computeVisorProgress(linearProgress);
     }
 
+    public static float peekLocalProgress() {
+        return computeVisorProgress(linearProgress);
+    }
+
     public static boolean isLocalFullyDown() {
         return state == FlipState.DOWN_ACTIVE;
     }
 
     public static boolean isLocalTransitioning() {
-        return linearProgress > 0.001f && linearProgress < 0.999f;
+        return state == FlipState.FLIPPING_DOWN || state == FlipState.FLIPPING_UP;
+    }
+
+    public static boolean isOpticsEngaged() {
+        return state == FlipState.DOWN_ACTIVE || (isLocalTransitioning() && linearProgress >= OPTICS_HANDOFF_T);
+    }
+
+    public static float getOpticsHandoffThreshold() {
+        return OPTICS_HANDOFF_T;
+    }
+
+    public static float getReachPhaseEnd() {
+        return REACH_PHASE_END;
+    }
+
+    public static float getVisorPhaseEnd() {
+        return VISOR_PHASE_END;
     }
 
     /**

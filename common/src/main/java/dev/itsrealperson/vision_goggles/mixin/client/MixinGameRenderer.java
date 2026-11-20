@@ -36,6 +36,15 @@ public class MixinGameRenderer {
     @Inject(method = "render",
             at = @At(value = "INVOKE",
                      target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(FJLcom/mojang/blaze3d/vertex/PoseStack;)V",
+                     shift = At.Shift.BEFORE),
+            require = 0)
+    private void vision_goggles$syncFlipBeforeLevel(float partialTick, long nanoTime, boolean renderLevel, CallbackInfo ci) {
+        VisionRenderer.syncOpticsForRenderFrame(Minecraft.getInstance());
+    }
+
+    @Inject(method = "render",
+            at = @At(value = "INVOKE",
+                     target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(FJLcom/mojang/blaze3d/vertex/PoseStack;)V",
                      shift = At.Shift.AFTER),
             require = 0)
     private void vision_goggles$processOurShader(float partialTick, long nanoTime, boolean renderLevel, CallbackInfo ci) {

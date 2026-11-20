@@ -85,61 +85,100 @@ public class FirstPersonVisorRenderer {
         ItemStack stack = PlatformMethods.getEquippedHelmet(mc.player);
         if (stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem goggles)) return;
 
-        float rawT = Mth.clamp(GogglesFlipAnimator.getLocalLinearProgress(), 0.0f, 1.0f);
-        float visorProgress = Mth.clamp(GogglesFlipAnimator.getLocalProgress(), 0.0f, 1.0f);
+        float rawT = Mth.clamp(GogglesFlipAnimator.peekLocalLinearProgress(), 0.0f, 1.0f);
+        float visorProgress = Mth.clamp(GogglesFlipAnimator.peekLocalProgress(), 0.0f, 1.0f);
         int width = gui.guiWidth();
         int height = gui.guiHeight();
 
-        VisionMode mode = resolveMode(stack, goggles);
-        ResourceLocation baseTex = resolveBaseTexture(mode);
-        ResourceLocation glowTex = resolveGlowTexture(mode);
+        float reachEnd = GogglesFlipAnimator.getReachPhaseEnd();
+        float visorEnd = GogglesFlipAnimator.getVisorPhaseEnd();
+        float handoffT = GogglesFlipAnimator.getOpticsHandoffThreshold();
 
-        FirstPersonVisorModel visorModel = getModel();
-        visorModel.visorPivot.xRot = Mth.lerp(visorProgress, -1.15f, 0.05f);
-        visorModel.visorPivot.yRot = 0.0f;
-        visorModel.visorPivot.zRot = 0.0f;
-
-        gui.flush();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(true);
-        Lighting.setupFor3DItems();
-
-        PoseStack poseStack = gui.pose();
-        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-
-        // 1. Render the 3D tactical visor descending from above the viewport onto the eyes with progressive eye-approach zoom
+        float browPresence = smoothstep01(rawT / reachEnd);
         float ez = smoothstep01(visorProgress);
-        float eyeZoom = 0.45f * ez + 0.55f * (visorProgress * ez);
-        float scale = height * Mth.lerp(eyeZoom, 1.05f, 3.85f);
-        float yOffset = height * Mth.lerp(ez, -0.46f, -0.21f);
+        float eyeZoom = 0.40f * ez + 0.60f * (visorProgress * ez);
+        float scale = height * Mth.lerp(eyeZoom, 1.05f, 4.85f);
+        float yOffset = height * (Mth.lerp(browPresence, -0.70f, -0.46f) + 0.38f * ez);
         float zArc = (float) Math.sin(visorProgress * Math.PI) * 35.0f;
+
+        float sealAlpha = (rawT <= handoffT)
+                ? smoothstep01((rawT - 0.72f) / (handoffT - 0.72f))
+                : 1.0f - smoothstep01((rawT - handoffT) / (1.0f - handoffT));
+
+        float reachIn = smoothstep01(rawT / reachEnd);
+        float retract = smoothstep01((rawT - visorEnd) / 0.14f);
+        float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
+
         boolean isRightArm = mc.player.getMainArm() == HumanoidArm.RIGHT;
         float sideSign = isRightArm ? 1.0f : -1.0f;
         int packedLight = mc.getEntityRenderDispatcher().getPackedLightCoords(mc.player, partialTicks);
+        PoseStack poseStack = gui.pose();
+        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
-        poseStack.pushPose();
-        poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 300.0f + zArc);
-        poseStack.scale(scale, scale, scale);
-        // Slight tactical 3D angle so the dual-tube underside and side rim read clearly
-        poseStack.mulPose(Axis.YP.rotationDegrees(6.0f * sideSign * (1.0f - visorProgress * 0.5f)));
-        poseStack.mulPose(Axis.XP.rotationDegrees(14.0f));
+        // Pass 1: Render the 3D tactical visor descending from above viewport onto the eyes
+        if (rawT < handoffT) {
+            VisionMode mode = resolveMode(stack, goggles);
+            ResourceLocation baseTex = resolveBaseTexture(mode);
+            ResourceLocation glowTex = resolveGlowTexture(mode);
 
-        VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
-        visorModel.renderToBuffer(poseStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+            FirstPersonVisorModel visorModel = getModel();
+            visorModel.visorPivot.xRot = Mth.lerp(visorProgress, -1.15f, 0.08f);
+            visorModel.visorPivot.yRot = 0.0f;
+            visorModel.visorPivot.zRot = 0.0f;
 
-        if (visorProgress > 0.70f) {
-            VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
-            visorModel.renderToBuffer(poseStack, glowConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+            gui.flush();
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+            Lighting.setupFor3DItems();
+
+            poseStack.pushPose();
+            poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 1800.0f + zArc);
+            poseStack.scale(scale, scale, scale);
+            // Slight tactical 3D angle so the dual-tube underside and side rim read clearly
+            poseStack.mulPose(Axis.YP.rotationDegrees(6.0f * sideSign * (1.0f - visorProgress * 0.5f)));
+            poseStack.mulPose(Axis.XP.rotationDegrees(14.0f));
+
+            VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
+            visorModel.renderToBuffer(poseStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+
+            float glowIntensity = smoothstep01((visorProgress - 0.60f) / 0.28f);
+            if (glowIntensity > 0.01f) {
+                VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
+                visorModel.renderToBuffer(poseStack, glowConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, glowIntensity, glowIntensity, glowIntensity, 1.0f);
+            }
+            poseStack.popPose();
+
+            bufferSource.endBatch();
+            Lighting.setupForFlatItems();
+            RenderSystem.disableDepthTest();
         }
-        poseStack.popPose();
 
-        // 2. Render the player's main arm + sleeve reaching in to grip the side of the goggles
-        renderPlayerArm(mc.player, poseStack, bufferSource, width, height, scale, yOffset, zArc, rawT, visorProgress, isRightArm, sideSign, packedLight);
+        // Pass 2: Smooth ocular eyecup blackout seal bridging 3D visor <-> shader + HUD
+        if (sealAlpha > 0.005f) {
+            int alphaInt = Mth.clamp((int) (sealAlpha * 255.0f), 0, 255);
+            if (alphaInt > 0) {
+                gui.flush();
+                poseStack.pushPose();
+                poseStack.translate(0.0f, 0.0f, 5500.0f);
+                gui.fill(0, 0, width, height, alphaInt << 24);
+                gui.flush();
+                poseStack.popPose();
+            }
+        }
 
-        bufferSource.endBatch();
-        Lighting.setupForFlatItems();
+        // Pass 3: Render the player's main arm + sleeve reaching in and sliding cleanly offscreen
+        if (offscreen < 0.995f) {
+            gui.flush();
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+            Lighting.setupFor3DItems();
 
-        RenderSystem.disableDepthTest();
+            renderPlayerArm(mc.player, poseStack, bufferSource, width, height, yOffset, zArc, ez, visorProgress, offscreen, isRightArm, sideSign, packedLight);
+
+            bufferSource.endBatch();
+            Lighting.setupForFlatItems();
+            RenderSystem.disableDepthTest();
+        }
     }
 
     private static void renderPlayerArm(
@@ -148,11 +187,11 @@ public class FirstPersonVisorRenderer {
             MultiBufferSource bufferSource,
             int width,
             int height,
-            float visorScale,
             float yOffset,
             float zArc,
-            float rawT,
+            float ez,
             float visorProgress,
+            float offscreen,
             boolean isRightArm,
             float sideSign,
             int packedLight
@@ -170,20 +209,18 @@ public class FirstPersonVisorRenderer {
         sleeve.setRotation(0.0f, 0.0f, 0.0f);
         sleeve.visible = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
 
-        // Phase 1 reach-in (0.0 -> 0.35), Phase 2 grip & pull/push (0.35 -> 0.88), retract (0.88 -> 1.0)
-        float reachIn = smoothstep01(rawT / 0.35f);
-        float retract = smoothstep01((rawT - 0.88f) / 0.12f);
-        float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
-
         // Anchor the fist directly onto the outer optical tube / side rim of the 3D goggles
-        float gripScale = height * Mth.lerp(smoothstep01(visorProgress), 1.05f, 2.35f);
+        float gripScale = height * Mth.lerp(ez, 1.05f, 2.55f);
         float visorEdgeX = width * 0.5f + sideSign * (gripScale * 0.17f);
         float visorEdgeY = height * 0.5f + yOffset + gripScale * 0.03f;
-        float visorEdgeZ = 300.0f + zArc + 18.0f;
+        float visorEdgeZ = 7200.0f + zArc;
 
-        float handX = visorEdgeX + sideSign * (offscreen * width * 0.14f);
-        float handY = visorEdgeY + offscreen * height * 0.62f;
-        float handZ = visorEdgeZ + 12.0f;
+        float offscreenX = width * 0.5f + sideSign * (width * 0.42f);
+        float offscreenY = height * 1.32f;
+
+        float handX = Mth.lerp(offscreen, visorEdgeX, offscreenX);
+        float handY = Mth.lerp(offscreen, visorEdgeY, offscreenY);
+        float handZ = visorEdgeZ;
 
         float armScale = height * 1.50f;
         float armLengthScale = height * 2.30f;
