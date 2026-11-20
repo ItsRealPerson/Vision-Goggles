@@ -62,7 +62,7 @@ NOTA SOBRE 'battery_drain':
 * world.getEntitiesInRadius(radio?)               -> array de entidades (max 64)
   Campos entidad: name, type, health, max_health, armor, x, y, z, eye_y,
                   height, pitch, yaw, distance, is_hostile, is_player,
-                  emits_heat, is_undead
+                  emits_heat, is_undead, thermal_visible
 * world.getProjectilesInRadius(radio?)            -> array de proyectiles activos (max 48)
   Campos proyectil: type, x, y, z, vx, vy, vz, distance, approaching
 * world.scanBlocks(radio, tablaBloques, maxResultados?) -> array { id, x, y, z, distance }

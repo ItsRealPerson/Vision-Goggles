@@ -165,7 +165,7 @@ public class LuaModuleManager {
         }
     }
 
-    private static final String BUNDLED_VERSION_MARKER = "-- [VG-BUNDLED v36]";
+    private static final String BUNDLED_VERSION_MARKER = "-- [VG-BUNDLED v37]";
 
     private static boolean shouldUpgradeBundledScript(File target) {
         try {
@@ -205,7 +205,7 @@ public class LuaModuleManager {
                     }
                     Files.copy(in, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     if (isUpgrading) {
-                        Vision_goggles.LOGGER.info("[Vision Goggles] Upgraded bundled Lua example to v36: " + fileName);
+                        Vision_goggles.LOGGER.info("[Vision Goggles] Upgraded bundled Lua example to v37: " + fileName);
                     }
                 }
             }
