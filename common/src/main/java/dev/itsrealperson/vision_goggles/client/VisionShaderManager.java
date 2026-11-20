@@ -174,6 +174,7 @@ public class VisionShaderManager {
         // Keep compiled PostChain instances alive in SHADER_CACHE; only deactivate active pointers.
         savedPostChain = null;
         activeShaderLocation = null;
+        ThermalEntityPainter.invalidateFrameMask();
         currentGlare = 0.0f;
         flashGlare = 0.0f;
         currentInterference = 0.0f;
@@ -317,6 +318,12 @@ public class VisionShaderManager {
         return path.contains("nvg") || path.contains("thermal");
     }
 
+    public static boolean isThermalShaderActive() {
+        return activeMode == VisionMode.THERMAL
+                || (activeMode == null && activeShaderLocation != null
+                    && activeShaderLocation.getPath().toLowerCase(java.util.Locale.ROOT).contains("thermal"));
+    }
+
     public static void clearCache() {
         for (PostChain chain : SHADER_CACHE.values()) {
             try { chain.close(); } catch (Exception ignored) {}
@@ -329,6 +336,7 @@ public class VisionShaderManager {
         savedPostChain = null;
         savedFlashlightChain = null;
         activeShaderLocation = null;
+        ThermalEntityPainter.invalidateFrameMask();
         FAILED_SHADER_TIMESTAMPS.clear();
         prewarmed = false;
         lastWindowWidth = -1;
@@ -668,6 +676,10 @@ public class VisionShaderManager {
 
         for (PostPass pass : passes) {
             var shader = pass.getEffect();
+            if (isThermalShader && shader.getName() != null
+                    && shader.getName().toLowerCase(java.util.Locale.ROOT).contains("thermal")) {
+                shader.setSampler("ThermalMask", ThermalEntityPainter::getMaskTextureId);
+            }
             if (shader.getUniform("battery") != null) {
                 float finalBatt = battery * startupMultiplier;
                 if (damageFlicker && mc.level.random.nextFloat() > 0.5f) finalBatt = 0.0f;

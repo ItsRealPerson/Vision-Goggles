@@ -7,15 +7,17 @@ import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
-import dev.itsrealperson.vision_goggles.util.PlatformMethods;
+import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobType;
@@ -27,37 +29,40 @@ import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.MagmaCube;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.Silverfish;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.monster.Spider;
 import net.minecraft.world.entity.monster.Vex;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL11C;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL11C;
+import org.lwjgl.system.MemoryStack;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Renders all living entities as flat cyan silhouettes when thermal vision is active.
- * Uses a simple FBO + shader approach - no blur, no outlines, just solid color painting.
+ * Captures living thermal entities into an offscreen mask texture ({@link #getMaskTextureId()})
+ * using camera-invariant world-up gradients, world-depth pixel occlusion for direct sightlines,
+ * and strict OpenGL state restoration so thermal post-processing never depends on world RGB key colors.
  */
 public class ThermalEntityPainter {
 
@@ -67,12 +72,23 @@ public class ThermalEntityPainter {
             new ResourceLocation(Vision_goggles.MOD_ID, "thermal_transparent")
     );
 
-    // FBO resources
-    private static int fboId = 0;
+    // Offscreen capture FBO (with world-compatible depth attachment) & clean entity mask FBO
+    private static int captureFbo = 0;
     private static int colorTexture = 0;
     private static int depthRenderbuffer = 0;
+    private static int captureDepthFormat = GL14.GL_DEPTH_COMPONENT24;
+    private static int captureDepthAttachment = GL30.GL_DEPTH_ATTACHMENT;
+
+    private static int maskFbo = 0;
+    private static int maskTexture = 0;
+    private static int emptyMaskTexture = 0;
+
     private static int fboWidth = 0;
     private static int fboHeight = 0;
+
+    private static volatile boolean maskValidThisFrame = false;
+    private static boolean depthBlitSupported = true;
+    private static boolean depthBlitRetried = false;
 
     // Shader resources
     private static int programId = 0;
@@ -87,7 +103,7 @@ public class ThermalEntityPainter {
     private static BufferBuilder maskBuffer = null;
     private static MultiBufferSource.BufferSource maskBufferSource = null;
 
-    // True no-op consumer so held items, emissive eyes, glints, capes, and elytras are discarded cleanly
+    // True no-op consumer so held items, emissive eyes, glints, capes, elytras, nametags, and leashes are discarded cleanly
     private static final VertexConsumer DISCARD_VERTEX_CONSUMER = new VertexConsumer() {
         @Override public VertexConsumer vertex(double x, double y, double z) { return this; }
         @Override public VertexConsumer color(int r, int g, int b, int a) { return this; }
@@ -101,14 +117,7 @@ public class ThermalEntityPainter {
     };
 
     private static boolean initialized = false;
-    private static boolean active = false;
     private static boolean hasPerEntityCustomColor = false;
-
-    // Thermal tint color: cyan
-    private static final float TINT_R = 0.0f;
-    private static final float TINT_G = 1.0f;
-    private static final float TINT_B = 1.0f;
-    private static final float TINT_A = 0.85f;
 
     public static boolean hasPerEntityCustomColor() {
         return hasPerEntityCustomColor;
@@ -116,6 +125,18 @@ public class ThermalEntityPainter {
 
     public static void setHasPerEntityCustomColor(boolean value) {
         hasPerEntityCustomColor = value;
+    }
+
+    public static int getMaskTextureId() {
+        if (maskValidThisFrame && maskTexture != 0) {
+            return maskTexture;
+        }
+        int empty = ensureEmptyMaskTexture();
+        return (empty > 0) ? empty : -1;
+    }
+
+    public static void invalidateFrameMask() {
+        maskValidThisFrame = false;
     }
 
     public static Integer resolveEntityThermalColor(LivingEntity entity) {
@@ -130,13 +151,17 @@ public class ThermalEntityPainter {
             Minecraft mc = Minecraft.getInstance();
             int w = Math.max(1, mc.getWindow().getWidth());
             int h = Math.max(1, mc.getWindow().getHeight());
-            createFBO(w, h);
+            createFBO(w, h, mc);
+            ensureEmptyMaskTexture();
             createShader();
             createQuad();
             maskBuffer = new BufferBuilder(262144);
             maskBufferSource = MultiBufferSource.immediate(maskBuffer);
 
             initialized = true;
+            maskValidThisFrame = false;
+            depthBlitSupported = true;
+            depthBlitRetried = false;
         } catch (Exception e) {
             cleanup();
             Vision_goggles.LOGGER.error("[ThermalEntityPainter] Failed to initialize: " + e.getMessage());
@@ -144,14 +169,22 @@ public class ThermalEntityPainter {
     }
 
     public static void cleanup() {
-        if (fboId != 0) { GlStateManager._glDeleteFramebuffers(fboId); fboId = 0; }
+        if (captureFbo != 0) { GlStateManager._glDeleteFramebuffers(captureFbo); captureFbo = 0; }
         if (colorTexture != 0) { GlStateManager._deleteTexture(colorTexture); colorTexture = 0; }
         if (depthRenderbuffer != 0) { GL30.glDeleteRenderbuffers(depthRenderbuffer); depthRenderbuffer = 0; }
+        if (maskFbo != 0) { GlStateManager._glDeleteFramebuffers(maskFbo); maskFbo = 0; }
+        if (maskTexture != 0) { GlStateManager._deleteTexture(maskTexture); maskTexture = 0; }
+        if (emptyMaskTexture != 0) { GlStateManager._deleteTexture(emptyMaskTexture); emptyMaskTexture = 0; }
         if (programId != 0) { GL20.glDeleteProgram(programId); programId = 0; }
         if (vertexShaderId != 0) { GL20.glDeleteShader(vertexShaderId); vertexShaderId = 0; }
         if (fragmentShaderId != 0) { GL20.glDeleteShader(fragmentShaderId); fragmentShaderId = 0; }
-        if (quadVAO != -1) { GL30.glDeleteVertexArrays(quadVAO); GL30.glDeleteBuffers(quadVBO); quadVAO = -1; }
+        if (quadVAO != -1) { GL30.glDeleteVertexArrays(quadVAO); GL30.glDeleteBuffers(quadVBO); quadVAO = -1; quadVBO = -1; }
+        fboWidth = 0;
+        fboHeight = 0;
         initialized = false;
+        maskValidThisFrame = false;
+        depthBlitSupported = true;
+        depthBlitRetried = false;
     }
 
     private static class ThermalRenderEntry {
@@ -160,15 +193,15 @@ public class ThermalEntityPainter {
         final double dy;
         final double dz;
         final float heat;
-        final int colorRgb;
+        final double distSq;
 
-        ThermalRenderEntry(LivingEntity entity, double dx, double dy, double dz, float heat, int colorRgb) {
+        ThermalRenderEntry(LivingEntity entity, double dx, double dy, double dz, float heat, double distSq) {
             this.entity = entity;
             this.dx = dx;
             this.dy = dy;
             this.dz = dz;
             this.heat = heat;
-            this.colorRgb = colorRgb;
+            this.distSq = distSq;
         }
     }
 
@@ -177,7 +210,7 @@ public class ThermalEntityPainter {
         // Undead: no body heat
         if (living.getMobType() == MobType.UNDEAD
                 || living instanceof net.minecraft.world.entity.monster.Zombie
-                || living.getType().getDescriptionId().toLowerCase(java.util.Locale.ROOT).contains("zombie")) {
+                || living.getType().getDescriptionId().toLowerCase(Locale.ROOT).contains("zombie")) {
             return false;
         }
         // Cold-blooded / constructs / spirits
@@ -194,119 +227,153 @@ public class ThermalEntityPainter {
         return true;
     }
 
-    /** Call from RenderLevelStageEvent.AFTER_ENTITIES */
+    /** Call from RenderLevelStageEvent.AFTER_BLOCK_ENTITIES / WorldRenderEvents.AFTER_ENTITIES */
     public static void captureAndComposite(PoseStack poseStack) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
-
-        // Check if thermal vision mode is active on the local player
-        if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != dev.itsrealperson.vision_goggles.util.VisionMode.THERMAL) return;
-
-        // Lazy-init on first use if not already initialized (e.g. on Fabric where client init runs before ResourceManager)
-        if (!initialized) {
-            init();
-            if (!initialized) return;
-        }
-
-        float partialTick = mc.getFrameTime();
-        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
-
-        Integer defaultLuaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
-        int defaultRgb = (defaultLuaColor != null) ? (defaultLuaColor & 0x00FFFFFF) : 0x00FFFF;
-
-        Map<Integer, List<ThermalRenderEntry>> buckets = new LinkedHashMap<>();
-
-        for (Entity entity : mc.level.entitiesForRendering()) {
-            // Skip non-living, non-thermal mobs (undead, cold-blooded, constructs), and self in first person
-            if (!(entity instanceof LivingEntity living)) continue;
-            if (!emitsThermalHeat(living)) continue;
-            if (entity == mc.player && mc.options.getCameraType() == CameraType.FIRST_PERSON) continue;
-
-            double lerpX = entity.xOld + (entity.getX() - entity.xOld) * partialTick;
-            double lerpY = entity.yOld + (entity.getY() - entity.yOld) * partialTick;
-            double lerpZ = entity.zOld + (entity.getZ() - entity.zOld) * partialTick;
-
-            double dx = lerpX - camPos.x;
-            double dy = lerpY - camPos.y;
-            double dz = lerpZ - camPos.z;
-            if (dx * dx + dy * dy + dz * dz > 4096) continue; // 64 block limit
-
-            // Revisar 9 puntos (centro + 8 esquinas del Hitbox) para evitar falsos positivos por huecos
-            net.minecraft.world.phys.AABB bb = entity.getBoundingBox();
-            Vec3[] points = new Vec3[]{
-                new Vec3(lerpX, lerpY + entity.getBbHeight() * 0.5, lerpZ), // Centro
-                new Vec3(bb.minX, bb.minY, bb.minZ),
-                new Vec3(bb.minX, bb.minY, bb.maxZ),
-                new Vec3(bb.minX, bb.maxY, bb.minZ),
-                new Vec3(bb.minX, bb.maxY, bb.maxZ),
-                new Vec3(bb.maxX, bb.minY, bb.minZ),
-                new Vec3(bb.maxX, bb.minY, bb.maxZ),
-                new Vec3(bb.maxX, bb.maxY, bb.minZ),
-                new Vec3(bb.maxX, bb.maxY, bb.maxZ)
-            };
-
-            float maxHeat = 0.0f;
-            for (Vec3 pt : points) {
-                float ptHeat = getThermalAttenuation(camPos, pt, mc.level);
-                if (ptHeat > maxHeat) maxHeat = ptHeat;
-                if (maxHeat >= 1.0f) break; // Si ya encontramos un punto 100% visible, no buscar más
-            }
-
-            float heat = maxHeat;
-            if (heat <= 0.11f) continue; // Too weak or fully blocked
-
-            Integer customColor = resolveEntityThermalColor(living);
-            int bucketRgb = (customColor != null) ? (customColor & 0x00FFFFFF) : defaultRgb;
-            buckets.computeIfAbsent(bucketRgb, k -> new ArrayList<>())
-                   .add(new ThermalRenderEntry(living, dx, dy, dz, heat, bucketRgb));
-        }
-
-        hasPerEntityCustomColor = false;
-        if (buckets.isEmpty()) {
+        if (mc.player == null || mc.level == null) {
+            maskValidThisFrame = false;
             return;
         }
 
-        // Resize FBO if window changed
-        int mainW = mc.getMainRenderTarget().width;
-        int mainH = mc.getMainRenderTarget().height;
-        if (mainW != fboWidth || mainH != fboHeight) resizeFBO(mainW, mainH);
+        boolean isThermalMode = VisionRenderer.isVisionModeActive()
+                && (VisionRenderer.getCurrentVisionMode() == VisionMode.THERMAL
+                    || (VisionRenderer.getCurrentVisionMode() == null && VisionShaderManager.isThermalShaderActive()));
+        if (!isThermalMode) {
+            maskValidThisFrame = false;
+            return;
+        }
 
-        // Save currently-bound FBO & GL clear color (Xenon/Sodium/Iris/Fabulous manages its own FBOs)
+        if (!initialized) {
+            init();
+            if (!initialized) {
+                maskValidThisFrame = false;
+                return;
+            }
+        }
+
+        // Capture full GL state BEFORE resizeFBO so resized FBOs never overwrite prevDrawFbo/prevProgram
+        int mainW = Math.max(1, mc.getMainRenderTarget().width);
+        int mainH = Math.max(1, mc.getMainRenderTarget().height);
+
         int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int[] prevViewport = new int[4];
+        GL11C.glGetIntegerv(GL11.GL_VIEWPORT, prevViewport);
         float[] prevClearColor = new float[4];
         GL11C.glGetFloatv(GL11.GL_COLOR_CLEAR_VALUE, prevClearColor);
-
-        // Flush any previous batches to ensure clean state
-        mc.renderBuffers().bufferSource().endBatch();
+        int prevProgram = GL11C.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        RenderSystem.activeTexture(GL13.GL_TEXTURE0);
+        int prevTex0 = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
 
         EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
         boolean oldShadow = mc.options.entityShadows().get();
-        dispatcher.setRenderShadow(false);
 
         try {
-            if (buckets.size() == 1) {
-                Map.Entry<Integer, List<ThermalRenderEntry>> single = buckets.entrySet().iterator().next();
-                GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
-                GlStateManager._viewport(0, 0, fboWidth, fboHeight);
-                RenderSystem.enableDepthTest();
-                RenderSystem.depthFunc(GL11.GL_LEQUAL);
-                RenderSystem.depthMask(true);
-                RenderSystem.colorMask(true, true, true, true);
-                RenderSystem.clearColor(0f, 0f, 0f, 0f);
-                RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
+            if (mainW != fboWidth || mainH != fboHeight) {
+                try {
+                    resizeFBO(mainW, mainH, mc);
+                } catch (Exception e) {
+                    Vision_goggles.LOGGER.error("[ThermalEntityPainter] Failed to resize FBOs: " + e.getMessage());
+                    cleanup();
+                    return;
+                }
+            }
 
-                for (ThermalRenderEntry entry : single.getValue()) {
-                    renderEntityMask(dispatcher, poseStack, entry, partialTick);
+            float partialTick = mc.getFrameTime();
+            Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+
+            Integer defaultLuaColor = dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor("general", false);
+            int defaultRgb = (defaultLuaColor != null) ? (defaultLuaColor & 0x00FFFFFF) : 0x00FFFF;
+
+            Map<Integer, List<ThermalRenderEntry>> throughWallBuckets = new LinkedHashMap<>();
+            Map<Integer, List<ThermalRenderEntry>> directBuckets = new LinkedHashMap<>();
+
+            for (Entity entity : mc.level.entitiesForRendering()) {
+                if (!(entity instanceof LivingEntity living)) continue;
+                if (!emitsThermalHeat(living)) continue;
+                if (entity == mc.player && mc.options.getCameraType() == CameraType.FIRST_PERSON) continue;
+
+                double lerpX = entity.xOld + (entity.getX() - entity.xOld) * partialTick;
+                double lerpY = entity.yOld + (entity.getY() - entity.yOld) * partialTick;
+                double lerpZ = entity.zOld + (entity.getZ() - entity.zOld) * partialTick;
+
+                double dx = lerpX - camPos.x;
+                double dy = lerpY - camPos.y;
+                double dz = lerpZ - camPos.z;
+                double distSq = dx * dx + dy * dy + dz * dz;
+                if (distSq > 4096.0) continue; // 64 block limit
+
+                // Interpolate bounding box with partialTick and slightly inset Y to avoid floor-block false hits
+                AABB bb = entity.getBoundingBox().move(lerpX - entity.getX(), lerpY - entity.getY(), lerpZ - entity.getZ());
+                double minY = Math.min(bb.maxY, bb.minY + 0.08);
+                double maxY = Math.max(minY, bb.maxY - 0.05);
+                Vec3[] points = new Vec3[]{
+                    new Vec3(lerpX, lerpY + entity.getBbHeight() * 0.5, lerpZ),
+                    new Vec3(bb.minX, minY, bb.minZ),
+                    new Vec3(bb.minX, minY, bb.maxZ),
+                    new Vec3(bb.minX, maxY, bb.minZ),
+                    new Vec3(bb.minX, maxY, bb.maxZ),
+                    new Vec3(bb.maxX, minY, bb.minZ),
+                    new Vec3(bb.maxX, minY, bb.maxZ),
+                    new Vec3(bb.maxX, maxY, bb.minZ),
+                    new Vec3(bb.maxX, maxY, bb.maxZ)
+                };
+
+                float maxHeat = 0.0f;
+                for (Vec3 pt : points) {
+                    float ptHeat = getThermalAttenuation(camPos, pt, mc.level);
+                    if (ptHeat > maxHeat) maxHeat = ptHeat;
+                    if (maxHeat >= 1.0f) break;
                 }
 
-                bindCompositeTarget(mc, prevDrawFbo, mainW, mainH);
-                doComposite(single.getKey());
+                if (maxHeat <= 0.11f) continue; // Too weak or fully blocked
+
+                Integer customColor = resolveEntityThermalColor(living);
+                int bucketRgb = (customColor != null) ? (customColor & 0x00FFFFFF) : defaultRgb;
+                ThermalRenderEntry entry = new ThermalRenderEntry(living, dx, dy, dz, maxHeat, distSq);
+                if (maxHeat < 0.99f) {
+                    throughWallBuckets.computeIfAbsent(bucketRgb, k -> new ArrayList<>()).add(entry);
+                } else {
+                    directBuckets.computeIfAbsent(bucketRgb, k -> new ArrayList<>()).add(entry);
+                }
+            }
+
+            hasPerEntityCustomColor = false;
+
+            // Pre-compute camera world-up direction in view space once per frame
+            Vector3f worldUpView = new Vector3f(0.0f, 1.0f, 0.0f);
+            poseStack.last().pose().transformDirection(0.0f, 1.0f, 0.0f, worldUpView);
+            float upLen = worldUpView.length();
+            if (upLen > 1e-5f) {
+                worldUpView.div(upLen);
             } else {
-                // Multi-bucket: 1) depth pre-pass across all thermal entities so occlusion across colors is exact,
-                // 2) render & composite each color bucket separately using flat TintColor (UseVertexColor=0)
-                //    so skin textures never corrupt thermal RGB ratios.
-                GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+                worldUpView.set(0.0f, 1.0f, 0.0f);
+            }
+
+            // Always clear maskFbo first so stale silhouettes from previous frames never persist
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, maskFbo);
+            GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.clearColor(0f, 0f, 0f, 0f);
+            RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
+
+            if (throughWallBuckets.isEmpty() && directBuckets.isEmpty()) {
+                maskValidThisFrame = false;
+                return;
+            }
+
+            // Flush any pending batches before borrowing EntityRenderDispatcher
+            mc.renderBuffers().bufferSource().endBatch();
+            dispatcher.setRenderShadow(false);
+
+            // Phase 1: Through-wall thermal signatures (behind THERMAL_TRANSPARENT wood/glass/leaves)
+            if (!throughWallBuckets.isEmpty()) {
+                for (List<ThermalRenderEntry> group : throughWallBuckets.values()) {
+                    group.sort(Comparator.comparingDouble((ThermalRenderEntry e) -> e.distSq).reversed());
+                }
+
+                GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
                 GlStateManager._viewport(0, 0, fboWidth, fboHeight);
                 RenderSystem.enableDepthTest();
                 RenderSystem.depthFunc(GL11.GL_LEQUAL);
@@ -315,120 +382,296 @@ public class ThermalEntityPainter {
                 RenderSystem.clearColor(0f, 0f, 0f, 0f);
                 RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
 
-                RenderSystem.colorMask(false, false, false, false);
-                for (List<ThermalRenderEntry> group : buckets.values()) {
-                    for (ThermalRenderEntry entry : group) {
-                        renderEntityMask(dispatcher, poseStack, entry, partialTick);
+                if (throughWallBuckets.size() > 1) {
+                    RenderSystem.colorMask(false, false, false, false);
+                    for (List<ThermalRenderEntry> group : throughWallBuckets.values()) {
+                        for (ThermalRenderEntry entry : group) {
+                            renderEntityMask(dispatcher, poseStack, entry, partialTick, worldUpView);
+                        }
                     }
+                    RenderSystem.colorMask(true, true, true, true);
                 }
 
-                RenderSystem.colorMask(true, true, true, true);
-                for (Map.Entry<Integer, List<ThermalRenderEntry>> bucket : buckets.entrySet()) {
-                    GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+                for (Map.Entry<Integer, List<ThermalRenderEntry>> bucket : throughWallBuckets.entrySet()) {
+                    GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
                     GlStateManager._viewport(0, 0, fboWidth, fboHeight);
                     RenderSystem.enableDepthTest();
                     RenderSystem.depthFunc(GL11.GL_LEQUAL);
-                    RenderSystem.depthMask(false);
-                    RenderSystem.disableBlend();
+                    RenderSystem.colorMask(true, true, true, true);
                     RenderSystem.clearColor(0f, 0f, 0f, 0f);
                     RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
 
                     for (ThermalRenderEntry entry : bucket.getValue()) {
-                        renderEntityMask(dispatcher, poseStack, entry, partialTick);
+                        renderEntityMask(dispatcher, poseStack, entry, partialTick, worldUpView);
                     }
 
-                    bindCompositeTarget(mc, prevDrawFbo, mainW, mainH);
-                    doComposite(bucket.getKey());
+                    compositeIntoMask(bucket.getKey(), prevProgram);
                 }
             }
+
+            // Phase 2: Direct-sightline entities occluded pixel-for-pixel by the world's depth buffer
+            if (!directBuckets.isEmpty()) {
+                int srcDepthFbo = (prevDrawFbo > 0) ? prevDrawFbo : mc.getMainRenderTarget().frameBufferId;
+                boolean useWorldDepth = depthBlitSupported;
+
+                if (useWorldDepth && directBuckets.size() > 1) {
+                    // Verify world depth blit once before looping buckets
+                    useWorldDepth = blitWorldDepthToCapture(mc, srcDepthFbo, mainW, mainH);
+                }
+
+                if (useWorldDepth) {
+                    boolean firstBlitDone = (directBuckets.size() > 1);
+                    for (Map.Entry<Integer, List<ThermalRenderEntry>> bucket : directBuckets.entrySet()) {
+                        if (firstBlitDone) {
+                            firstBlitDone = false;
+                        } else if (!blitWorldDepthToCapture(mc, srcDepthFbo, mainW, mainH)) {
+                            useWorldDepth = false;
+                            break;
+                        }
+
+                        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
+                        GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+                        RenderSystem.enableDepthTest();
+                        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                        RenderSystem.colorMask(true, true, true, true);
+                        RenderSystem.clearColor(0f, 0f, 0f, 0f);
+                        RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
+
+                        RenderSystem.polygonOffset(-1.0f, -2.0f);
+                        RenderSystem.enablePolygonOffset();
+                        try {
+                            for (ThermalRenderEntry entry : bucket.getValue()) {
+                                renderEntityMask(dispatcher, poseStack, entry, partialTick, worldUpView);
+                            }
+                        } finally {
+                            RenderSystem.disablePolygonOffset();
+                            RenderSystem.polygonOffset(0.0f, 0.0f);
+                        }
+
+                        compositeIntoMask(bucket.getKey(), prevProgram);
+                    }
+                }
+
+                if (!useWorldDepth) {
+                    // Safe fallback when world depth blit is unsupported by current pipeline
+                    GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
+                    GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+                    RenderSystem.enableDepthTest();
+                    RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                    RenderSystem.depthMask(true);
+                    RenderSystem.colorMask(true, true, true, true);
+                    RenderSystem.clearColor(0f, 0f, 0f, 0f);
+                    RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
+
+                    if (directBuckets.size() > 1) {
+                        RenderSystem.colorMask(false, false, false, false);
+                        for (List<ThermalRenderEntry> group : directBuckets.values()) {
+                            for (ThermalRenderEntry entry : group) {
+                                renderEntityMask(dispatcher, poseStack, entry, partialTick, worldUpView);
+                            }
+                        }
+                        RenderSystem.colorMask(true, true, true, true);
+                    }
+
+                    for (Map.Entry<Integer, List<ThermalRenderEntry>> bucket : directBuckets.entrySet()) {
+                        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
+                        GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+                        RenderSystem.enableDepthTest();
+                        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+                        RenderSystem.colorMask(true, true, true, true);
+                        RenderSystem.clearColor(0f, 0f, 0f, 0f);
+                        RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
+
+                        for (ThermalRenderEntry entry : bucket.getValue()) {
+                            renderEntityMask(dispatcher, poseStack, entry, partialTick, worldUpView);
+                        }
+
+                        compositeIntoMask(bucket.getKey(), prevProgram);
+                    }
+                }
+            }
+
+            maskValidThisFrame = true;
         } finally {
+            RenderSystem.disablePolygonOffset();
+            RenderSystem.polygonOffset(0.0f, 0.0f);
+            GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
             RenderSystem.colorMask(true, true, true, true);
             RenderSystem.depthMask(true);
+            RenderSystem.enableDepthTest();
+            RenderSystem.enableCull();
+            RenderSystem.disableBlend();
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.clearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
             dispatcher.setRenderShadow(oldShadow);
-            // Restore the previously-bound FBO so Xenon/Sodium/Fabulous can continue with its own pipeline
+
+            GL20.glUseProgram(prevProgram);
+            RenderSystem.activeTexture(GL13.GL_TEXTURE0);
+            GlStateManager._bindTexture(prevTex0);
+            RenderSystem.activeTexture(prevActiveTex);
+
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
+            GlStateManager._viewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         }
     }
 
-    private static void bindCompositeTarget(Minecraft mc, int prevDrawFbo, int mainW, int mainH) {
-        if (prevDrawFbo > 0) {
-            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, prevDrawFbo);
-            GlStateManager._viewport(0, 0, mainW, mainH);
-        } else {
-            mc.getMainRenderTarget().bindWrite(false);
-            GlStateManager._viewport(0, 0, mainW, mainH);
+    private static boolean blitWorldDepthToCapture(Minecraft mc, int srcDepthFbo, int srcW, int srcH) {
+        if (!depthBlitSupported || srcDepthFbo <= 0 || captureFbo <= 0) {
+            return false;
         }
+        while (GL11.glGetError() != GL11.GL_NO_ERROR) {}
+
+        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, srcDepthFbo);
+        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, captureFbo);
+        GL30.glBlitFramebuffer(
+                0, 0, srcW, srcH,
+                0, 0, fboWidth, fboHeight,
+                GL11.GL_DEPTH_BUFFER_BIT,
+                GL11.GL_NEAREST
+        );
+        int err = GL11.glGetError();
+        if (err != GL11.GL_NO_ERROR) {
+            if (!depthBlitRetried) {
+                depthBlitRetried = true;
+                Vision_goggles.LOGGER.warn("[ThermalEntityPainter] Depth blit failed (GL error {}), recreating capture FBO with detected world depth format...", err);
+                recreateCaptureFBO(fboWidth, fboHeight, mc);
+                while (GL11.glGetError() != GL11.GL_NO_ERROR) {}
+                GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, srcDepthFbo);
+                GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, captureFbo);
+                GL30.glBlitFramebuffer(
+                        0, 0, srcW, srcH,
+                        0, 0, fboWidth, fboHeight,
+                        GL11.GL_DEPTH_BUFFER_BIT,
+                        GL11.GL_NEAREST
+                );
+                err = GL11.glGetError();
+            }
+            if (err != GL11.GL_NO_ERROR) {
+                depthBlitSupported = false;
+                Vision_goggles.LOGGER.warn("[ThermalEntityPainter] Depth blit unsupported on current pipeline (GL error {}), using raycast-only occlusion fallback.", err);
+                return false;
+            }
+        }
+        return true;
     }
 
-    private static void renderEntityMask(EntityRenderDispatcher dispatcher, PoseStack poseStack, ThermalRenderEntry entry, float partialTick) {
-        // Re-assert fboId before each entity so any custom RenderType output state cannot redirect subsequent entities
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+    private static void renderEntityMask(EntityRenderDispatcher dispatcher, PoseStack poseStack, ThermalRenderEntry entry, float partialTick, Vector3f worldUpView) {
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
         GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
 
         PoseStack entityPoseStack = new PoseStack();
         entityPoseStack.last().pose().set(poseStack.last().pose());
         entityPoseStack.last().normal().set(poseStack.last().normal());
         entityPoseStack.translate(entry.dx, entry.dy, entry.dz);
 
+        // Entity foot origin in view space (after camera rotation + entity translation)
+        Vector3f footView = new Vector3f();
+        entityPoseStack.last().pose().transformPosition(0.0f, 0.0f, 0.0f, footView);
+
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
         final float finalHeat = entry.heat;
-        final double finalDy = entry.dy;
         final float entityHeight = entry.entity.getBbHeight();
 
         try {
             float lerpYaw = entry.entity.yRotO + (entry.entity.getYRot() - entry.entity.yRotO) * partialTick;
 
             MultiBufferSource wrappedSource = type -> {
-                String name = type.toString().toLowerCase(java.util.Locale.ROOT);
-                // Discard held items, glowing eyes, glints, capes, elytras, and block overlays completely
-                if (name.contains("item") || name.contains("eyes") || name.contains("glint") || name.contains("cape") || name.contains("elytra") || name.contains("blocks")) {
+                if (shouldDiscardRenderType(type)) {
                     return DISCARD_VERTEX_CONSUMER;
                 }
 
-                // Organic body/fur/robe layers carry full body heat; armor acts as moderate thermal insulation
-                boolean isArmor = name.contains("armor");
-                if (!isArmor) {
-                    return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int) (finalHeat * 255), finalDy, entityHeight, true, null);
-                } else {
-                    return new AlphaOverrideVertexConsumer(maskBufferSource.getBuffer(type), (int) (finalHeat * 110), finalDy, entityHeight, false, null);
-                }
+                // Organic body/fur/robe layers carry full heat; armor insulates moderately (~72%) without going black
+                boolean isArmor = isArmorRenderType(type);
+                int baseAlpha = isArmor ? Math.round(finalHeat * 185.0f) : Math.round(finalHeat * 255.0f);
+                return new AlphaOverrideVertexConsumer(
+                        maskBufferSource.getBuffer(type),
+                        baseAlpha,
+                        footView.x, footView.y, footView.z,
+                        worldUpView.x, worldUpView.y, worldUpView.z,
+                        entityHeight,
+                        !isArmor
+                );
             };
 
             dispatcher.render(entry.entity, 0, 0, 0, lerpYaw, partialTick, entityPoseStack, wrappedSource, 15728880);
         } catch (Throwable ignored) {
         } finally {
-            try { maskBufferSource.endBatch(); } catch (Throwable ignored) {}
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
+            GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+            try {
+                maskBufferSource.endBatch();
+            } catch (Throwable ignored) {
+            }
+            if (maskBuffer != null && maskBuffer.building()) {
+                try { maskBuffer.discard(); } catch (Throwable ignored) {}
+            }
         }
     }
 
-    private static void doComposite(int rgbColor) {
+    private static boolean shouldDiscardRenderType(net.minecraft.client.renderer.RenderType type) {
+        if (type == net.minecraft.client.renderer.RenderType.leash()
+                || type == net.minecraft.client.renderer.RenderType.lines()
+                || type == net.minecraft.client.renderer.RenderType.lineStrip()
+                || type == net.minecraft.client.renderer.RenderType.lightning()
+                || type == net.minecraft.client.renderer.RenderType.waterMask()
+                || type == net.minecraft.client.renderer.RenderType.endPortal()
+                || type == net.minecraft.client.renderer.RenderType.endGateway()) {
+            return true;
+        }
+        String raw = type.toString().toLowerCase(Locale.ROOT);
+        int colonIdx = raw.indexOf(':');
+        String rtName = (raw.startsWith("rendertype[") && colonIdx > 11) ? raw.substring(11, colonIdx) : raw;
+
+        if (rtName.startsWith("text") || rtName.equals("lines") || rtName.equals("line_strip")
+                || rtName.equals("leash") || rtName.equals("lightning") || rtName.equals("beacon_beam")
+                || rtName.equals("entity_shadow") || rtName.equals("crumbling")
+                || rtName.equals("end_portal") || rtName.equals("end_gateway") || rtName.equals("water_mask")
+                || rtName.contains("glint") || rtName.equals("eyes") || rtName.startsWith("item_")
+                || rtName.contains("item_entity")) {
+            return true;
+        }
+
+        return raw.contains("textures/atlas/blocks.png")
+                || raw.contains("textures/item/")
+                || raw.contains("textures/misc/enchanted")
+                || raw.contains("/cape")
+                || raw.contains("cape.png")
+                || raw.contains("elytra")
+                || raw.contains("_eyes.png");
+    }
+
+    private static boolean isArmorRenderType(net.minecraft.client.renderer.RenderType type) {
+        String raw = type.toString().toLowerCase(Locale.ROOT);
+        int colonIdx = raw.indexOf(':');
+        String rtName = (raw.startsWith("rendertype[") && colonIdx > 11) ? raw.substring(11, colonIdx) : raw;
+        return rtName.contains("armor") || raw.contains("textures/models/armor/");
+    }
+
+    private static void compositeIntoMask(int rgbColor, int restoreProgram) {
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, maskFbo);
+        GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.SRC_ALPHA,
-                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-                GlStateManager.SourceFactor.ONE,
-                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
-        );
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
 
         GL20.glUseProgram(programId);
 
-        // Bind entity mask texture to unit 0
-        RenderSystem.activeTexture(GL20.GL_TEXTURE0);
+        RenderSystem.activeTexture(GL13.GL_TEXTURE0);
         GlStateManager._bindTexture(colorTexture);
         GL20.glUniform1i(GL20.glGetUniformLocation(programId, "EntityMask"), 0);
 
         float tintR = ((rgbColor >> 16) & 0xFF) / 255.0f;
         float tintG = ((rgbColor >> 8) & 0xFF) / 255.0f;
         float tintB = (rgbColor & 0xFF) / 255.0f;
-        float tintA = TINT_A;
 
-        GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), tintR, tintG, tintB, tintA);
+        // Alpha = 1.0f (unpremultiplied); thermal_overlay.fsh discards pixels with mask alpha < 0.01
+        GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), tintR, tintG, tintB, 1.0f);
         int useVertexColorLoc = GL20.glGetUniformLocation(programId, "UseVertexColor");
         if (useVertexColorLoc != -1) {
             GL20.glUniform1f(useVertexColorLoc, 0.0f);
@@ -439,18 +682,84 @@ public class ThermalEntityPainter {
         GL30.glBindVertexArray(0);
         BufferUploader.invalidate();
 
-        GL20.glUseProgram(0);
+        // Restore caller's shader program so Blaze3D ShaderInstance.lastProgramId cache stays consistent
+        GL20.glUseProgram(restoreProgram);
+        RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
-        RenderSystem.disableBlend();
-        GlStateManager._bindTexture(0);
     }
 
-    // ── Internals ──────────────────────────────────────────────────────────
+    // ── FBO & Resource Internals ───────────────────────────────────────────
 
-    private static void createFBO(int w, int h) {
-        fboWidth = w; fboHeight = h;
-        fboId = GlStateManager.glGenFramebuffers();
+    private static int[] detectWorldDepthFormat(Minecraft mc) {
+        int format = GL14.GL_DEPTH_COMPONENT24;
+        int attachment = GL30.GL_DEPTH_ATTACHMENT;
+        try {
+            if (mc != null && mc.getMainRenderTarget() != null) {
+                int depthTex = mc.getMainRenderTarget().getDepthTextureId();
+                if (depthTex > 0) {
+                    int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+                    GlStateManager._bindTexture(depthTex);
+                    int texFmt = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_INTERNAL_FORMAT);
+                    GlStateManager._bindTexture(prevTex);
+
+                    if (texFmt == GL30.GL_DEPTH24_STENCIL8 || texFmt == GL30.GL_DEPTH32F_STENCIL8) {
+                        format = texFmt;
+                        attachment = GL30.GL_DEPTH_STENCIL_ATTACHMENT;
+                    } else if (texFmt == GL14.GL_DEPTH_COMPONENT16
+                            || texFmt == GL14.GL_DEPTH_COMPONENT24
+                            || texFmt == GL14.GL_DEPTH_COMPONENT32
+                            || texFmt == GL30.GL_DEPTH_COMPONENT32F) {
+                        format = texFmt;
+                        attachment = GL30.GL_DEPTH_ATTACHMENT;
+                    } else if (texFmt == GL11.GL_DEPTH_COMPONENT || texFmt == 0) {
+                        format = GL14.GL_DEPTH_COMPONENT24;
+                        attachment = GL30.GL_DEPTH_ATTACHMENT;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return new int[]{format, attachment};
+    }
+
+    private static void createFBO(int w, int h, Minecraft mc) {
+        int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+
+        try {
+            allocateCaptureFBO(w, h, mc);
+
+            maskFbo = GlStateManager.glGenFramebuffers();
+            maskTexture = GL30.glGenTextures();
+            GlStateManager._bindTexture(maskTexture);
+            GL30.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, w, h, 0, GL30.GL_RGBA, GL11.GL_UNSIGNED_BYTE, 0);
+            GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MIN_FILTER, GL30.GL_LINEAR);
+            GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MAG_FILTER, GL30.GL_LINEAR);
+            GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_WRAP_S, GL30.GL_CLAMP_TO_EDGE);
+            GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_WRAP_T, GL30.GL_CLAMP_TO_EDGE);
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, maskFbo);
+            GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL30.GL_TEXTURE_2D, maskTexture, 0);
+            int maskStatus = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
+            if (maskStatus != GL30.GL_FRAMEBUFFER_COMPLETE) {
+                throw new RuntimeException("maskFbo incomplete: status=" + maskStatus);
+            }
+            fboWidth = w;
+            fboHeight = h;
+        } finally {
+            GlStateManager._bindTexture(prevTex);
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
+        }
+    }
+
+    private static void allocateCaptureFBO(int w, int h, Minecraft mc) {
+        int[] depthInfo = detectWorldDepthFormat(mc);
+        captureDepthFormat = depthInfo[0];
+        captureDepthAttachment = depthInfo[1];
+
+        captureFbo = GlStateManager.glGenFramebuffers();
         colorTexture = GL30.glGenTextures();
         GlStateManager._bindTexture(colorTexture);
         GL30.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, w, h, 0, GL30.GL_RGBA, GL11.GL_UNSIGNED_BYTE, 0);
@@ -458,20 +767,71 @@ public class ThermalEntityPainter {
         GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MAG_FILTER, GL30.GL_LINEAR);
         GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_WRAP_S, GL30.GL_CLAMP_TO_EDGE);
         GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_WRAP_T, GL30.GL_CLAMP_TO_EDGE);
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
+
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
         GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL30.GL_TEXTURE_2D, colorTexture, 0);
+
         depthRenderbuffer = GL30.glGenRenderbuffers();
         GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depthRenderbuffer);
-        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, GL30.GL_DEPTH24_STENCIL8, w, h);
-        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_STENCIL_ATTACHMENT, GL30.GL_RENDERBUFFER, depthRenderbuffer);
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, captureDepthFormat, w, h);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, captureDepthAttachment, GL30.GL_RENDERBUFFER, depthRenderbuffer);
+
+        int capStatus = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
+        if (capStatus != GL30.GL_FRAMEBUFFER_COMPLETE) {
+            throw new RuntimeException("captureFbo incomplete: status=" + capStatus);
+        }
     }
 
-    private static void resizeFBO(int w, int h) {
-        if (fboId != 0) GlStateManager._glDeleteFramebuffers(fboId);
-        if (colorTexture != 0) GlStateManager._deleteTexture(colorTexture);
-        if (depthRenderbuffer != 0) GL30.glDeleteRenderbuffers(depthRenderbuffer);
-        createFBO(w, h);
+    private static void recreateCaptureFBO(int w, int h, Minecraft mc) {
+        int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        int oldCaptureFbo = captureFbo;
+
+        try {
+            if (captureFbo != 0) { GlStateManager._glDeleteFramebuffers(captureFbo); captureFbo = 0; }
+            if (colorTexture != 0) { GlStateManager._deleteTexture(colorTexture); colorTexture = 0; }
+            if (depthRenderbuffer != 0) { GL30.glDeleteRenderbuffers(depthRenderbuffer); depthRenderbuffer = 0; }
+            allocateCaptureFBO(w, h, mc);
+        } finally {
+            GlStateManager._bindTexture(prevTex);
+            int restoreDraw = (prevDrawFbo == oldCaptureFbo) ? 0 : prevDrawFbo;
+            int restoreRead = (prevReadFbo == oldCaptureFbo) ? 0 : prevReadFbo;
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, restoreDraw);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, restoreRead);
+        }
+    }
+
+    private static void resizeFBO(int w, int h, Minecraft mc) {
+        if (captureFbo != 0) { GlStateManager._glDeleteFramebuffers(captureFbo); captureFbo = 0; }
+        if (colorTexture != 0) { GlStateManager._deleteTexture(colorTexture); colorTexture = 0; }
+        if (depthRenderbuffer != 0) { GL30.glDeleteRenderbuffers(depthRenderbuffer); depthRenderbuffer = 0; }
+        if (maskFbo != 0) { GlStateManager._glDeleteFramebuffers(maskFbo); maskFbo = 0; }
+        if (maskTexture != 0) { GlStateManager._deleteTexture(maskTexture); maskTexture = 0; }
+        fboWidth = 0;
+        fboHeight = 0;
+        maskValidThisFrame = false;
+        createFBO(w, h, mc);
+    }
+
+    private static int ensureEmptyMaskTexture() {
+        if (emptyMaskTexture != 0) return emptyMaskTexture;
+        int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            ByteBuffer zero = stack.calloc(4);
+            emptyMaskTexture = GL30.glGenTextures();
+            GlStateManager._bindTexture(emptyMaskTexture);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, zero);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL30.GL_CLAMP_TO_EDGE);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL30.GL_CLAMP_TO_EDGE);
+        } catch (Throwable e) {
+            return -1;
+        } finally {
+            GlStateManager._bindTexture(prevTex);
+        }
+        return emptyMaskTexture;
     }
 
     private static void createShader() throws IOException {
@@ -511,7 +871,6 @@ public class ThermalEntityPainter {
         Resource res = opt.orElseThrow();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(res.open(), StandardCharsets.UTF_8))) {
             String src = reader.lines().collect(Collectors.joining("\n"));
-            // Inject UseVertexColor support if the loaded thermal_overlay.fsh doesn't declare it yet
             if (path.equals("shaders/thermal/thermal_overlay.fsh") && !src.contains("UseVertexColor")) {
                 src = """
                         #version 150
@@ -581,107 +940,137 @@ public class ThermalEntityPainter {
 
         for (int i = 1; i <= steps; i++) {
             pos.set(from.x + stepX * i, from.y + stepY * i, from.z + stepZ * i);
-            
-            if (pos.equals(lastPos)) continue; // Only process each block once
+
+            if (pos.equals(lastPos)) continue;
             lastPos.set(pos);
 
             BlockState state = level.getBlockState(pos);
 
             if (state.isAir()) continue;
-
-            // Allow non-collidable blocks (e.g. tall grass, flowers) without losing heat
             if (state.getCollisionShape(level, pos).isEmpty()) continue;
 
             boolean isTransparent = false;
 
-            // Allow thermal to pass through whitelisted blocks (custom tag)
             if (state.is(THERMAL_TRANSPARENT)) isTransparent = true;
 
-            // Fallback: check hardcoded vanilla tags
-            if (state.is(BlockTags.PLANKS) || state.is(BlockTags.LEAVES) || 
-                state.is(BlockTags.WOODEN_FENCES) || state.is(BlockTags.WOODEN_SLABS) || 
+            if (state.is(BlockTags.PLANKS) || state.is(BlockTags.LEAVES) ||
+                state.is(BlockTags.WOODEN_FENCES) || state.is(BlockTags.WOODEN_SLABS) ||
                 state.is(BlockTags.WOODEN_STAIRS) || state.is(BlockTags.DOORS) ||
                 state.is(BlockTags.TRAPDOORS)) isTransparent = true;
-                
-            // Check for glass
+
             if (state.is(Blocks.GLASS) || state.getBlock().getDescriptionId().contains("glass")) isTransparent = true;
 
             if (isTransparent) {
-                heat *= 0.6f; // Drop heat by 40% for each plank/glass wall
-                if (heat < 0.05f) return 0.0f; // Too weak to see, consider blocked
+                heat *= 0.6f;
+                if (heat < 0.05f) return 0.0f;
                 continue;
             }
 
-            return 0.0f; // Solid, non-transparent block — blocks thermal view
+            return 0.0f;
         }
         return heat;
     }
 
-    private static class AlphaOverrideVertexConsumer implements com.mojang.blaze3d.vertex.VertexConsumer {
-        private final com.mojang.blaze3d.vertex.VertexConsumer delegate;
+    /**
+     * Wraps vertex writes so alpha encodes true world-up height gradient and view-normal Fresnel
+     * shading without any dependency on camera pitch, yaw, or distance.
+     */
+    private static class AlphaOverrideVertexConsumer implements VertexConsumer {
+        private final VertexConsumer delegate;
         private final int baseAlpha;
-        private final double dy;
+        private final float footX;
+        private final float footY;
+        private final float footZ;
+        private final float upX;
+        private final float upY;
+        private final float upZ;
         private final float entityHeight;
         private final boolean isBody;
-        private final Integer customColor;
+
+        private double lastX = 0;
         private double lastY = 0;
+        private double lastZ = 0;
 
-        public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody) {
-            this(delegate, baseAlpha, dy, entityHeight, isBody, null);
-        }
-
-        public AlphaOverrideVertexConsumer(com.mojang.blaze3d.vertex.VertexConsumer delegate, int baseAlpha, double dy, float entityHeight, boolean isBody, Integer customColor) {
+        AlphaOverrideVertexConsumer(
+                VertexConsumer delegate,
+                int baseAlpha,
+                float footX, float footY, float footZ,
+                float upX, float upY, float upZ,
+                float entityHeight,
+                boolean isBody) {
             this.delegate = delegate;
-            this.baseAlpha = baseAlpha;
-            this.dy = dy;
+            this.baseAlpha = Math.max(0, Math.min(255, baseAlpha));
+            this.footX = footX;
+            this.footY = footY;
+            this.footZ = footZ;
+            this.upX = upX;
+            this.upY = upY;
+            this.upZ = upZ;
             this.entityHeight = entityHeight;
             this.isBody = isBody;
-            this.customColor = customColor;
+        }
+
+        private int computeZonedAlpha(double vx, double vy, double vz, float facing) {
+            double localY = (vx - footX) * upX + (vy - footY) * upY + (vz - footZ) * upZ;
+            float relY = (entityHeight > 0.01f) ? (float) Math.max(0.0, Math.min(1.0, localY / entityHeight)) : 0.5f;
+            float smoothY = relY * relY * (3.0f - 2.0f * relY);
+            float zoneLum = isBody ? (0.84f + 0.16f * smoothY) : 0.90f;
+            float fresnel = isBody ? (0.88f + 0.12f * facing) : (0.90f + 0.10f * facing);
+            // Keep alpha >= 26 (26/255 = 0.102 > 0.10) so heavily-attenuated/armored entities survive vanilla alpha cutout
+            return Math.min(255, Math.max(26, Math.round(this.baseAlpha * zoneLum * fresnel)));
         }
 
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer vertex(double x, double y, double z) { 
-            this.lastY = y;
-            delegate.vertex(x, y, z); 
-            return this; 
-        }
-        
-        @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer color(int r, int g, int b, int a) { 
-            double relY = (entityHeight > 0.01f) ? Math.max(0.0, Math.min(1.0, (this.lastY - dy) / entityHeight)) : 0.5;
-            float zoneLum = isBody ? (relY < 0.45 ? 0.78f : (relY < 0.80 ? 0.90f : 1.0f)) : 0.65f;
-            int zonedAlpha = Math.min(255, Math.max(0, Math.round(this.baseAlpha * zoneLum)));
-            if (customColor != null) {
-                int cr = (customColor >> 16) & 0xFF;
-                int cg = (customColor >> 8) & 0xFF;
-                int cb = customColor & 0xFF;
-                delegate.color(cr, cg, cb, zonedAlpha);
+        public void vertex(float x, float y, float z, float r, float g, float b, float a,
+                           float u, float v, int overlay, int light, float nx, float ny, float nz) {
+            float vLen = (float) Math.sqrt(x * x + y * y + z * z);
+            float nLen = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+            float facing;
+            if (vLen > 1e-4f && nLen > 1e-4f) {
+                facing = Math.min(1.0f, Math.abs((nx * x + ny * y + nz * z) / (vLen * nLen)));
             } else {
-                delegate.color(0, 255, 255, zonedAlpha); 
+                facing = Math.min(1.0f, Math.abs(nz));
             }
-            return this; 
+            int zonedAlpha = computeZonedAlpha(x, y, z, facing);
+            delegate.vertex(x, y, z, 1.0f, 1.0f, 1.0f, zonedAlpha / 255.0f, u, v, overlay, light, nx, ny, nz);
         }
+
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer uv(float u, float v) { delegate.uv(u, v); return this; }
+        public VertexConsumer vertex(double x, double y, double z) {
+            this.lastX = x;
+            this.lastY = y;
+            this.lastZ = z;
+            delegate.vertex(x, y, z);
+            return this;
+        }
+
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer overlayCoords(int u, int v) { delegate.overlayCoords(u, v); return this; }
+        public VertexConsumer color(int r, int g, int b, int a) {
+            int zonedAlpha = computeZonedAlpha(this.lastX, this.lastY, this.lastZ, 0.85f);
+            delegate.color(255, 255, 255, zonedAlpha);
+            return this;
+        }
+
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer uv2(int u, int v) { delegate.uv2(u, v); return this; }
+        public VertexConsumer uv(float u, float v) { delegate.uv(u, v); return this; }
+
         @Override
-        public com.mojang.blaze3d.vertex.VertexConsumer normal(float x, float y, float z) { delegate.normal(x, y, z); return this; }
+        public VertexConsumer overlayCoords(int u, int v) { delegate.overlayCoords(u, v); return this; }
+
+        @Override
+        public VertexConsumer uv2(int u, int v) { delegate.uv2(u, v); return this; }
+
+        @Override
+        public VertexConsumer normal(float x, float y, float z) { delegate.normal(x, y, z); return this; }
+
         @Override
         public void endVertex() { delegate.endVertex(); }
+
         @Override
         public void defaultColor(int r, int g, int b, int a) {
-            if (customColor != null) {
-                int cr = (customColor >> 16) & 0xFF;
-                int cg = (customColor >> 8) & 0xFF;
-                int cb = customColor & 0xFF;
-                delegate.defaultColor(cr, cg, cb, this.baseAlpha);
-            } else {
-                delegate.defaultColor(r, g, b, this.baseAlpha);
-            }
+            delegate.defaultColor(255, 255, 255, this.baseAlpha);
         }
+
         @Override
         public void unsetDefaultColor() { delegate.unsetDefaultColor(); }
     }
