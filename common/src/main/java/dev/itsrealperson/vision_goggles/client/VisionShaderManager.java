@@ -654,23 +654,15 @@ public class VisionShaderManager {
         float zoomFactor = dev.itsrealperson.vision_goggles.client.VisionRenderer.getCurrentZoomFactor();
         float focus = Math.max(0.0f, Math.min(1.0f, (zoomFactor - 1.0f) / 7.0f));
 
-        // Power-up sequence: Photonic capacitor spike, micro-strobe, and phosphor warm-up ramp
+        // Power-up sequence: Smooth optical tube bloom without jarring black strobe gaps
         float startupMultiplier = 1.0f;
         if (startupTimestamp > 0L) {
             long elapsed = System.currentTimeMillis() - startupTimestamp;
-            if (elapsed < 650L) {
-                if (elapsed < 75L) {
-                    startupMultiplier = 1.85f; // Initial phosphor overcharge bloom
-                    currentGlare = Math.max(currentGlare, 0.40f);
-                } else if (elapsed < 165L) {
-                    startupMultiplier = 0.0f; // Strobe gap / blackout
-                } else if (elapsed < 230L) {
-                    startupMultiplier = 1.35f; // Warmup flicker pulse 1
-                } else if (elapsed < 280L) {
-                    startupMultiplier = 0.08f; // Micro dip
-                } else {
-                    float t = (elapsed - 280L) / 370.0f;
-                    startupMultiplier = 0.40f + 0.60f * t; // Smooth phosphor stabilization
+            if (elapsed < 240L) {
+                float t = Math.max(0.0f, Math.min(1.0f, (float) elapsed / 240.0f));
+                float decay = (1.0f - t) * (1.0f - t);
+                if (activeMode == VisionMode.NIGHT_VISION) {
+                    currentGlare = Math.max(currentGlare, 0.28f * decay);
                 }
             }
         }

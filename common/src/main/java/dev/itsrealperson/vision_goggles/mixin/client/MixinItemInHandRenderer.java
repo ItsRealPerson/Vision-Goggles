@@ -23,6 +23,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinItemInHandRenderer {
 
     @Shadow
+    private float mainHandHeight;
+
+    @Shadow
+    private float oMainHandHeight;
+
+    @Shadow
     public abstract void renderItem(
             LivingEntity entity,
             ItemStack itemStack,
@@ -51,6 +57,8 @@ public abstract class MixinItemInHandRenderer {
         if (arm == player.getMainArm()
                 && GogglesFlipAnimator.isLocalTransitioning()
                 && Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
+            this.mainHandHeight = 0.0f;
+            this.oMainHandHeight = 0.0f;
             ci.cancel();
             return;
         }
