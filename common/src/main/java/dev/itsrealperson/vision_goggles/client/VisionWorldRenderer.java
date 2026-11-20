@@ -122,6 +122,7 @@ public class VisionWorldRenderer {
         BufferBuilder builder = tesselator.getBuilder();
 
         if (isThermal && !HOT_BLOCKS.isEmpty()) {
+            RenderSystem.enableCull();
             RenderSystem.disableDepthTest(); // Thermal cubes should be seen through walls
             builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             for (BlockPos pos : HOT_BLOCKS) {
@@ -132,7 +133,7 @@ public class VisionWorldRenderer {
                 poseStack.translate((1-s)/2, (1-s)/2, (1-s)/2);
                 poseStack.scale(s, s, s);
                 
-                renderCube(poseStack.last().pose(), builder, 1.0f, 0.5f, 0.0f, 0.4f);
+                renderCube(poseStack.last().pose(), builder, 1.0f, 0.5f, 0.0f, 0.28f);
                 poseStack.popPose();
             }
             tesselator.end();
