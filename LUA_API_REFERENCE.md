@@ -178,8 +178,9 @@ if target ~= nil then
     -- target.distance    (number: distancia al jugador en bloques)
     -- target.is_hostile  (boolean: true si es monstruo hostil)
     -- target.is_player   (boolean: true si es otro jugador)
-    -- target.emits_heat  (boolean: true si tiene firma termica real; false en no-muertos/aranas/slimes/golems)
-    -- target.is_undead   (boolean: true si pertenece a MobType.UNDEAD)
+    -- target.emits_heat      (boolean: true si tiene firma termica real; false en no-muertos/aranas/slimes/golems/soportes)
+    -- target.is_undead       (boolean: true si pertenece a MobType.UNDEAD)
+    -- target.thermal_visible (boolean: true si tiene firma termica y linea de vision termica sin bloqueo solido)
 end
 ```
 
@@ -449,4 +450,4 @@ module = {
 | `03_visor_combate_reactivo.lua` | `vision_goggles:cyber_visor` | `VISION_MODE` (Req: `"nvg"`) | **Visor Combate Gen-3 Auto-Gate**: activa `u_DSPActive = 1.0` en `nvg.fsh` (75% menos grano y Smart Auto-Gating anti-ceguera), detector de proyectiles entrantes (`world.getProjectilesInRadius`), anillo direccional 360° alrededor de la mira, alerta de armadura critica y telemetria de dano. |
 | `04_hud_piloto_avionica.lua` | `vision_goggles:tactical_hud` | `HUD` (Autonomo) | **HUD de avionica y vuelo** con cinta de brujula deslizante (`000°=Norte`), escalera de cabeceo (*Pitch Ladder*), velocimetro `m/s`, variometro `VSI` (`dy/dt`), alarma GPWS `¡PULL UP!`, reloj solar 24h, clima y efectos de pocion. |
 | `05_escaner_geologico_entorno.lua` | `vision_goggles:geo_scanner` | `UTILITY` (Autonomo) | **Prospector Geologico AR de 14m**: escaneo rapido en Java (`world.scanBlocks`) con agrupacion automatica de vetas (`DIAMANTE x4 10.2m`), rombos AR 3D + flechas direccionales, Geiger progresivo y alerta de lava bajo los pies y frente a la mira. |
-| `06_suite_termica_flir.lua` | `vision_goggles:thermal_palette` | `UTILITY` (Req: `"thermal"`) | **Clasificador termico IFF Ironbow calibrado** (`#00FFFF` / `#FFBB00` / `#FF8800`), filtrado por `e.emits_heat` para evitar etiquetas `[HOT]` sobre mobs frios/no-muertos, estabilizador criogenico en Nether, barra FLIR y temperatura `°C`. |
+| `06_suite_termica_flir.lua` | `vision_goggles:thermal_palette` | `UTILITY` (Req: `"thermal"`) | **Clasificador termico IFF Ironbow calibrado** (`#00FFFF` / `#FFBB00` / `#FF8800`), censo FLIR filtrado por `e.emits_heat` (`C: H: P: \| F:`), estabilizador criogenico en Nether, barra Ironbow y temperatura `°C`. |
