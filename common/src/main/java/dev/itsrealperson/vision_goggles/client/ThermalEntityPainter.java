@@ -214,6 +214,7 @@ public class ThermalEntityPainter {
             return false;
         }
         // Cold-blooded / constructs / spirits
+        if (living instanceof net.minecraft.world.entity.decoration.ArmorStand) return false; // Wooden construct, no heat
         if (living instanceof Slime && !(living instanceof MagmaCube)) return false; // Slime = cold, MagmaCube = hot
         if (living instanceof Spider) return false;      // Arthropod, cold-blooded
         if (living instanceof Silverfish) return false;  // Insect, cold-blooded
@@ -225,6 +226,50 @@ public class ThermalEntityPainter {
         if (living instanceof IronGolem) return false;   // Metal construct, no organic heat
         if (living instanceof SnowGolem) return false;   // Made of snow
         return true;
+    }
+
+    /**
+     * Evaluates thermal visibility (0.0 = blocked/out of range, 1.0 = clear sightline,
+     * intermediate = attenuated through THERMAL_TRANSPARENT wood/glass/leaves).
+     */
+    public static float computeEntityThermalHeat(LivingEntity entity, Vec3 camPos, float partialTick, net.minecraft.world.level.Level level) {
+        if (entity == null || level == null || camPos == null || !emitsThermalHeat(entity)) {
+            return 0.0f;
+        }
+        double lerpX = entity.xOld + (entity.getX() - entity.xOld) * partialTick;
+        double lerpY = entity.yOld + (entity.getY() - entity.yOld) * partialTick;
+        double lerpZ = entity.zOld + (entity.getZ() - entity.zOld) * partialTick;
+
+        double dx = lerpX - camPos.x;
+        double dy = lerpY - camPos.y;
+        double dz = lerpZ - camPos.z;
+        if (dx * dx + dy * dy + dz * dz > 4096.0) {
+            return 0.0f;
+        }
+
+        // Interpolate bounding box with partialTick and slightly inset Y to avoid floor-block false hits
+        AABB bb = entity.getBoundingBox().move(lerpX - entity.getX(), lerpY - entity.getY(), lerpZ - entity.getZ());
+        double minY = Math.min(bb.maxY, bb.minY + 0.08);
+        double maxY = Math.max(minY, bb.maxY - 0.05);
+        Vec3[] points = new Vec3[]{
+            new Vec3(lerpX, lerpY + entity.getBbHeight() * 0.5, lerpZ),
+            new Vec3(bb.minX, minY, bb.minZ),
+            new Vec3(bb.minX, minY, bb.maxZ),
+            new Vec3(bb.minX, maxY, bb.minZ),
+            new Vec3(bb.minX, maxY, bb.maxZ),
+            new Vec3(bb.maxX, minY, bb.minZ),
+            new Vec3(bb.maxX, minY, bb.maxZ),
+            new Vec3(bb.maxX, maxY, bb.minZ),
+            new Vec3(bb.maxX, maxY, bb.maxZ)
+        };
+
+        float maxHeat = 0.0f;
+        for (Vec3 pt : points) {
+            float ptHeat = getThermalAttenuation(camPos, pt, level);
+            if (ptHeat > maxHeat) maxHeat = ptHeat;
+            if (maxHeat >= 1.0f) break;
+        }
+        return maxHeat;
     }
 
     /** Call from RenderLevelStageEvent.AFTER_BLOCK_ENTITIES / WorldRenderEvents.AFTER_ENTITIES */
@@ -263,13 +308,15 @@ public class ThermalEntityPainter {
         GL11C.glGetFloatv(GL11.GL_COLOR_CLEAR_VALUE, prevClearColor);
         int prevProgram = GL11C.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
-        RenderSystem.activeTexture(GL13.GL_TEXTURE0);
+        forceActiveTexture(GL13.GL_TEXTURE0);
         int prevTex0 = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
 
         EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
         boolean oldShadow = mc.options.entityShadows().get();
 
         try {
+            maskValidThisFrame = false;
+
             if (mainW != fboWidth || mainH != fboHeight) {
                 try {
                     resizeFBO(mainW, mainH, mc);
@@ -291,7 +338,6 @@ public class ThermalEntityPainter {
 
             for (Entity entity : mc.level.entitiesForRendering()) {
                 if (!(entity instanceof LivingEntity living)) continue;
-                if (!emitsThermalHeat(living)) continue;
                 if (entity == mc.player && mc.options.getCameraType() == CameraType.FIRST_PERSON) continue;
 
                 double lerpX = entity.xOld + (entity.getX() - entity.xOld) * partialTick;
@@ -304,29 +350,7 @@ public class ThermalEntityPainter {
                 double distSq = dx * dx + dy * dy + dz * dz;
                 if (distSq > 4096.0) continue; // 64 block limit
 
-                // Interpolate bounding box with partialTick and slightly inset Y to avoid floor-block false hits
-                AABB bb = entity.getBoundingBox().move(lerpX - entity.getX(), lerpY - entity.getY(), lerpZ - entity.getZ());
-                double minY = Math.min(bb.maxY, bb.minY + 0.08);
-                double maxY = Math.max(minY, bb.maxY - 0.05);
-                Vec3[] points = new Vec3[]{
-                    new Vec3(lerpX, lerpY + entity.getBbHeight() * 0.5, lerpZ),
-                    new Vec3(bb.minX, minY, bb.minZ),
-                    new Vec3(bb.minX, minY, bb.maxZ),
-                    new Vec3(bb.minX, maxY, bb.minZ),
-                    new Vec3(bb.minX, maxY, bb.maxZ),
-                    new Vec3(bb.maxX, minY, bb.minZ),
-                    new Vec3(bb.maxX, minY, bb.maxZ),
-                    new Vec3(bb.maxX, maxY, bb.minZ),
-                    new Vec3(bb.maxX, maxY, bb.maxZ)
-                };
-
-                float maxHeat = 0.0f;
-                for (Vec3 pt : points) {
-                    float ptHeat = getThermalAttenuation(camPos, pt, mc.level);
-                    if (ptHeat > maxHeat) maxHeat = ptHeat;
-                    if (maxHeat >= 1.0f) break;
-                }
-
+                float maxHeat = computeEntityThermalHeat(living, camPos, partialTick, mc.level);
                 if (maxHeat <= 0.11f) continue; // Too weak or fully blocked
 
                 Integer customColor = resolveEntityThermalColor(living);
@@ -363,8 +387,9 @@ public class ThermalEntityPainter {
                 return;
             }
 
-            // Flush any pending batches before borrowing EntityRenderDispatcher
-            mc.renderBuffers().bufferSource().endBatch();
+            // NOTE: Never call mc.renderBuffers().bufferSource().endBatch() here!
+            // That shared bufferSource holds pending item-frame items, sign text, banners, etc.
+            // Flushing it while maskFbo (which has no depth buffer) is bound draws X-ray items and glyphs into ThermalMask.
             dispatcher.setRenderShadow(false);
 
             // Phase 1: Through-wall thermal signatures (behind THERMAL_TRANSPARENT wood/glass/leaves)
@@ -505,15 +530,25 @@ public class ThermalEntityPainter {
             RenderSystem.clearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
             dispatcher.setRenderShadow(oldShadow);
 
-            GL20.glUseProgram(prevProgram);
-            RenderSystem.activeTexture(GL13.GL_TEXTURE0);
-            GlStateManager._bindTexture(prevTex0);
-            RenderSystem.activeTexture(prevActiveTex);
+            GlStateManager._glUseProgram(prevProgram);
+            forceActiveTexture(GL13.GL_TEXTURE0);
+            forceBindTexture2D(prevTex0);
+            forceActiveTexture(prevActiveTex);
 
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
             GlStateManager._viewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         }
+    }
+
+    private static void forceActiveTexture(int unit) {
+        GL13.glActiveTexture(unit);
+        GlStateManager._activeTexture(unit);
+    }
+
+    private static void forceBindTexture2D(int textureId) {
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+        GlStateManager._bindTexture(textureId);
     }
 
     private static boolean blitWorldDepthToCapture(Minecraft mc, int srcDepthFbo, int srcW, int srcH) {
@@ -624,19 +659,24 @@ public class ThermalEntityPainter {
         }
         String raw = type.toString().toLowerCase(Locale.ROOT);
         int colonIdx = raw.indexOf(':');
-        String rtName = (raw.startsWith("rendertype[") && colonIdx > 11) ? raw.substring(11, colonIdx) : raw;
+        boolean hasRtName = raw.startsWith("rendertype[") && colonIdx > 11;
+        String rtName = hasRtName ? raw.substring(11, colonIdx) : raw;
 
-        if (rtName.startsWith("text") || rtName.equals("lines") || rtName.equals("line_strip")
+        if ((hasRtName && (rtName.contains("text") || rtName.contains("font")))
+                || rtName.startsWith("text") || rtName.equals("lines") || rtName.equals("line_strip")
                 || rtName.equals("leash") || rtName.equals("lightning") || rtName.equals("beacon_beam")
                 || rtName.equals("entity_shadow") || rtName.equals("crumbling")
                 || rtName.equals("end_portal") || rtName.equals("end_gateway") || rtName.equals("water_mask")
                 || rtName.contains("glint") || rtName.equals("eyes") || rtName.startsWith("item_")
-                || rtName.contains("item_entity")) {
+                || rtName.contains("item_entity") || rtName.contains("item_layered")) {
             return true;
         }
 
         return raw.contains("textures/atlas/blocks.png")
                 || raw.contains("textures/item/")
+                || raw.contains("textures/font/")
+                || raw.contains("font/")
+                || raw.contains("glyph")
                 || raw.contains("textures/misc/enchanted")
                 || raw.contains("/cape")
                 || raw.contains("cape.png")
@@ -660,10 +700,10 @@ public class ThermalEntityPainter {
         RenderSystem.disableBlend();
         RenderSystem.disableCull();
 
-        GL20.glUseProgram(programId);
+        GlStateManager._glUseProgram(programId);
 
-        RenderSystem.activeTexture(GL13.GL_TEXTURE0);
-        GlStateManager._bindTexture(colorTexture);
+        forceActiveTexture(GL13.GL_TEXTURE0);
+        forceBindTexture2D(colorTexture);
         GL20.glUniform1i(GL20.glGetUniformLocation(programId, "EntityMask"), 0);
 
         float tintR = ((rgbColor >> 16) & 0xFF) / 255.0f;
@@ -683,7 +723,7 @@ public class ThermalEntityPainter {
         BufferUploader.invalidate();
 
         // Restore caller's shader program so Blaze3D ShaderInstance.lastProgramId cache stays consistent
-        GL20.glUseProgram(restoreProgram);
+        GlStateManager._glUseProgram(restoreProgram);
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
@@ -694,14 +734,15 @@ public class ThermalEntityPainter {
     private static int[] detectWorldDepthFormat(Minecraft mc) {
         int format = GL14.GL_DEPTH_COMPONENT24;
         int attachment = GL30.GL_DEPTH_ATTACHMENT;
+        int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        forceActiveTexture(GL13.GL_TEXTURE0);
+        int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         try {
             if (mc != null && mc.getMainRenderTarget() != null) {
                 int depthTex = mc.getMainRenderTarget().getDepthTextureId();
                 if (depthTex > 0) {
-                    int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
-                    GlStateManager._bindTexture(depthTex);
+                    forceBindTexture2D(depthTex);
                     int texFmt = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_INTERNAL_FORMAT);
-                    GlStateManager._bindTexture(prevTex);
 
                     if (texFmt == GL30.GL_DEPTH24_STENCIL8 || texFmt == GL30.GL_DEPTH32F_STENCIL8) {
                         format = texFmt;
@@ -719,6 +760,9 @@ public class ThermalEntityPainter {
                 }
             }
         } catch (Throwable ignored) {
+        } finally {
+            forceBindTexture2D(prevTex);
+            forceActiveTexture(prevActiveTex);
         }
         return new int[]{format, attachment};
     }
@@ -726,6 +770,8 @@ public class ThermalEntityPainter {
     private static void createFBO(int w, int h, Minecraft mc) {
         int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        forceActiveTexture(GL13.GL_TEXTURE0);
         int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
 
         try {
@@ -733,7 +779,7 @@ public class ThermalEntityPainter {
 
             maskFbo = GlStateManager.glGenFramebuffers();
             maskTexture = GL30.glGenTextures();
-            GlStateManager._bindTexture(maskTexture);
+            forceBindTexture2D(maskTexture);
             GL30.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, w, h, 0, GL30.GL_RGBA, GL11.GL_UNSIGNED_BYTE, 0);
             GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MIN_FILTER, GL30.GL_LINEAR);
             GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MAG_FILTER, GL30.GL_LINEAR);
@@ -748,7 +794,8 @@ public class ThermalEntityPainter {
             fboWidth = w;
             fboHeight = h;
         } finally {
-            GlStateManager._bindTexture(prevTex);
+            forceBindTexture2D(prevTex);
+            forceActiveTexture(prevActiveTex);
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
         }
@@ -761,7 +808,8 @@ public class ThermalEntityPainter {
 
         captureFbo = GlStateManager.glGenFramebuffers();
         colorTexture = GL30.glGenTextures();
-        GlStateManager._bindTexture(colorTexture);
+        forceActiveTexture(GL13.GL_TEXTURE0);
+        forceBindTexture2D(colorTexture);
         GL30.glTexImage2D(GL30.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, w, h, 0, GL30.GL_RGBA, GL11.GL_UNSIGNED_BYTE, 0);
         GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MIN_FILTER, GL30.GL_LINEAR);
         GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MAG_FILTER, GL30.GL_LINEAR);
@@ -775,6 +823,7 @@ public class ThermalEntityPainter {
         GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depthRenderbuffer);
         GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, captureDepthFormat, w, h);
         GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, captureDepthAttachment, GL30.GL_RENDERBUFFER, depthRenderbuffer);
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, 0);
 
         int capStatus = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
         if (capStatus != GL30.GL_FRAMEBUFFER_COMPLETE) {
@@ -785,6 +834,8 @@ public class ThermalEntityPainter {
     private static void recreateCaptureFBO(int w, int h, Minecraft mc) {
         int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        forceActiveTexture(GL13.GL_TEXTURE0);
         int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         int oldCaptureFbo = captureFbo;
 
@@ -794,7 +845,8 @@ public class ThermalEntityPainter {
             if (depthRenderbuffer != 0) { GL30.glDeleteRenderbuffers(depthRenderbuffer); depthRenderbuffer = 0; }
             allocateCaptureFBO(w, h, mc);
         } finally {
-            GlStateManager._bindTexture(prevTex);
+            forceBindTexture2D(prevTex);
+            forceActiveTexture(prevActiveTex);
             int restoreDraw = (prevDrawFbo == oldCaptureFbo) ? 0 : prevDrawFbo;
             int restoreRead = (prevReadFbo == oldCaptureFbo) ? 0 : prevReadFbo;
             GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, restoreDraw);
@@ -816,11 +868,21 @@ public class ThermalEntityPainter {
 
     private static int ensureEmptyMaskTexture() {
         if (emptyMaskTexture != 0) return emptyMaskTexture;
+        int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        forceActiveTexture(GL13.GL_TEXTURE0);
         int prevTex = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        int prevRowLen = GL11C.glGetInteger(GL11.GL_UNPACK_ROW_LENGTH);
+        int prevSkipPixels = GL11C.glGetInteger(GL11.GL_UNPACK_SKIP_PIXELS);
+        int prevSkipRows = GL11C.glGetInteger(GL11.GL_UNPACK_SKIP_ROWS);
+        int prevAlignment = GL11C.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
         try (MemoryStack stack = MemoryStack.stackPush()) {
             ByteBuffer zero = stack.calloc(4);
             emptyMaskTexture = GL30.glGenTextures();
-            GlStateManager._bindTexture(emptyMaskTexture);
+            forceBindTexture2D(emptyMaskTexture);
+            GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, 0);
+            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
+            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
+            GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 4);
             GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, zero);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
@@ -829,7 +891,12 @@ public class ThermalEntityPainter {
         } catch (Throwable e) {
             return -1;
         } finally {
-            GlStateManager._bindTexture(prevTex);
+            GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, prevRowLen);
+            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, prevSkipPixels);
+            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, prevSkipRows);
+            GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, prevAlignment);
+            forceBindTexture2D(prevTex);
+            forceActiveTexture(prevActiveTex);
         }
         return emptyMaskTexture;
     }
@@ -910,7 +977,9 @@ public class ThermalEntityPainter {
         GL20.glVertexAttribPointer(0, 2, GL11.GL_FLOAT, false, 4 * Float.BYTES, 0);
         GL20.glEnableVertexAttribArray(1);
         GL20.glVertexAttribPointer(1, 2, GL11.GL_FLOAT, false, 4 * Float.BYTES, 2 * Float.BYTES);
+        GL30.glBindBuffer(GL30.GL_ARRAY_BUFFER, 0);
         GL30.glBindVertexArray(0);
+        BufferUploader.invalidate();
     }
 
     /**

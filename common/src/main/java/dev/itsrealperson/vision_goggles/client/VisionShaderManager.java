@@ -37,6 +37,7 @@ public class VisionShaderManager {
     private static final long RETRY_COOLDOWN_MS = 5000L;
     private static final ResourceLocation FLASHLIGHT_SHADER_LOC =
             new ResourceLocation(Vision_goggles.MOD_ID, "shaders/post/flashlight.json");
+    private static final java.util.function.IntSupplier THERMAL_MASK_SUPPLIER = ThermalEntityPainter::getMaskTextureId;
 
     private static PostChain savedPostChain = null;
     private static ResourceLocation activeShaderLocation = null;
@@ -678,7 +679,7 @@ public class VisionShaderManager {
             var shader = pass.getEffect();
             if (isThermalShader && shader.getName() != null
                     && shader.getName().toLowerCase(java.util.Locale.ROOT).contains("thermal")) {
-                shader.setSampler("ThermalMask", ThermalEntityPainter::getMaskTextureId);
+                shader.setSampler("ThermalMask", THERMAL_MASK_SUPPLIER);
             }
             if (shader.getUniform("battery") != null) {
                 float finalBatt = battery * startupMultiplier;
