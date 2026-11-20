@@ -750,7 +750,8 @@ public class LuaWorldScanner {
 
     private static LuaTable wrapEntity(LivingEntity living, double dist) {
         LuaTable t = new LuaTable();
-        float pt = Minecraft.getInstance().getFrameTime();
+        Minecraft mc = Minecraft.getInstance();
+        float pt = mc.getFrameTime();
         Vec3 interp = living.getPosition(pt);
         double roundedHealth = Math.round(living.getHealth() * 10.0) / 10.0;
         double roundedMaxHealth = Math.round(living.getMaxHealth() * 10.0) / 10.0;
@@ -769,9 +770,17 @@ public class LuaWorldScanner {
         t.set("pitch", Math.round(living.getXRot() * 10.0) / 10.0);
         t.set("yaw", Math.round(living.getYRot() * 10.0) / 10.0);
         t.set("distance", roundedDist);
+        boolean emitsHeat = dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.emitsThermalHeat(living);
+        boolean thermalVisible = false;
+        if (emitsHeat && mc.level != null && mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
+            thermalVisible = dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.computeEntityThermalHeat(
+                    living, mc.gameRenderer.getMainCamera().getPosition(), pt, mc.level) > 0.11f;
+        }
+
         t.set("is_hostile", LuaValue.valueOf(living instanceof net.minecraft.world.entity.monster.Enemy || living instanceof Monster));
         t.set("is_player", LuaValue.valueOf(living instanceof Player));
-        t.set("emits_heat", LuaValue.valueOf(dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.emitsThermalHeat(living)));
+        t.set("emits_heat", LuaValue.valueOf(emitsHeat));
+        t.set("thermal_visible", LuaValue.valueOf(thermalVisible));
         t.set("is_undead", LuaValue.valueOf(living.getMobType() == MobType.UNDEAD));
         return t;
     }

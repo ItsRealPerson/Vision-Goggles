@@ -1,4 +1,4 @@
--- [VG-BUNDLED v34]
+-- [VG-BUNDLED v36]
 -- ============================================================================
 -- EJEMPLO 6: SUITE TERMICA FLIR (IFF IRONBOW + ESTABILIZADOR CRIOGENICO)
 -- ============================================================================
@@ -138,7 +138,7 @@ module = {
                     pCnt = pCnt + 1
                 end
 
-                if isCrit or e.is_hostile then
+                if (isCrit or e.is_hostile) and (e.thermal_visible ~= false) then
                     list[#list + 1] = {
                         x = e.x,
                         y = e.y,
@@ -171,11 +171,13 @@ module = {
     end,
 
     onRenderHud = function(h)
-        local w = h.getWidth()
+        local sw = h.getWidth()
+        local sh = h.getHeight()
+        local aspect = sw / math.max(1, sh)
         local tempC = estimateAmbientTempC(player)
 
         -- 1. Panel superior derecho de telemetria FLIR
-        local boxX = w - 126
+        local boxX = sw - 126
         local boxY = 8
         h.drawRect(boxX, boxY, 118, 29, "#AA0A0814")
         local cryoTxt = cryoActive and "CRYO-DSP: ACTIVO" or "FLIR IRONBOW: OK"
@@ -188,7 +190,7 @@ module = {
         h.drawText(boxX + 5, boxY + 21, censusStr, "#FFCC66", 0.64)
 
         -- 2. Barra vertical calibrada Ironbow FLIR en el borde derecho
-        local barX = w - 16
+        local barX = sw - 16
         local barY = 41
         local segH = 8
         h.drawRect(barX - 1, barY - 1, 10, (#IRONBOW_SCALE * segH) + 2, "#CC000000")
@@ -198,16 +200,20 @@ module = {
         h.drawText(barX - 24, barY, "+95C", "#FFFFFF", 0.58)
         h.drawText(barX - 24, barY + (#IRONBOW_SCALE - 1) * segH, string.format("%+dC", tempC), "#77AAFF", 0.58)
 
-        -- 3. Etiquetas AR 3D solo sobre entidades que realmente emiten firma termica
+        -- 3. Etiquetas AR 3D solo sobre entidades termicamente visibles y dentro del lente circular
         for i = 1, #priorityTargets do
             local t = priorityTargets[i]
             local proj = world.worldToScreen(t.x, t.y + t.height + 0.35, t.z)
             if proj ~= nil and proj.visible and not proj.behind then
-                local sx = math.floor(proj.x + 0.5)
-                local sy = math.floor(proj.y + 0.5)
-                local tag = t.is_crit and "[CRIT]" or "[HOT]"
-                local col = t.is_crit and "#FFFFFF" or "#FFBB33"
-                h.drawText(sx - math.floor(h.getTextWidth(tag, 0.62) / 2), sy, tag, col, 0.62)
+                local nx = (proj.x / math.max(1, sw) - 0.5) * aspect
+                local ny = (proj.y / math.max(1, sh) - 0.5)
+                if (nx * nx + ny * ny) <= (0.48 * 0.48) then
+                    local sx = math.floor(proj.x + 0.5)
+                    local sy = math.floor(proj.y + 0.5)
+                    local tag = t.is_crit and "[CRIT]" or "[HOT]"
+                    local col = t.is_crit and "#FFFFFF" or "#FFBB33"
+                    h.drawText(sx - math.floor(h.getTextWidth(tag, 0.62) / 2), sy, tag, col, 0.62)
+                end
             end
         end
     end
