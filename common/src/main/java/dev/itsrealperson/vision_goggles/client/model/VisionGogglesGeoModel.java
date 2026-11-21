@@ -8,6 +8,8 @@ import software.bernie.geckolib.model.GeoModel;
 
 public class VisionGogglesGeoModel extends GeoModel<VisionGogglesItem> {
 
+    public static final boolean USE_NVG_PROTOTYPE = true;
+
     private net.minecraft.world.item.ItemStack currentStack;
 
     public void setCurrentStack(net.minecraft.world.item.ItemStack stack) {
@@ -35,6 +37,10 @@ public class VisionGogglesGeoModel extends GeoModel<VisionGogglesItem> {
             }
         }
         
+        if (USE_NVG_PROTOTYPE && "night_vision_goggles".equals(name)) {
+            return new ResourceLocation(Vision_goggles.MOD_ID, "geo/item/night_vision_goggles_proto.geo.json");
+        }
+
         return new ResourceLocation(Vision_goggles.MOD_ID, "geo/item/" + name + ".geo.json");
     }
 

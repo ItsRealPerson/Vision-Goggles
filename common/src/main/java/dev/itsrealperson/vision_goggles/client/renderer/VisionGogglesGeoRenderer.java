@@ -18,6 +18,7 @@ import java.util.List;
 public class VisionGogglesGeoRenderer extends GeoItemRenderer<VisionGogglesItem> {
 
     private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
+    private static final ResourceLocation NVG_PROTO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_proto.png");
     private static final ResourceLocation CHASSIS_NEUTRAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/chassis_neutral.png");
     private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
     private static final ResourceLocation HYDRO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_vision.png");
@@ -53,6 +54,10 @@ public class VisionGogglesGeoRenderer extends GeoItemRenderer<VisionGogglesItem>
         if (mode == VisionMode.THERMAL) return THERMAL_TEXTURE;
         if (mode == VisionMode.HYDRO) return HYDRO_TEXTURE;
         if (mode == VisionMode.BIOMETRIC) return BIO_TEXTURE;
+        if (dev.itsrealperson.vision_goggles.client.model.VisionGogglesGeoModel.USE_NVG_PROTOTYPE
+                && !(animatable instanceof ModularGogglesItem)) {
+            return NVG_PROTO_TEXTURE;
+        }
         
         return NVG_TEXTURE;
     }
