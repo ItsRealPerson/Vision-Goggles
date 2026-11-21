@@ -53,19 +53,13 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         int y = this.topPos;
 
         this.btnAssembleTab = this.addRenderableWidget(
-                Button.builder(Component.translatable("gui.vision_goggles.tab.assemble"), b -> switchTab(ModificationStationMenu.TAB_ASSEMBLE))
-                        .bounds(x + 6, y + 6, 72, 15)
-                        .build()
+                new WorkstationButton(x + 6, y + 6, 76, 15, Component.translatable("gui.vision_goggles.tab.assemble"), b -> switchTab(ModificationStationMenu.TAB_ASSEMBLE), true)
         );
         this.btnModifyTab = this.addRenderableWidget(
-                Button.builder(Component.translatable("gui.vision_goggles.tab.modify"), b -> switchTab(ModificationStationMenu.TAB_MODIFY))
-                        .bounds(x + 81, y + 6, 89, 15)
-                        .build()
+                new WorkstationButton(x + 84, y + 6, 86, 15, Component.translatable("gui.vision_goggles.tab.modify"), b -> switchTab(ModificationStationMenu.TAB_MODIFY), true)
         );
         this.btnAssembleAction = this.addRenderableWidget(
-                Button.builder(Component.translatable("gui.vision_goggles.button.assemble"), b -> triggerFinalizeAssembly())
-                        .bounds(x + 6, y + 77, GUI_W - 12, 14)
-                        .build()
+                new WorkstationButton(x + 6, y + 77, GUI_W - 12, 14, Component.translatable("gui.vision_goggles.button.assemble"), b -> triggerFinalizeAssembly(), false)
         );
         updateButtonStates();
     }
@@ -195,7 +189,7 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF9AA3AE, false);
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFFB8C0C8, true);
     }
 
     @Override
@@ -204,17 +198,25 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Compact Left-Docked Tactical Panel (translucent charcoal so it blends cleanly)
-        guiGraphics.fill(x, y, x + GUI_W, y + GUI_H, 0xE816191E);
-        drawBorder(guiGraphics, x, y, GUI_W, GUI_H, 0xFF3A414B);
+        // Industrial Gunmetal 3D-Beveled Minecraft Workstation Frame
+        drawBevelPanel(guiGraphics, x, y, GUI_W, GUI_H, 0xFF2B2F36, 0xFF545B66, 0xFF191C20, 0xFF0E1012);
+        // Subtle corner rivets
+        guiGraphics.fill(x + 3, y + 3, x + 5, y + 5, 0xFF424852);
+        guiGraphics.fill(x + GUI_W - 5, y + 3, x + GUI_W - 3, y + 5, 0xFF424852);
+        guiGraphics.fill(x + 3, y + GUI_H - 5, x + 5, y + GUI_H - 3, 0xFF424852);
+        guiGraphics.fill(x + GUI_W - 5, y + GUI_H - 5, x + GUI_W - 3, y + GUI_H - 3, 0xFF424852);
 
         if (this.menu.getCurrentTab() == ModificationStationMenu.TAB_ASSEMBLE) {
-            renderAssembleTab(guiGraphics, x, y);
+            renderAssembleTab(guiGraphics, x, y, mouseX, mouseY);
         } else {
             renderModifyTab(guiGraphics, x, y);
         }
 
-        // Player Inventory & Hotbar Slot Frames
+        // Divider groove above player inventory
+        guiGraphics.fill(x + 6, y + 100, x + GUI_W - 6, y + 101, 0xFF171A1E);
+        guiGraphics.fill(x + 6, y + 101, x + GUI_W - 6, y + 102, 0xFF444A54);
+
+        // Classic Recessed Minecraft Inventory & Hotbar Slots
         int invX = x + 7;
         int invY = y + 103;
         for (int row = 0; row < 3; row++) {
@@ -227,23 +229,28 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         }
     }
 
-    private void renderAssembleTab(GuiGraphics guiGraphics, int x, int y) {
+    private void renderAssembleTab(GuiGraphics guiGraphics, int x, int y, int mouseX, int mouseY) {
         if (this.minecraft == null || this.minecraft.player == null) return;
         ModificationStationBlockEntity station = getStation();
         StationBlueprints.Blueprint activeBp = getSelectedBlueprint(station);
         List<ItemStack> staged = (station != null) ? station.getStagedItems() : Collections.emptyList();
 
-        // 1. Blueprint Icon Strip (7 blueprints across top)
+        // 1. Recessed Blueprint Rack (7 blueprints across top)
+        drawRecessedBox(guiGraphics, x + 5, y + 23, GUI_W - 10, 20, 0xFF1A1D22);
         List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
         for (int i = 0; i < all.size(); i++) {
             StationBlueprints.Blueprint bp = all.get(i);
             int bx = x + 6 + i * 24;
             int by = y + 24;
             boolean selected = bp.id().equals(activeBp.id());
-            int bg = selected ? 0xFF21382B : 0xFF1D2229;
-            int border = selected ? 0xFF3CFF82 : 0xFF323943;
-            guiGraphics.fill(bx, by, bx + 22, by + 18, bg);
-            drawBorder(guiGraphics, bx, by, 22, 18, border);
+            boolean hovered = mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18;
+            if (selected) {
+                drawBevelPanel(guiGraphics, bx, by, 22, 18, 0xFF28382E, 0xFF4F785D, 0xFF18221B, 0xFF111417);
+                guiGraphics.fill(bx + 2, by + 15, bx + 20, by + 17, 0xFF52B778);
+            } else {
+                int fill = hovered ? 0xFF2B3038 : 0xFF21252B;
+                drawRecessedBox(guiGraphics, bx, by, 22, 18, fill);
+            }
             guiGraphics.renderItem(bp.createDefaultResult(), bx + 3, by + 1);
         }
 
@@ -262,45 +269,52 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
                     : StationBlueprints.countAvailable(this.minecraft.player, this.menu.getStationContainer(), req.item().get());
             boolean done = placed >= req.count();
             boolean canAddMore = !done && invHave > 0;
+            boolean hovered = mouseX >= ix && mouseX < ix + 53 && mouseY >= iy && mouseY < iy + 14;
 
-            int bg = done ? 0xFF153021 : (canAddMore ? 0xFF1D262D : 0xFF24171A);
-            int border = done ? 0xFF3CFF82 : (canAddMore ? 0xFF3C7C96 : 0xFF522A30);
-            guiGraphics.fill(ix, iy, ix + 53, iy + 14, bg);
-            drawBorder(guiGraphics, ix, iy, 53, 14, border);
+            int fill = done ? 0xFF202B24 : (hovered && canAddMore ? 0xFF2A3038 : 0xFF1D2026);
+            drawRecessedBox(guiGraphics, ix, iy, 53, 14, fill);
+
+            // Subtle 2px status indicator bar on left edge
+            int pipColor = done ? 0xFF47A866 : (canAddMore ? 0xFFD99B38 : 0xFF8C3F3F);
+            guiGraphics.fill(ix + 1, iy + 2, ix + 3, iy + 12, pipColor);
 
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(ix + 1, iy, 0);
-            guiGraphics.pose().scale(0.82f, 0.82f, 1.0f);
+            guiGraphics.pose().translate(ix + 4, iy + 1, 0);
+            guiGraphics.pose().scale(0.75f, 0.75f, 1.0f);
             guiGraphics.renderItem(req.asStack(), 0, 0);
             guiGraphics.pose().popPose();
 
             String label = placed + "/" + req.count();
-            int color = done ? 0xFF5CFF9D : (canAddMore ? 0xFF8BE2FF : 0xFFFF7A7A);
+            int textColor = done ? 0xFF8BE0A4 : (canAddMore ? 0xFFE5E9F0 : 0xFFCC7676);
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(ix + 18, iy + 4, 200);
-            guiGraphics.pose().scale(0.68f, 0.68f, 1.0f);
-            guiGraphics.drawString(this.font, label, 0, 0, color, true);
+            guiGraphics.pose().translate(ix + 21, iy + 4, 200);
+            guiGraphics.pose().scale(0.72f, 0.72f, 1.0f);
+            guiGraphics.drawString(this.font, label, 0, 0, textColor, true);
             guiGraphics.pose().popPose();
         }
     }
 
     private void renderModifyTab(GuiGraphics guiGraphics, int x, int y) {
-        guiGraphics.fill(x + 6, y + 25, x + GUI_W - 6, y + 90, 0xFF11161A);
-        drawBorder(guiGraphics, x + 6, y + 25, GUI_W - 12, 65, 0xFF2F4F58);
+        drawRecessedBox(guiGraphics, x + 6, y + 25, GUI_W - 12, 65, 0xFF1B1E23);
 
         // Station Slots at exact Menu coordinates (34, 42), (70, 42), (106, 42)
         drawSlotBox(guiGraphics, x + 33, y + 41);
         drawSlotBox(guiGraphics, x + 69, y + 41);
         drawSlotBox(guiGraphics, x + 105, y + 41);
 
-        guiGraphics.drawString(this.font, "+", x + 57, y + 46, 0xFF56B4D3, false);
-        guiGraphics.drawString(this.font, "->", x + 89, y + 46, 0xFF3CFF82, false);
+        // Clean pixel "+" and "->" arrow
+        guiGraphics.fill(x + 56, y + 49, x + 63, y + 51, 0xFF8B95A1);
+        guiGraphics.fill(x + 59, y + 46, x + 60, y + 54, 0xFF8B95A1);
+
+        guiGraphics.fill(x + 90, y + 49, x + 99, y + 51, 0xFF52B778);
+        guiGraphics.fill(x + 97, y + 47, x + 99, y + 53, 0xFF52B778);
+        guiGraphics.fill(x + 99, y + 48, x + 101, y + 52, 0xFF52B778);
 
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(x + 10, y + 66, 0);
-        guiGraphics.pose().scale(0.66f, 0.66f, 1.0f);
-        guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.modify.hint1"), 0, 0, 0xFF9FB3C0, false);
-        guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.modify.hint2"), 0, 12, 0xFF6E828E, false);
+        guiGraphics.pose().scale(0.68f, 0.68f, 1.0f);
+        guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.modify.hint1"), 0, 0, 0xFFB0B8C2, false);
+        guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.modify.hint2"), 0, 12, 0xFF7D8794, false);
         guiGraphics.pose().popPose();
     }
 
@@ -331,14 +345,68 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
     }
 
     private static void drawSlotBox(GuiGraphics guiGraphics, int x, int y) {
-        guiGraphics.fill(x, y, x + 18, y + 18, 0xFF0E1013);
-        drawBorder(guiGraphics, x, y, 18, 18, 0xFF3A4049);
+        guiGraphics.fill(x, y, x + 18, y + 18, 0xFF1D2025);
+        // Classic Minecraft recessed 3D slot border
+        guiGraphics.fill(x, y, x + 17, y + 1, 0xFF101215);
+        guiGraphics.fill(x, y, x + 1, y + 17, 0xFF101215);
+        guiGraphics.fill(x + 1, y + 17, x + 18, y + 18, 0xFF4A505A);
+        guiGraphics.fill(x + 17, y + 1, x + 18, y + 18, 0xFF4A505A);
     }
 
-    private static void drawBorder(GuiGraphics guiGraphics, int x, int y, int w, int h, int color) {
-        guiGraphics.fill(x, y, x + w, y + 1, color);
-        guiGraphics.fill(x, y + h - 1, x + w, y + h, color);
-        guiGraphics.fill(x, y, x + 1, y + h, color);
-        guiGraphics.fill(x + w - 1, y, x + w, y + h, color);
+    private static void drawRecessedBox(GuiGraphics guiGraphics, int x, int y, int w, int h, int fill) {
+        guiGraphics.fill(x, y, x + w, y + h, fill);
+        guiGraphics.fill(x, y, x + w - 1, y + 1, 0xFF101215);
+        guiGraphics.fill(x, y, x + 1, y + h - 1, 0xFF101215);
+        guiGraphics.fill(x + 1, y + h - 1, x + w, y + h, 0xFF444A54);
+        guiGraphics.fill(x + w - 1, y + 1, x + w, y + h, 0xFF444A54);
+    }
+
+    private static void drawBevelPanel(GuiGraphics guiGraphics, int x, int y, int w, int h, int body, int light, int dark, int outline) {
+        guiGraphics.fill(x, y, x + w, y + h, outline);
+        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, body);
+        guiGraphics.fill(x + 1, y + 1, x + w - 2, y + 2, light);
+        guiGraphics.fill(x + 1, y + 1, x + 2, y + h - 2, light);
+        guiGraphics.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, dark);
+        guiGraphics.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, dark);
+    }
+
+    private final class WorkstationButton extends Button {
+        private final boolean isTab;
+
+        private WorkstationButton(int x, int y, int w, int h, Component message, OnPress onPress, boolean isTab) {
+            super(x, y, w, h, message, onPress, DEFAULT_NARRATION);
+            this.isTab = isTab;
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            int bx = this.getX();
+            int by = this.getY();
+            int bw = this.getWidth();
+            int bh = this.getHeight();
+            if (this.isTab) {
+                // !this.active means this tab is currently selected
+                boolean selected = !this.active;
+                if (selected) {
+                    drawBevelPanel(guiGraphics, bx, by, bw, bh, 0xFF343942, 0xFF5D6572, 0xFF20242A, 0xFF0E1012);
+                    guiGraphics.fill(bx + 2, by + 1, bx + bw - 2, by + 3, 0xFF52B778);
+                } else {
+                    int fill = this.isHovered() ? 0xFF2A2F37 : 0xFF1F2329;
+                    drawRecessedBox(guiGraphics, bx, by, bw, bh, fill);
+                }
+                int textCol = selected ? 0xFFF2F5F8 : (this.isHovered() ? 0xFFD0D6DE : 0xFF8B94A0);
+                guiGraphics.drawCenteredString(ModificationStationScreen.this.font, this.getMessage(), bx + bw / 2, by + (bh - 8) / 2, textCol);
+            } else {
+                if (this.active) {
+                    int body = this.isHovered() ? 0xFF33734B : 0xFF295D3D;
+                    int light = this.isHovered() ? 0xFF5BC282 : 0xFF49A36B;
+                    drawBevelPanel(guiGraphics, bx, by, bw, bh, body, light, 0xFF183825, 0xFF0E1012);
+                    guiGraphics.drawCenteredString(ModificationStationScreen.this.font, this.getMessage(), bx + bw / 2, by + (bh - 8) / 2, 0xFFF4FFF7);
+                } else {
+                    drawRecessedBox(guiGraphics, bx, by, bw, bh, 0xFF1F2329);
+                    guiGraphics.drawCenteredString(ModificationStationScreen.this.font, this.getMessage(), bx + bw / 2, by + (bh - 8) / 2, 0xFF666E78);
+                }
+            }
+        }
     }
 }
