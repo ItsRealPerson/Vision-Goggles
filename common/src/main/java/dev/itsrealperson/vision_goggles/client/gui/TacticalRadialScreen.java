@@ -290,7 +290,7 @@ public class TacticalRadialScreen extends Screen {
         int cx = this.width / 2;
         int cy = this.height / 2;
         int count = options.size();
-        int nodeRadius = (count >= 7) ? 84 : 76;
+        int nodeRadius = (count >= 7) ? 82 : 74;
 
         // Subtle vanilla-style screen darkening
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x55000000, 0x77000000);
@@ -323,20 +323,8 @@ public class TacticalRadialScreen extends Screen {
             lastHoverIndex = selectedIndex;
         }
 
-        // 1. Pixel-aligned stone/iron wheel ring behind the tiles
-        drawPixelRing(guiGraphics, cx, cy, nodeRadius - 9, nodeRadius + 9);
-
-        // 2. Pixel-stepped connector spoke from center to active tile
+        // Minecraft beveled action buttons arranged in a clean circle (no lines or rings)
         double sliceAngle = (2.0 * Math.PI) / Math.max(1, count);
-        if (selectedIndex >= 0 && selectedIndex < count) {
-            RadialOption sel = options.get(selectedIndex);
-            double midAngle = -Math.PI / 2.0 + (selectedIndex * sliceAngle);
-            int targetX = cx + (int) Math.round(Math.cos(midAngle) * nodeRadius);
-            int targetY = cy + (int) Math.round(Math.sin(midAngle) * nodeRadius);
-            drawPixelSpoke(guiGraphics, cx, cy, targetX, targetY, sel.enabled ? sel.color : 0xFF666666);
-        }
-
-        // 3. Minecraft beveled action tiles arranged around the ring
         for (int i = 0; i < count; i++) {
             RadialOption opt = options.get(i);
             boolean isSel = (i == selectedIndex);
@@ -350,18 +338,17 @@ public class TacticalRadialScreen extends Screen {
             renderActionTile(guiGraphics, tx, ty, opt, isSel);
         }
 
-        // 4. Classic Minecraft tooltip-style central hub
+        // Compact Minecraft beveled center info badge
         renderCenterHub(guiGraphics, cx, cy, count);
     }
 
     private void renderActionTile(GuiGraphics guiGraphics, int tx, int ty, RadialOption opt, boolean isSel) {
         if (!opt.enabled) {
-            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xCC181A1E, 0xFF282B30, 0xFF101114, 0xFF0A0B0D);
+            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xFF1F2227, 0xFF32363E, 0xFF131519, 0xFF0E1012);
         } else if (isSel) {
-            int accent = (opt.color & 0x00FFFFFF) | 0xFF000000;
-            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xF0343B46, accent, 0xFF181C22, 0xFF0A0B0D);
+            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xFF3E4550, 0xFF7A8494, 0xFF22262C, 0xFF0E1012);
         } else {
-            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xE625282E, 0xFF4A505C, 0xFF14161A, 0xFF0A0B0D);
+            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xFF2B2F36, 0xFF545B66, 0xFF191C20, 0xFF0E1012);
         }
 
         // Classic 18x18 recessed Minecraft slot for the item icon
@@ -374,11 +361,11 @@ public class TacticalRadialScreen extends Screen {
         }
 
         if (isSel && opt.enabled) {
-            guiGraphics.fill(slotX + 1, slotY + 1, slotX + 17, slotY + 17, 0x33FFFFFF);
+            guiGraphics.fill(slotX + 1, slotY + 1, slotX + 17, slotY + 17, 0x40FFFFFF);
         }
 
         // Centered shadowed label below the slot
-        int textColor = !opt.enabled ? 0xFF777777 : (isSel ? 0xFFFFFFFF : 0xFFD0D6DE);
+        int textColor = !opt.enabled ? 0xFF777777 : (isSel ? 0xFFFFFF55 : 0xFFE0E0E0);
         int strW = this.font.width(opt.title);
         int maxTextW = TILE_W - 6;
 
@@ -396,89 +383,32 @@ public class TacticalRadialScreen extends Screen {
     }
 
     private void renderCenterHub(GuiGraphics guiGraphics, int cx, int cy, int count) {
-        String line1;
-        String line2;
-        int color1;
-        int borderColor;
-
         if (selectedIndex >= 0 && selectedIndex < count) {
             RadialOption sel = options.get(selectedIndex);
-            line1 = sel.title;
-            line2 = sel.subtitle;
-            color1 = sel.enabled ? sel.color : 0xFF888888;
-            borderColor = sel.enabled ? ((sel.color & 0x00FFFFFF) | 0xCC000000) : 0xFF555555;
+            String line1 = sel.title;
+            String line2 = sel.subtitle;
+            int color1 = sel.enabled ? sel.color : 0xFF888888;
+
+            int w1 = this.font.width(line1);
+            int w2 = this.font.width(line2);
+            int boxW = Math.max(76, Math.max(w1, w2) + 14);
+            int boxH = 26;
+            int bx = cx - boxW / 2;
+            int by = cy - boxH / 2;
+
+            drawBevelPanel(guiGraphics, bx, by, boxW, boxH, 0xFF23272D, 0xFF4A505A, 0xFF15181C, 0xFF0E1012);
+            guiGraphics.drawString(this.font, line1, cx - w1 / 2, by + 4, color1, true);
+            guiGraphics.drawString(this.font, line2, cx - w2 / 2, by + 15, 0xFFB0B8C2, true);
         } else {
-            line1 = this.title.getString();
-            line2 = Component.translatable("gui.vision_goggles.radial.ready").getString();
-            color1 = 0xFFFFFFFF;
-            borderColor = 0xFF5000FF;
-        }
+            String titleStr = this.title.getString();
+            int w1 = this.font.width(titleStr);
+            int boxW = Math.max(72, w1 + 14);
+            int boxH = 16;
+            int bx = cx - boxW / 2;
+            int by = cy - boxH / 2;
 
-        int w1 = this.font.width(line1);
-        int w2 = this.font.width(line2);
-        int boxW = Math.max(76, Math.max(w1, w2) + 14);
-        int boxH = 28;
-        int bx = cx - boxW / 2;
-        int by = cy - boxH / 2;
-
-        // Classic Minecraft tooltip box (dark purple-black interior + 1px inner frame)
-        guiGraphics.fill(bx + 1, by, bx + boxW - 1, by + boxH, 0xF0100010);
-        guiGraphics.fill(bx, by + 1, bx + 1, by + boxH - 1, 0xF0100010);
-        guiGraphics.fill(bx + boxW - 1, by + 1, bx + boxW, by + boxH - 1, 0xF0100010);
-
-        // 1px inner border
-        guiGraphics.fill(bx + 1, by + 1, bx + boxW - 1, by + 2, borderColor);
-        guiGraphics.fill(bx + 1, by + boxH - 2, bx + boxW - 1, by + boxH - 1, borderColor);
-        guiGraphics.fill(bx + 1, by + 2, bx + 2, by + boxH - 2, borderColor);
-        guiGraphics.fill(bx + boxW - 2, by + 2, bx + boxW - 1, by + boxH - 2, borderColor);
-
-        guiGraphics.drawString(this.font, line1, cx - w1 / 2, by + 5, color1, true);
-        guiGraphics.drawString(this.font, line2, cx - w2 / 2, by + 16, 0xFFAAAAAA, true);
-    }
-
-    /**
-     * Draws a crisp pixel-rasterized ring using integer scanlines so edges match
-     * Minecraft's native pixel grid without smooth vector anti-aliasing.
-     */
-    private static void drawPixelRing(GuiGraphics guiGraphics, int cx, int cy, int innerR, int outerR) {
-        int rOutSq = outerR * outerR;
-        int rInSq = innerR * innerR;
-        for (int dy = -outerR; dy <= outerR; dy++) {
-            int outerX = (int) Math.round(Math.sqrt(rOutSq - dy * dy));
-            if (outerX <= 0) continue;
-
-            int innerX = (Math.abs(dy) < innerR) ? (int) Math.round(Math.sqrt(rInSq - dy * dy)) : 0;
-            int py = cy + dy;
-
-            if (innerX <= 0) {
-                guiGraphics.fill(cx - outerX, py, cx + outerX, py + 1, 0x99181B20);
-                guiGraphics.fill(cx - outerX, py, cx - outerX + 1, py + 1, 0xCC0B0D10);
-                guiGraphics.fill(cx + outerX - 1, py, cx + outerX, py + 1, 0xCC0B0D10);
-            } else {
-                // Left span
-                guiGraphics.fill(cx - outerX, py, cx - innerX, py + 1, 0x99181B20);
-                guiGraphics.fill(cx - outerX, py, cx - outerX + 1, py + 1, 0xCC0B0D10);
-                guiGraphics.fill(cx - innerX - 1, py, cx - innerX, py + 1, 0xCC0B0D10);
-
-                // Right span
-                guiGraphics.fill(cx + innerX, py, cx + outerX, py + 1, 0x99181B20);
-                guiGraphics.fill(cx + innerX, py, cx + innerX + 1, py + 1, 0xCC0B0D10);
-                guiGraphics.fill(cx + outerX - 1, py, cx + outerX, py + 1, 0xCC0B0D10);
-            }
-        }
-    }
-
-    /**
-     * Draws a 2px-thick pixel-stepped spoke from center to the hovered node.
-     */
-    private static void drawPixelSpoke(GuiGraphics guiGraphics, int x0, int y0, int x1, int y1, int color) {
-        int steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
-        if (steps <= 0) return;
-        int drawColor = (color & 0x00FFFFFF) | 0xCC000000;
-        for (int i = 10; i <= steps; i += 2) {
-            int px = x0 + (x1 - x0) * i / steps;
-            int py = y0 + (y1 - y0) * i / steps;
-            guiGraphics.fill(px - 1, py - 1, px + 1, py + 1, drawColor);
+            drawBevelPanel(guiGraphics, bx, by, boxW, boxH, 0xFF23272D, 0xFF4A505A, 0xFF15181C, 0xFF0E1012);
+            guiGraphics.drawString(this.font, titleStr, cx - w1 / 2, by + 4, 0xFFE0E0E0, true);
         }
     }
 
