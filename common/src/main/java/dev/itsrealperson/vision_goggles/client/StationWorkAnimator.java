@@ -16,7 +16,7 @@ public final class StationWorkAnimator {
 
     private static final float OPEN_DURATION_SECONDS = 0.22f;
     private static final float PLACE_DURATION_SECONDS = 0.28f;
-    private static final float ASSEMBLE_DURATION_SECONDS = 2.40f;
+    private static final float ASSEMBLE_DURATION_SECONDS = 3.00f;
     private static final float MAX_DT_SECONDS = 0.05f;
     private static final long REMOTE_EXPIRE_NANOS = 1_500_000_000L;
 

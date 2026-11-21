@@ -235,19 +235,34 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
             }
         }
 
-        // Collect the remaining fly-in parts
+        // Collect and order fly-in parts: power/auxiliary first, lens/vision module LAST (for dramatic visor color shift)
         java.util.List<ItemStack> flyParts = new java.util.ArrayList<>();
         java.util.List<float[]> flyStarts = new java.util.ArrayList<>();
+        java.util.List<ItemStack> lensParts = new java.util.ArrayList<>();
+        java.util.List<float[]> lensStarts = new java.util.ArrayList<>();
         for (int i = 0; i < flatList.size(); i++) {
             if (i != baseFlatIdx) {
-                flyParts.add(flatList.get(i));
-                flyStarts.add(flatStarts.get(i));
+                String desc = flatList.get(i).getItem().getDescriptionId();
+                if (desc.contains("lens") || desc.contains("module")) {
+                    lensParts.add(flatList.get(i));
+                    lensStarts.add(flatStarts.get(i));
+                } else {
+                    flyParts.add(flatList.get(i));
+                    flyStarts.add(flatStarts.get(i));
+                }
             }
         }
+        flyParts.addAll(lensParts);
+        flyStarts.addAll(lensStarts);
 
-        // Stage A (0.00..0.25): Base chassis rises to center
-        if (p < 0.25f) {
-            float t = smoothstep(p / 0.25f);
+        boolean resultIsGoggles = result.getItem() instanceof VisionGogglesItem;
+        ItemStack neutralChassis = resultIsGoggles
+                ? (hasGoggles ? baseGoggles : new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.MODULAR_GOGGLES.get()))
+                : ItemStack.EMPTY;
+
+        // Stage A (0.00..0.28): Base chassis lifts & forms the uncolored goggles body
+        if (p < 0.28f) {
+            float t = smoothstep(p / 0.28f);
             if (hasGoggles) {
                 float y = Mth.lerp(t, 1.00f, 1.03f);
                 float z = Mth.lerp(t, -0.07f, 0.02f);
@@ -258,11 +273,17 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                 float x = Mth.lerp(t, st[0], 0.0f);
                 float y = Mth.lerp(t, st[1], 1.03f) + (float) Math.sin(t * Math.PI) * 0.03f;
                 float z = Mth.lerp(t, st[2], 0.02f);
-                float pitch = Mth.lerp(t, 90.0f, 0.0f);
-                float sc = Mth.lerp(t, 0.21f, 0.30f);
-                renderFlatItem(station, flatList.get(baseFlatIdx), x, y, z, sc, pitch, poseStack, buffer, light);
+                if (resultIsGoggles && t > 0.55f) {
+                    // Morph from flat tactical frame into upright neutral 3D goggles chassis
+                    float chassisT = smoothstep((t - 0.55f) / 0.45f);
+                    float sc = Mth.lerp(chassisT, 0.26f, 0.38f);
+                    renderUprightGoggles(station, neutralChassis, x, y, z, sc, (1.0f - chassisT) * -25.0f, poseStack, buffer, light);
+                } else {
+                    float pitch = Mth.lerp(t, 90.0f, 0.0f);
+                    float sc = Mth.lerp(t, 0.21f, 0.30f);
+                    renderFlatItem(station, flatList.get(baseFlatIdx), x, y, z, sc, pitch, poseStack, buffer, light);
+                }
             }
-            // Other parts lift slightly to ready position
             for (int i = 0; i < flyParts.size(); i++) {
                 float[] st = flyStarts.get(i);
                 float y = Mth.lerp(t, st[1], 0.99f);
@@ -271,14 +292,16 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
             return;
         }
 
-        // Stage B & C (0.25..1.00): Sequential snap-in into central result + final lock
-        float buildFrac = Mth.clamp((p - 0.25f) / 0.57f, 0.0f, 1.0f);
+        // Stage B (0.28..0.72): Sequential snap-in; lens/module snaps last and shifts goggles color
         float snapJolt = 0.0f;
         int flyCount = flyParts.size();
+        float lensColorBlend = (flyCount == 0) ? 1.0f : 0.0f;
 
         for (int i = 0; i < flyCount; i++) {
-            float winStart = 0.25f + (0.57f * i) / Math.max(1, flyCount);
-            float winEnd = 0.25f + (0.57f * (i + 1)) / Math.max(1, flyCount);
+            float winStart = 0.28f + (0.44f * i) / Math.max(1, flyCount);
+            float winEnd = 0.28f + (0.44f * (i + 1)) / Math.max(1, flyCount);
+            boolean isFinalLens = (i == flyCount - 1);
+
             if (p < winStart) {
                 float[] st = flyStarts.get(i);
                 float bob = (float) Math.sin((p * 18.0f) + i) * 0.006f;
@@ -288,30 +311,42 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                 float[] st = flyStarts.get(i);
                 String desc = flyParts.get(i).getItem().getDescriptionId();
                 float targetX = (desc.contains("battery") || desc.contains("expansion")) ? (i % 2 == 0 ? -0.05f : 0.05f) : 0.0f;
-                float targetZ = (desc.contains("lens") || desc.contains("module")) ? 0.06f : 0.02f;
+                float targetZ = (desc.contains("lens") || desc.contains("module")) ? 0.07f : 0.02f;
 
                 float x = Mth.lerp(localT, st[0], targetX);
                 float y = Mth.lerp(localT, 0.99f, 1.03f) + (float) Math.sin(localT * Math.PI) * 0.065f;
                 float z = Mth.lerp(localT, st[2], targetZ);
                 float pitch = Mth.lerp(localT, 90.0f, 0.0f);
-                float sc = Mth.lerp(localT, 0.21f, 0.07f);
+                float sc = Mth.lerp(localT, 0.21f, 0.08f);
                 renderFlatItem(station, flyParts.get(i), x, y, z, sc, pitch, poseStack, buffer, light);
-                if (localT > 0.85f) {
-                    snapJolt = Math.max(snapJolt, (1.0f - (localT - 0.85f) / 0.15f) * 0.012f);
+                if (localT > 0.80f) {
+                    snapJolt = Math.max(snapJolt, (1.0f - (localT - 0.80f) / 0.20f) * 0.014f);
                 }
+                if (isFinalLens) {
+                    lensColorBlend = Mth.clamp((localT - 0.65f) / 0.35f, 0.0f, 1.0f);
+                }
+            } else if (isFinalLens) {
+                lensColorBlend = 1.0f;
             }
         }
 
-        float settleT = (p > 0.82f) ? smoothstep((p - 0.82f) / 0.18f) : 0.0f;
-        float yawSettle = (p > 0.82f) ? (1.0f - settleT) * 14.0f : (float) Math.sin(buildFrac * Math.PI * 3.0f) * 4.0f;
-        float centerY = 1.025f + snapJolt + ((p > 0.82f) ? (float) Math.sin(settleT * Math.PI) * 0.025f : 0.0f);
+        // Stage C (0.72..1.00): Finished goggles inspection spin & settle
+        float settleT = (p > 0.72f) ? smoothstep((p - 0.72f) / 0.28f) : 0.0f;
+        float yawSettle = (p > 0.72f) ? (1.0f - settleT) * 360.0f : 0.0f;
+        float centerY = 1.03f + snapJolt + ((p > 0.72f) ? (float) Math.sin(settleT * Math.PI) * 0.025f : 0.0f);
 
-        if (result.getItem() instanceof VisionGogglesItem) {
-            float sc = Mth.lerp(buildFrac, 0.30f, 0.44f);
-            renderUprightGoggles(station, result, 0.0f, centerY, 0.02f, sc, yawSettle, poseStack, buffer, light);
+        if (resultIsGoggles) {
+            ItemStack activeModel = (lensColorBlend >= 0.5f) ? result : neutralChassis;
+            float sc = Mth.lerp(Mth.clamp((p - 0.28f) / 0.44f, 0.0f, 1.0f), 0.38f, 0.44f);
+            // Subtle scale pop when the lens switches color
+            if (lensColorBlend > 0.0f && lensColorBlend < 1.0f) {
+                sc += (float) Math.sin(lensColorBlend * Math.PI) * 0.025f;
+            }
+            renderUprightGoggles(station, activeModel, 0.0f, centerY, 0.02f, sc, yawSettle, poseStack, buffer, light);
         } else {
+            float buildFrac = Mth.clamp((p - 0.28f) / 0.44f, 0.0f, 1.0f);
             float sc = Mth.lerp(buildFrac, 0.28f, 0.42f);
-            float pitch = (p > 0.82f) ? Mth.lerp(settleT, 20.0f, 90.0f) : 20.0f;
+            float pitch = (p > 0.72f) ? Mth.lerp(settleT, 20.0f, 90.0f) : 20.0f;
             renderFlatItem(station, result, 0.0f, centerY - 0.03f, 0.02f, sc, pitch, poseStack, buffer, light);
         }
     }

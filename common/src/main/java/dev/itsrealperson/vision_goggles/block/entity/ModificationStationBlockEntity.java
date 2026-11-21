@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class ModificationStationBlockEntity extends BlockEntity implements WorldlyContainer, dev.architectury.registry.menu.ExtendedMenuProvider {
-    public static final int ASSEMBLY_DURATION_TICKS = 48;
+    public static final int ASSEMBLY_DURATION_TICKS = 60;
 
     private final NonNullList<ItemStack> items = NonNullList.withSize(3, ItemStack.EMPTY);
     private String activeBlueprintId = "night_vision_goggles";
@@ -265,11 +265,14 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
         station.assemblingTicks--;
 
-        if (station.assemblingTicks == 36 || station.assemblingTicks == 26 || station.assemblingTicks == 16 || station.assemblingTicks == 8) {
-            float pitch = 1.20F + (48 - station.assemblingTicks) * 0.01F;
-            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.40F, pitch);
+        if (station.assemblingTicks == 44 || station.assemblingTicks == 32 || station.assemblingTicks == 20 || station.assemblingTicks == 10) {
+            float pitch = (station.assemblingTicks == 20) ? 1.65F : (1.15F + (60 - station.assemblingTicks) * 0.008F);
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.42F, pitch);
+            if (station.assemblingTicks == 20) {
+                level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.55F, 1.35F);
+            }
             if (level instanceof ServerLevel serverLevel) {
-                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 1.01, pos.getZ() + 0.5, 4, 0.10, 0.04, 0.10, 0.02);
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 1.02, pos.getZ() + 0.5, 5, 0.10, 0.04, 0.10, 0.02);
             }
         }
 
