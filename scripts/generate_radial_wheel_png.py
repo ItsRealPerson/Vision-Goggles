@@ -34,7 +34,7 @@ def octagon_dist(dx: float, dy: float) -> float:
 
 
 def draw_wheel_base(img: Image.Image) -> None:
-    """Draw compact 152x152 chamfered-octagon Minecraft pixel-art wheel at (0, 0)."""
+    """Draw compact 152x152 flat chamfered-octagon Minecraft panel at (0, 0) without bevel lines."""
     px = img.load()
     size = 152
     cx = size / 2.0
@@ -51,27 +51,12 @@ def draw_wheel_base(img: Image.Image) -> None:
             if d > r_out:
                 continue
 
-            is_tl = (dx + dy) <= 0.0
-
             if d >= r_out - 1.0:
                 px[x, y] = C_OUTLINE
-            elif d >= r_out - 3.0:
-                px[x, y] = C_BEVEL_LT if is_tl else C_BEVEL_DK
-            elif d > r_in + 2.0:
-                px[x, y] = C_BG_FILL
             elif d > r_in:
-                # Inner hub is inset (dark top-left, light bottom-right)
-                px[x, y] = C_HUB_DK if is_tl else C_HUB_LT
-            elif d > r_in - 1.0:
-                px[x, y] = C_OUTLINE
+                px[x, y] = C_BG_FILL
             else:
                 px[x, y] = C_HUB_FILL
-
-    # Subtle 2x2 pixel rivets at the 4 cardinal points near the rim
-    for rx, ry in [(75, 6), (75, 144), (6, 75), (144, 75)]:
-        for oy in range(2):
-            for ox in range(2):
-                px[rx + ox, ry + oy] = C_RIVET
 
 
 def draw_slot_sprite(img: Image.Image, ox: int, oy: int, selected: bool, disabled: bool) -> None:
