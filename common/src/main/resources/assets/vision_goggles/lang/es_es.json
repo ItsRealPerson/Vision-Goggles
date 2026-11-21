@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "Máximo de Módulos (Gafas Modulares)",
   "config.vision_goggles.modular_max_modules.tooltip": "Número máximo de módulos instalables en las Gafas Modulares estándar.",
   "config.vision_goggles.pro_modular_max_modules": "Máximo de Módulos (Gafas Modulares Pro)",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "Número máximo de módulos instalables en las Gafas Modulares Pro."
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Número máximo de módulos instalables en las Gafas Modulares Pro.",
+  "gui.vision_goggles.tooltip.stage_controls": "§7Click izq.: Colocar 1  §8|  §7Click der.: Quitar 1"
 }

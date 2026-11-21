@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "Modules Max (Lunettes Modulaires)",
   "config.vision_goggles.modular_max_modules.tooltip": "Nombre maximal de modules installables dans les Lunettes Modulaires standard.",
   "config.vision_goggles.pro_modular_max_modules": "Modules Max (Lunettes Modulaires Pro)",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "Nombre maximal de modules installables dans les Lunettes Modulaires Pro."
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Nombre maximal de modules installables dans les Lunettes Modulaires Pro.",
+  "gui.vision_goggles.tooltip.stage_controls": "§7Clic gauche : Poser 1  §8|  §7Clic droit : Retirer 1"
 }

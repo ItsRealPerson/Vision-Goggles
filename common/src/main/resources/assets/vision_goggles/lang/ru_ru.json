@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "Макс. модулей (Модульные очки)",
   "config.vision_goggles.modular_max_modules.tooltip": "Максимальное число модулей в стандартных модульных очках.",
   "config.vision_goggles.pro_modular_max_modules": "Макс. модулей (Pro-модульные очки)",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "Максимальное число модулей в Pro-модульных очках."
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Максимальное число модулей в Pro-модульных очках.",
+  "gui.vision_goggles.tooltip.stage_controls": "§7ЛКМ: Положить 1  §8|  §7ПКМ: Убрать 1"
 }

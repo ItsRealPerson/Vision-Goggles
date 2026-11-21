@@ -153,19 +153,30 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             if ((button == 0 || button == 1) && !busy) {
                 StationBlueprints.Blueprint bp = getSelectedBlueprint(station);
                 List<StationBlueprints.IngredientReq> reqs = bp.ingredients();
+                List<ItemStack> staged = (station != null) ? station.getStagedItems() : Collections.emptyList();
                 for (int idx = 0; idx < reqs.size(); idx++) {
                     int col = idx % 3;
                     int row = idx / 3;
                     int ix = this.leftPos + 6 + col * 55;
                     int iy = this.topPos + 45 + row * 15;
                     if (mouseX >= ix && mouseX < ix + 53 && mouseY >= iy && mouseY < iy + 14) {
-                        AssembleBlueprintPacket.Action act = (button == 0)
-                                ? AssembleBlueprintPacket.Action.ADD_INGREDIENT
-                                : AssembleBlueprintPacket.Action.REMOVE_INGREDIENT;
-                        NetworkManager.INSTANCE.sendToServer(
-                                new AssembleBlueprintPacket(this.menu.getStationPos(), act, bp.id(), idx)
-                        );
-                        StationWorkAnimator.triggerPlacePart((idx % 2) == 0);
+                        StationBlueprints.IngredientReq req = reqs.get(idx);
+                        int placed = StationBlueprints.countInList(staged, req.item().get());
+                        int invHave = (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.isCreative())
+                                ? req.count()
+                                : (this.minecraft != null && this.minecraft.player != null
+                                        ? StationBlueprints.countAvailable(this.minecraft.player, this.menu.getStationContainer(), req.item().get())
+                                        : 0);
+                        boolean canAct = (button == 0) ? (placed < req.count() && invHave > 0) : (placed > 0);
+                        if (canAct) {
+                            AssembleBlueprintPacket.Action act = (button == 0)
+                                    ? AssembleBlueprintPacket.Action.ADD_INGREDIENT
+                                    : AssembleBlueprintPacket.Action.REMOVE_INGREDIENT;
+                            NetworkManager.INSTANCE.sendToServer(
+                                    new AssembleBlueprintPacket(this.menu.getStationPos(), act, bp.id(), idx)
+                            );
+                            StationWorkAnimator.triggerPlacePart((idx % 2) == 0);
+                        }
                         return true;
                     }
                 }
@@ -347,7 +358,11 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             int ix = this.leftPos + 6 + col * 55;
             int iy = this.topPos + 45 + row * 15;
             if (mouseX >= ix && mouseX < ix + 53 && mouseY >= iy && mouseY < iy + 14) {
-                guiGraphics.renderTooltip(this.font, reqs.get(idx).asStack(), mouseX, mouseY);
+                java.util.List<Component> lines = new java.util.ArrayList<>(
+                        getTooltipFromItem(this.minecraft, reqs.get(idx).asStack())
+                );
+                lines.add(Component.translatable("gui.vision_goggles.tooltip.stage_controls"));
+                guiGraphics.renderTooltip(this.font, lines, java.util.Optional.empty(), mouseX, mouseY);
                 return;
             }
         }

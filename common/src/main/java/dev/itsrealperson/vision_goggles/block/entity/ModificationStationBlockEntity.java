@@ -45,11 +45,12 @@ import java.util.List;
 import java.util.UUID;
 
 public class ModificationStationBlockEntity extends BlockEntity implements WorldlyContainer, dev.architectury.registry.menu.ExtendedMenuProvider {
-    public static final int ASSEMBLY_DURATION_TICKS = 20;
+    public static final int ASSEMBLY_DURATION_TICKS = 48;
 
     private final NonNullList<ItemStack> items = NonNullList.withSize(3, ItemStack.EMPTY);
     private String activeBlueprintId = "night_vision_goggles";
     private final List<ItemStack> stagedItems = new ArrayList<>();
+    private final List<ItemStack> assemblingParts = new ArrayList<>();
     private int assemblingTicks = 0;
     private ItemStack assemblingResult = ItemStack.EMPTY;
     @Nullable
@@ -113,6 +114,10 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
     public List<ItemStack> getStagedItems() {
         return Collections.unmodifiableList(this.stagedItems);
+    }
+
+    public List<ItemStack> getAssemblingParts() {
+        return Collections.unmodifiableList(this.assemblingParts);
     }
 
     public static boolean isCreativeStaged(ItemStack stack) {
@@ -226,6 +231,12 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             }
         }
 
+        this.assemblingParts.clear();
+        for (ItemStack s : this.stagedItems) {
+            if (!s.isEmpty()) {
+                this.assemblingParts.add(s.copy());
+            }
+        }
         this.stagedItems.clear();
         this.stagedOwnerUuid = null;
         this.assemblingResult = built;
@@ -254,11 +265,11 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
         station.assemblingTicks--;
 
-        if (station.assemblingTicks == 14 || station.assemblingTicks == 7) {
-            float pitch = (station.assemblingTicks == 14) ? 1.35F : 1.55F;
-            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.35F, pitch);
+        if (station.assemblingTicks == 36 || station.assemblingTicks == 26 || station.assemblingTicks == 16 || station.assemblingTicks == 8) {
+            float pitch = 1.20F + (48 - station.assemblingTicks) * 0.01F;
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.40F, pitch);
             if (level instanceof ServerLevel serverLevel) {
-                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 0.98, pos.getZ() + 0.5, 4, 0.14, 0.04, 0.14, 0.02);
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 1.01, pos.getZ() + 0.5, 4, 0.10, 0.04, 0.10, 0.02);
             }
         }
 
@@ -278,6 +289,7 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             }
 
             station.assemblingResult = ItemStack.EMPTY;
+            station.assemblingParts.clear();
             station.assemblingPlayerUuid = null;
             station.assemblingTicks = 0;
             station.setChanged();
@@ -548,6 +560,16 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                 }
             }
         }
+        this.assemblingParts.clear();
+        if (tag.contains("AssemblingParts", Tag.TAG_LIST)) {
+            ListTag partList = tag.getList("AssemblingParts", Tag.TAG_COMPOUND);
+            for (int i = 0; i < partList.size(); i++) {
+                ItemStack s = ItemStack.of(partList.getCompound(i));
+                if (!s.isEmpty()) {
+                    this.assemblingParts.add(s);
+                }
+            }
+        }
         this.assemblingTicks = tag.getInt("AssemblingTicks");
         if (tag.contains("AssemblingResult", Tag.TAG_COMPOUND)) {
             this.assemblingResult = ItemStack.of(tag.getCompound("AssemblingResult"));
@@ -573,6 +595,13 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             }
         }
         tag.put("StagedItems", list);
+        ListTag partList = new ListTag();
+        for (ItemStack s : this.assemblingParts) {
+            if (!s.isEmpty()) {
+                partList.add(s.save(new CompoundTag()));
+            }
+        }
+        tag.put("AssemblingParts", partList);
         tag.putInt("AssemblingTicks", this.assemblingTicks);
         if (!this.assemblingResult.isEmpty()) {
             tag.put("AssemblingResult", this.assemblingResult.save(new CompoundTag()));
