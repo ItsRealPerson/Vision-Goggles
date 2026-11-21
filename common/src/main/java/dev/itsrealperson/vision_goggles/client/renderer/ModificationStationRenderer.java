@@ -256,9 +256,15 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
         flyStarts.addAll(lensStarts);
 
         boolean resultIsGoggles = result.getItem() instanceof VisionGogglesItem;
-        ItemStack neutralChassis = resultIsGoggles
-                ? (hasGoggles ? baseGoggles : new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.MODULAR_GOGGLES.get()))
-                : ItemStack.EMPTY;
+        ItemStack neutralChassis = ItemStack.EMPTY;
+        if (resultIsGoggles) {
+            neutralChassis = hasGoggles
+                    ? baseGoggles.copy()
+                    : new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.MODULAR_GOGGLES.get());
+            if (!hasGoggles) {
+                neutralChassis.getOrCreateTag().putBoolean("vg_neutral_chassis", true);
+            }
+        }
 
         // Stage A (0.00..0.28): Base chassis lifts & forms the uncolored goggles body
         if (p < 0.28f) {

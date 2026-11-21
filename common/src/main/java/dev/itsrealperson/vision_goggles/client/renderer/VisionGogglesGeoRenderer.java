@@ -18,6 +18,7 @@ import java.util.List;
 public class VisionGogglesGeoRenderer extends GeoItemRenderer<VisionGogglesItem> {
 
     private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
+    private static final ResourceLocation CHASSIS_NEUTRAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/chassis_neutral.png");
     private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
     private static final ResourceLocation HYDRO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_vision.png");
     private static final ResourceLocation BIO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_vision.png");
@@ -30,6 +31,9 @@ public class VisionGogglesGeoRenderer extends GeoItemRenderer<VisionGogglesItem>
     public ResourceLocation getTextureLocation(VisionGogglesItem animatable) {
         ItemStack stack = getCurrentItemStack();
         if (stack == null) return super.getTextureLocation(animatable);
+        if (stack.hasTag() && stack.getTag().getBoolean("vg_neutral_chassis")) {
+            return CHASSIS_NEUTRAL_TEXTURE;
+        }
 
         VisionMode mode = animatable.getVisionMode();
 

@@ -96,23 +96,61 @@ public final class FirstPersonStationWorkRenderer {
             }
         }
 
-        // Full 2-hand assembly motion when finalizing goggles
+        // Full 2-hand assembly motion: reach inward to hold chassis, fit/press parts + lens, then present
         if (StationWorkAnimator.isAssembling()) {
             float t = StationWorkAnimator.getProgress();
-            float w = smoothstep01(t / 0.18f) * (1.0f - smoothstep01((t - 0.82f) / 0.18f));
-            float workWave = (float) Math.sin(t * Math.PI * 6.0f) * w;
-            float steadyWave = (float) Math.sin(t * Math.PI * 3.0f) * w;
+            float w = smoothstep01(t / 0.14f) * (1.0f - smoothstep01((t - 0.84f) / 0.16f));
 
-            lx = Mth.lerp(w, lx, -0.26f);
-            ly = Mth.lerp(w, ly, -0.30f + steadyWave * 0.015f);
-            lz = Mth.lerp(w, lz, -0.56f);
-            lRotX += steadyWave * 5.0f;
+            if (t < 0.28f) {
+                // Stage 1: Both hands cradle & align the chassis in the center
+                float cT = smoothstep01(t / 0.28f);
+                lx = Mth.lerp(w, lx, Mth.lerp(cT, -0.22f, -0.14f));
+                ly = Mth.lerp(w, ly, Mth.lerp(cT, -0.28f, -0.18f));
+                lz = Mth.lerp(w, lz, Mth.lerp(cT, -0.54f, -0.47f));
+                lRotZ = Mth.lerp(w, lRotZ, -38.0f);
+                lRotX = Mth.lerp(w, lRotX, -32.0f);
+                lRotY = Mth.lerp(w, lRotY, 214.0f);
 
-            rx = Mth.lerp(w, rx, 0.26f - workWave * 0.03f);
-            ry = Mth.lerp(w, ry, -0.26f + Math.abs(workWave) * 0.045f);
-            rz = Mth.lerp(w, rz, -0.54f - workWave * 0.035f);
-            rRotZ -= workWave * 8.0f;
-            rRotX += workWave * 14.0f;
+                rx = Mth.lerp(w, rx, Mth.lerp(cT, 0.22f, 0.14f));
+                ry = Mth.lerp(w, ry, Mth.lerp(cT, -0.28f, -0.18f));
+                rz = Mth.lerp(w, rz, Mth.lerp(cT, -0.54f, -0.47f));
+                rRotZ = Mth.lerp(w, rRotZ, 38.0f);
+                rRotX = Mth.lerp(w, rRotX, -32.0f);
+                rRotY = Mth.lerp(w, rRotY, 146.0f);
+            } else if (t < 0.72f) {
+                // Stage 2: Left hand holds chassis steady; Right hand reaches to press parts & front lens in
+                float stageT = (t - 0.28f) / 0.44f;
+                float pressCycle = (float) Math.abs(Math.sin(stageT * Math.PI * 3.0f));
+                float snapJolt = (float) Math.sin(stageT * Math.PI * 6.0f) * 0.008f;
+
+                lx = Mth.lerp(w, lx, -0.14f);
+                ly = Mth.lerp(w, ly, -0.18f - snapJolt);
+                lz = Mth.lerp(w, lz, -0.47f);
+                lRotZ = Mth.lerp(w, lRotZ, -40.0f);
+                lRotX = Mth.lerp(w, lRotX, -30.0f);
+                lRotY = Mth.lerp(w, lRotY, 216.0f);
+
+                rx = Mth.lerp(w, rx, Mth.lerp(pressCycle, 0.21f, 0.08f));
+                ry = Mth.lerp(w, ry, Mth.lerp(pressCycle, -0.22f, -0.14f));
+                rz = Mth.lerp(w, rz, Mth.lerp(pressCycle, -0.50f, -0.43f));
+                rRotZ = Mth.lerp(w, rRotZ, Mth.lerp(pressCycle, 28.0f, 44.0f));
+                rRotX = Mth.lerp(w, rRotX, Mth.lerp(pressCycle, -38.0f, -22.0f));
+                rRotY = Mth.lerp(w, rRotY, Mth.lerp(pressCycle, 152.0f, 138.0f));
+            } else {
+                // Stage 3: Both hands pull back slightly to present finished goggles
+                float relT = smoothstep01((t - 0.72f) / 0.28f);
+                lx = Mth.lerp(w, lx, Mth.lerp(relT, -0.14f, -0.28f));
+                ly = Mth.lerp(w, ly, Mth.lerp(relT, -0.18f, -0.28f));
+                lz = Mth.lerp(w, lz, Mth.lerp(relT, -0.47f, -0.56f));
+                lRotZ = Mth.lerp(w, lRotZ, Mth.lerp(relT, -40.0f, -26.0f));
+                lRotX = Mth.lerp(w, lRotX, Mth.lerp(relT, -30.0f, -46.0f));
+
+                rx = Mth.lerp(w, rx, Mth.lerp(relT, 0.14f, 0.28f));
+                ry = Mth.lerp(w, ry, Mth.lerp(relT, -0.18f, -0.28f));
+                rz = Mth.lerp(w, rz, Mth.lerp(relT, -0.47f, -0.56f));
+                rRotZ = Mth.lerp(w, rRotZ, Mth.lerp(relT, 40.0f, 26.0f));
+                rRotX = Mth.lerp(w, rRotX, Mth.lerp(relT, -30.0f, -46.0f));
+            }
         }
 
         renderWorkArm(player, HumanoidArm.LEFT, poseStack, buffer, combinedLight, lx, ly, lz, lRotZ, lRotX, lRotY);

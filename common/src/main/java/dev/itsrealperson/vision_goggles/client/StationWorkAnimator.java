@@ -177,6 +177,20 @@ public final class StationWorkAnimator {
         return Mth.clamp(assembleProgress, 0.0f, 1.0f);
     }
 
+    public static float getWorkbenchZoomMultiplier() {
+        if (openBlend <= 0.001f) return 1.0f;
+        float openT = openBlend * openBlend * (3.0f - 2.0f * openBlend);
+        float targetZoom = 0.80f;
+        if (assembling) {
+            float p = getProgress();
+            float inW = Mth.clamp(p / 0.16f, 0.0f, 1.0f);
+            float outW = 1.0f - Mth.clamp((p - 0.84f) / 0.16f, 0.0f, 1.0f);
+            float w = (inW * inW * (3.0f - 2.0f * inW)) * (outW * outW * (3.0f - 2.0f * outW));
+            targetZoom = Mth.lerp(w, 0.80f, 0.62f);
+        }
+        return Mth.lerp(openT, 1.0f, targetZoom);
+    }
+
     private static float computeDeltaSeconds(long nowNanos, long prevNanos) {
         if (prevNanos <= 0L) return 0.0f;
         float dt = (nowNanos - prevNanos) / 1_000_000_000.0f;
