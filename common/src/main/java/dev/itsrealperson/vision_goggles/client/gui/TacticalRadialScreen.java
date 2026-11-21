@@ -65,9 +65,9 @@ public class TacticalRadialScreen extends Screen {
     private int openTicks = 0;
     private boolean executed = false;
 
-    private static final int WHEEL_SIZE = 192;
-    private static final int NODE_RADIUS = 63;
-    private static final int DEADZONE_RADIUS = 30;
+    private static final int WHEEL_SIZE = 152;
+    private static final int NODE_RADIUS = 48;
+    private static final int DEADZONE_RADIUS = 24;
 
     public TacticalRadialScreen() {
         super(Component.translatable("gui.vision_goggles.radial.title"));
@@ -361,14 +361,14 @@ public class TacticalRadialScreen extends Screen {
             drawCenteredScaledText(guiGraphics, opt.title, nodeCx, nodeCy + 11, 44, textColor);
         }
 
-        // 3. Center hub text (fits cleanly inside the 66px recessed center circle)
+        // 3. Center hub text (fits cleanly inside the 56px recessed center octagon)
         if (selectedIndex >= 0 && selectedIndex < count) {
             RadialOption sel = options.get(selectedIndex);
             int titleCol = sel.enabled ? sel.color : 0xFF888888;
-            drawCenteredScaledText(guiGraphics, sel.title, cx, cy - 9, 58, titleCol);
-            drawCenteredScaledText(guiGraphics, sel.subtitle, cx, cy + 2, 58, 0xFFB0B8C2);
+            drawCenteredScaledText(guiGraphics, sel.title, cx, cy - 9, 48, titleCol);
+            drawCenteredScaledText(guiGraphics, sel.subtitle, cx, cy + 2, 48, 0xFFB0B8C2);
         } else {
-            drawCenteredScaledText(guiGraphics, this.title.getString(), cx, cy - 4, 58, 0xFFD0D6DE);
+            drawCenteredScaledText(guiGraphics, this.title.getString(), cx, cy - 4, 48, 0xFFD0D6DE);
         }
     }
 
