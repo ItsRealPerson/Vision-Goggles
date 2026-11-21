@@ -17,12 +17,12 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.PlayerModelPart;
 
 /**
- * Renders both of the player's 3D arms + sleeves in first-person reaching onto
- * the Modification Station's green cutting mat during blueprint assembly.
+ * Renders both of the player's 3D arms + sleeves in first-person poised over
+ * the Modification Station, reaching to place parts and assembling goggles.
  */
 public final class FirstPersonStationWorkRenderer {
 
-    private static final float ARM_SCALE = 0.86f;
+    private static final float ARM_SCALE = 0.84f;
 
     private static PlayerModel<AbstractClientPlayer> wideArmModel;
     private static PlayerModel<AbstractClientPlayer> slimArmModel;
@@ -56,37 +56,67 @@ public final class FirstPersonStationWorkRenderer {
     ) {
         if (player == null || player.isInvisible()) return;
 
-        float t = StationWorkAnimator.getProgress();
-        float reachIn = smoothstep01(t / 0.18f);
-        float retract = smoothstep01((t - 0.84f) / 0.16f);
-        float offscreen = Mth.clamp((1.0f - reachIn) + retract, 0.0f, 1.0f);
+        float open = smoothstep01(StationWorkAnimator.getOpenBlend());
+        float offscreen = 1.0f - open;
 
-        // Work cycle active between 0.16 and 0.84 (3 rhythmic tactical clicks/adjustments)
-        float workWeight = smoothstep01((t - 0.14f) / 0.10f) * (1.0f - smoothstep01((t - 0.80f) / 0.10f));
-        float workWave = (float) Math.sin(t * Math.PI * 6.0f) * workWeight;
-        float steadyWave = (float) Math.sin(t * Math.PI * 3.0f) * workWeight;
+        // Gentle idle workbench breathing when hands are ready at the table edges
+        float idleTime = (System.currentTimeMillis() % 10000L) / 1000.0f;
+        float breath = (float) Math.sin(idleTime * 2.2f) * 0.008f;
 
-        // Left hand: steadies goggles frame on the green cutting mat
-        renderWorkArm(
-                player, HumanoidArm.LEFT, poseStack, buffer, combinedLight,
-                -0.30f - offscreen * 0.22f,
-                -0.32f - offscreen * 0.44f + steadyWave * 0.015f,
-                -0.58f + offscreen * 0.24f,
-                -24.0f,
-                -46.0f + steadyWave * 4.0f,
-                180.0f + 22.0f
-        );
+        // Base poised workbench positions (bottom-left and bottom-right, framing the green mat)
+        float lx = -0.34f - offscreen * 0.24f;
+        float ly = -0.36f - offscreen * 0.44f + breath;
+        float lz = -0.62f + offscreen * 0.22f;
+        float lRotZ = -26.0f;
+        float lRotX = -46.0f;
+        float lRotY = 180.0f + 22.0f;
 
-        // Right hand: calibrates & tightens optical tubes on the mat
-        renderWorkArm(
-                player, HumanoidArm.RIGHT, poseStack, buffer, combinedLight,
-                0.30f + offscreen * 0.22f - workWave * 0.03f,
-                -0.27f - offscreen * 0.44f + Math.abs(workWave) * 0.045f,
-                -0.56f + offscreen * 0.24f - workWave * 0.035f,
-                22.0f - workWave * 8.0f,
-                -42.0f + workWave * 14.0f,
-                180.0f - 24.0f
-        );
+        float rx = 0.34f + offscreen * 0.24f;
+        float ry = -0.36f - offscreen * 0.44f - breath;
+        float rz = -0.62f + offscreen * 0.22f;
+        float rRotZ = 26.0f;
+        float rRotX = -46.0f;
+        float rRotY = 180.0f - 22.0f;
+
+        // Single-hand placement reach pulse when adding/removing a component
+        if (StationWorkAnimator.isPlacing()) {
+            float p = (float) Math.sin(StationWorkAnimator.getPlaceProgress() * Math.PI);
+            if (StationWorkAnimator.isPlacingRightHand()) {
+                rx = Mth.lerp(p, rx, 0.14f);
+                ry = Mth.lerp(p, ry, -0.24f);
+                rz = Mth.lerp(p, rz, -0.54f);
+                rRotX += p * 12.0f;
+                rRotZ -= p * 8.0f;
+            } else {
+                lx = Mth.lerp(p, lx, -0.14f);
+                ly = Mth.lerp(p, ly, -0.24f);
+                lz = Mth.lerp(p, lz, -0.54f);
+                lRotX += p * 12.0f;
+                lRotZ += p * 8.0f;
+            }
+        }
+
+        // Full 2-hand assembly motion when finalizing goggles
+        if (StationWorkAnimator.isAssembling()) {
+            float t = StationWorkAnimator.getProgress();
+            float w = smoothstep01(t / 0.18f) * (1.0f - smoothstep01((t - 0.82f) / 0.18f));
+            float workWave = (float) Math.sin(t * Math.PI * 6.0f) * w;
+            float steadyWave = (float) Math.sin(t * Math.PI * 3.0f) * w;
+
+            lx = Mth.lerp(w, lx, -0.26f);
+            ly = Mth.lerp(w, ly, -0.30f + steadyWave * 0.015f);
+            lz = Mth.lerp(w, lz, -0.56f);
+            lRotX += steadyWave * 5.0f;
+
+            rx = Mth.lerp(w, rx, 0.26f - workWave * 0.03f);
+            ry = Mth.lerp(w, ry, -0.26f + Math.abs(workWave) * 0.045f);
+            rz = Mth.lerp(w, rz, -0.54f - workWave * 0.035f);
+            rRotZ -= workWave * 8.0f;
+            rRotX += workWave * 14.0f;
+        }
+
+        renderWorkArm(player, HumanoidArm.LEFT, poseStack, buffer, combinedLight, lx, ly, lz, lRotZ, lRotX, lRotY);
+        renderWorkArm(player, HumanoidArm.RIGHT, poseStack, buffer, combinedLight, rx, ry, rz, rRotZ, rRotX, rRotY);
     }
 
     private static void renderWorkArm(

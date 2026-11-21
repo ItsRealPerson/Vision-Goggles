@@ -87,21 +87,21 @@ public class ModificationStationMenu extends AbstractContainerMenu {
 
         // Station Slots (only active on TAB_MODIFY)
         // Input 0: Goggles
-        this.addSlot(new Slot(container, 0, 56, 39) {
+        this.addSlot(new Slot(container, 0, 34, 42) {
             @Override
             public boolean isActive() {
                 return currentTab == TAB_MODIFY;
             }
         });
         // Input 1: Module
-        this.addSlot(new Slot(container, 1, 92, 39) {
+        this.addSlot(new Slot(container, 1, 70, 42) {
             @Override
             public boolean isActive() {
                 return currentTab == TAB_MODIFY;
             }
         });
         // Output 2
-        this.addSlot(new Slot(container, 2, 128, 39) {
+        this.addSlot(new Slot(container, 2, 106, 42) {
             @Override
             public boolean isActive() {
                 return currentTab == TAB_MODIFY;
@@ -121,9 +121,9 @@ public class ModificationStationMenu extends AbstractContainerMenu {
             }
         });
 
-        // Player Inventory (centered for 220x196 tactical GUI)
-        int invOffsetX = 30;
-        int invOffsetY = 114;
+        // Player Inventory (left-docked 176x188 tactical panel so center 3D table stays unobstructed)
+        int invOffsetX = 8;
+        int invOffsetY = 104;
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
                 this.addSlot(new Slot(playerInventory, j + i * 9 + 9, invOffsetX + j * 18, invOffsetY + i * 18));

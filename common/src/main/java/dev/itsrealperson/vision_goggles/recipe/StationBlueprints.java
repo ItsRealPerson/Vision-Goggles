@@ -145,6 +145,51 @@ public final class StationBlueprints {
         return null;
     }
 
+    public static int countInList(List<ItemStack> list, Item target) {
+        int total = 0;
+        if (list == null) return 0;
+        for (ItemStack s : list) {
+            if (!s.isEmpty() && s.is(target)) {
+                total += s.getCount();
+            }
+        }
+        return total;
+    }
+
+    public static boolean areAllStaged(List<ItemStack> staged, Blueprint bp) {
+        if (bp == null) return false;
+        for (IngredientReq req : bp.ingredients()) {
+            if (countInList(staged, req.item().get()) < req.count()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static ItemStack buildResultFromStaged(List<ItemStack> staged, Blueprint bp) {
+        if (bp == null) return ItemStack.EMPTY;
+        ItemStack result = bp.createDefaultResult();
+        if (bp.isProUpgrade() && staged != null) {
+            CompoundTag preservedTag = null;
+            for (ItemStack s : staged) {
+                if (!s.isEmpty() && s.getItem() instanceof ModularGogglesItem && s.hasTag()) {
+                    preservedTag = s.getTag().copy();
+                    break;
+                }
+            }
+            if (preservedTag != null) {
+                result.setTag(preservedTag);
+            }
+            if (result.getItem() instanceof ModularGogglesItem modularItem && !modularItem.hasBatteryExpansion(result)) {
+                CompoundTag tag = result.getOrCreateTag();
+                ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
+                modules.add(StringTag.valueOf(ModConstants.ID_BATTERY_EXPANSION));
+                tag.put(ModConstants.TAG_MODULES, modules);
+            }
+        }
+        return result;
+    }
+
     public static int countAvailable(Player player, Container station, Item target) {
         int total = 0;
         if (player != null) {

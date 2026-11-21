@@ -1,6 +1,7 @@
 package dev.itsrealperson.vision_goggles.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import dev.itsrealperson.vision_goggles.block.entity.ModificationStationBlockEntity;
 import dev.itsrealperson.vision_goggles.client.StationWorkAnimator;
 import dev.itsrealperson.vision_goggles.menu.ModificationStationMenu;
 import dev.itsrealperson.vision_goggles.network.AssembleBlueprintPacket;
@@ -12,32 +13,21 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
+import java.util.Collections;
 import java.util.List;
 
+/**
+ * Left-docked tactical workbench UI that keeps the center 3D green cutting mat
+ * and the player's first-person hands completely unobstructed while placing parts
+ * step by step and assembling goggles.
+ */
 public class ModificationStationScreen extends AbstractContainerScreen<ModificationStationMenu> {
 
-    private static final int GUI_W = 220;
-    private static final int GUI_H = 196;
+    private static final int GUI_W = 176;
+    private static final int GUI_H = 188;
 
-    // Blueprint 2x4 selector grid (Tab 0 left panel)
-    private static final int GRID_X = 8;
-    private static final int GRID_Y = 26;
-    private static final int CELL_W = 42;
-    private static final int CELL_H = 19;
-    private static final int CELL_GAP = 2;
-
-    // Right monitor panel (Tab 0)
-    private static final int MON_X = 98;
-    private static final int MON_Y = 26;
-    private static final int MON_W = 114;
-    private static final int MON_H = 82;
-
-    private static final String[] SHORT_CODES = {
-            "NVG", "THRM", "HYDR", "BIO", "MOD", "PRO", "FLSH"
-    };
-
-    private int selectedIndex = 0;
     private Button btnAssembleTab;
     private Button btnModifyTab;
     private Button btnAssembleAction;
@@ -46,32 +36,56 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         super(menu, playerInventory, title);
         this.imageWidth = GUI_W;
         this.imageHeight = GUI_H;
-        this.inventoryLabelX = 30;
-        this.inventoryLabelY = 103;
+        this.inventoryLabelX = 8;
+        this.inventoryLabelY = 93;
     }
 
     @Override
     protected void init() {
         super.init();
+        // Dock left so the center 3D table and both player hands stay completely visible
+        this.leftPos = 6;
+        this.topPos = Math.max(6, (this.height - this.imageHeight) / 2);
+
+        StationWorkAnimator.setWorkbenchOpen(true, this.menu.getStationPos());
+
         int x = this.leftPos;
         int y = this.topPos;
 
         this.btnAssembleTab = this.addRenderableWidget(
                 Button.builder(Component.translatable("gui.vision_goggles.tab.assemble"), b -> switchTab(ModificationStationMenu.TAB_ASSEMBLE))
-                        .bounds(x + 8, y + 6, 88, 16)
+                        .bounds(x + 6, y + 6, 72, 15)
                         .build()
         );
         this.btnModifyTab = this.addRenderableWidget(
                 Button.builder(Component.translatable("gui.vision_goggles.tab.modify"), b -> switchTab(ModificationStationMenu.TAB_MODIFY))
-                        .bounds(x + 100, y + 6, 112, 16)
+                        .bounds(x + 81, y + 6, 89, 15)
                         .build()
         );
         this.btnAssembleAction = this.addRenderableWidget(
-                Button.builder(Component.translatable("gui.vision_goggles.button.assemble"), b -> triggerAssemble())
-                        .bounds(x + MON_X + 4, y + MON_Y + 62, MON_W - 8, 16)
+                Button.builder(Component.translatable("gui.vision_goggles.button.assemble"), b -> triggerFinalizeAssembly())
+                        .bounds(x + 6, y + 77, GUI_W - 12, 14)
                         .build()
         );
         updateButtonStates();
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        StationWorkAnimator.setWorkbenchOpen(false, null);
+    }
+
+    private ModificationStationBlockEntity getStation() {
+        if (this.minecraft == null || this.minecraft.level == null) return null;
+        BlockEntity be = this.minecraft.level.getBlockEntity(this.menu.getStationPos());
+        return (be instanceof ModificationStationBlockEntity station) ? station : null;
+    }
+
+    private StationBlueprints.Blueprint getSelectedBlueprint(ModificationStationBlockEntity station) {
+        String id = (station != null) ? station.getActiveBlueprintId() : "night_vision_goggles";
+        StationBlueprints.Blueprint bp = StationBlueprints.byId(id);
+        return (bp != null) ? bp : StationBlueprints.getAll().get(0);
     }
 
     private void switchTab(int tab) {
@@ -80,16 +94,16 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         }
     }
 
-    private void triggerAssemble() {
-        List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
-        if (selectedIndex < 0 || selectedIndex >= all.size()) return;
-        StationBlueprints.Blueprint bp = all.get(selectedIndex);
-        if (this.minecraft == null || this.minecraft.player == null) return;
-        if (!StationBlueprints.canAssemble(this.minecraft.player, this.menu.getStationContainer(), bp)) return;
+    private void triggerFinalizeAssembly() {
+        ModificationStationBlockEntity station = getStation();
+        StationBlueprints.Blueprint bp = getSelectedBlueprint(station);
+        List<ItemStack> staged = (station != null) ? station.getStagedItems() : Collections.emptyList();
+        if (!StationBlueprints.areAllStaged(staged, bp)) return;
 
-        NetworkManager.INSTANCE.sendToServer(new AssembleBlueprintPacket(this.menu.getStationPos(), bp.id()));
+        NetworkManager.INSTANCE.sendToServer(
+                new AssembleBlueprintPacket(this.menu.getStationPos(), AssembleBlueprintPacket.Action.FINALIZE_ASSEMBLY, bp.id(), 0)
+        );
         StationWorkAnimator.startLocalWork(this.menu.getStationPos());
-        this.onClose();
     }
 
     private void updateButtonStates() {
@@ -98,12 +112,12 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         if (this.btnModifyTab != null) this.btnModifyTab.active = isAssemble;
         if (this.btnAssembleAction != null) {
             this.btnAssembleAction.visible = isAssemble;
-            if (isAssemble && this.minecraft != null && this.minecraft.player != null) {
-                List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
-                StationBlueprints.Blueprint bp = (selectedIndex >= 0 && selectedIndex < all.size()) ? all.get(selectedIndex) : null;
-                this.btnAssembleAction.active = bp != null
-                        && this.menu.getAssemblingTicks() == 0
-                        && StationBlueprints.canAssemble(this.minecraft.player, this.menu.getStationContainer(), bp);
+            if (isAssemble) {
+                ModificationStationBlockEntity station = getStation();
+                StationBlueprints.Blueprint bp = getSelectedBlueprint(station);
+                List<ItemStack> staged = (station != null) ? station.getStagedItems() : Collections.emptyList();
+                boolean ready = StationBlueprints.areAllStaged(staged, bp);
+                this.btnAssembleAction.active = ready && (station == null || !station.isAssembling());
             } else {
                 this.btnAssembleAction.active = false;
             }
@@ -118,17 +132,44 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && this.menu.getCurrentTab() == ModificationStationMenu.TAB_ASSEMBLE) {
-            List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
-            for (int i = 0; i < all.size(); i++) {
-                int col = i % 2;
-                int row = i / 2;
-                int cx = this.leftPos + GRID_X + col * (CELL_W + CELL_GAP);
-                int cy = this.topPos + GRID_Y + row * (CELL_H + CELL_GAP);
-                if (mouseX >= cx && mouseX < cx + CELL_W && mouseY >= cy && mouseY < cy + CELL_H) {
-                    this.selectedIndex = i;
-                    updateButtonStates();
-                    return true;
+        if (this.menu.getCurrentTab() == ModificationStationMenu.TAB_ASSEMBLE) {
+            ModificationStationBlockEntity station = getStation();
+            boolean busy = (station != null && station.isAssembling());
+
+            // 1. Blueprint selector row (7 icons across top)
+            if (button == 0 && !busy) {
+                List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
+                for (int i = 0; i < all.size(); i++) {
+                    int bx = this.leftPos + 6 + i * 24;
+                    int by = this.topPos + 24;
+                    if (mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18) {
+                        NetworkManager.INSTANCE.sendToServer(
+                                new AssembleBlueprintPacket(this.menu.getStationPos(), AssembleBlueprintPacket.Action.SELECT_BLUEPRINT, all.get(i).id(), i)
+                        );
+                        return true;
+                    }
+                }
+            }
+
+            // 2. Step-by-step ingredient cards (Left-click = place 1 onto mat, Right-click = take 1 back)
+            if ((button == 0 || button == 1) && !busy) {
+                StationBlueprints.Blueprint bp = getSelectedBlueprint(station);
+                List<StationBlueprints.IngredientReq> reqs = bp.ingredients();
+                for (int idx = 0; idx < reqs.size(); idx++) {
+                    int col = idx % 3;
+                    int row = idx / 3;
+                    int ix = this.leftPos + 6 + col * 55;
+                    int iy = this.topPos + 45 + row * 15;
+                    if (mouseX >= ix && mouseX < ix + 53 && mouseY >= iy && mouseY < iy + 14) {
+                        AssembleBlueprintPacket.Action act = (button == 0)
+                                ? AssembleBlueprintPacket.Action.ADD_INGREDIENT
+                                : AssembleBlueprintPacket.Action.REMOVE_INGREDIENT;
+                        NetworkManager.INSTANCE.sendToServer(
+                                new AssembleBlueprintPacket(this.menu.getStationPos(), act, bp.id(), idx)
+                        );
+                        StationWorkAnimator.triggerPlacePart((idx % 2) == 0);
+                        return true;
+                    }
                 }
             }
         }
@@ -136,8 +177,12 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
     }
 
     @Override
+    public void renderBackground(GuiGraphics guiGraphics) {
+        // Intentionally do NOT darken the world center so the 3D cutting mat & hands stay bright and clear
+    }
+
+    @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
         updateButtonStates();
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         renderExtraTooltips(guiGraphics, mouseX, mouseY);
@@ -155,10 +200,9 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Tactical Charcoal Chassis
-        guiGraphics.fill(x, y, x + GUI_W, y + GUI_H, 0xFF1A1D22);
-        drawBorder(guiGraphics, x, y, GUI_W, GUI_H, 0xFF3E444E);
-        guiGraphics.fill(x + 2, y + 2, x + GUI_W - 2, y + 24, 0xFF121519);
+        // Compact Left-Docked Tactical Panel (translucent charcoal so it blends cleanly)
+        guiGraphics.fill(x, y, x + GUI_W, y + GUI_H, 0xE816191E);
+        drawBorder(guiGraphics, x, y, GUI_W, GUI_H, 0xFF3A414B);
 
         if (this.menu.getCurrentTab() == ModificationStationMenu.TAB_ASSEMBLE) {
             renderAssembleTab(guiGraphics, x, y);
@@ -167,8 +211,8 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         }
 
         // Player Inventory & Hotbar Slot Frames
-        int invX = x + 29;
-        int invY = y + 113;
+        int invX = x + 7;
+        int invY = y + 103;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 drawSlotBox(guiGraphics, invX + col * 18, invY + row * 18);
@@ -181,111 +225,76 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
 
     private void renderAssembleTab(GuiGraphics guiGraphics, int x, int y) {
         if (this.minecraft == null || this.minecraft.player == null) return;
-        List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
+        ModificationStationBlockEntity station = getStation();
+        StationBlueprints.Blueprint activeBp = getSelectedBlueprint(station);
+        List<ItemStack> staged = (station != null) ? station.getStagedItems() : Collections.emptyList();
 
-        // Left Blueprint Cards (2 columns x 4 rows)
+        // 1. Blueprint Icon Strip (7 blueprints across top)
+        List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
         for (int i = 0; i < all.size(); i++) {
             StationBlueprints.Blueprint bp = all.get(i);
-            int col = i % 2;
-            int row = i / 2;
-            int cx = x + GRID_X + col * (CELL_W + CELL_GAP);
-            int cy = y + GRID_Y + row * (CELL_H + CELL_GAP);
-
-            boolean selected = (i == selectedIndex);
-            boolean craftable = StationBlueprints.canAssemble(this.minecraft.player, this.menu.getStationContainer(), bp);
-            int bg = selected ? 0xFF213128 : (craftable ? 0xFF1E2429 : 0xFF14171B);
-            int border = selected ? 0xFF3CFF82 : (craftable ? 0xFF2E6B47 : 0xFF2D323A);
-
-            guiGraphics.fill(cx, cy, cx + CELL_W, cy + CELL_H, bg);
-            drawBorder(guiGraphics, cx, cy, CELL_W, CELL_H, border);
-
-            ItemStack icon = bp.createDefaultResult();
-            guiGraphics.renderItem(icon, cx + 2, cy + 1);
-
-            String tag = (i < SHORT_CODES.length) ? SHORT_CODES[i] : "ITEM";
-            int textColor = craftable ? 0xFFB8FFD2 : 0xFF7D8590;
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(cx + 20, cy + 6, 0);
-            guiGraphics.pose().scale(0.72f, 0.72f, 1.0f);
-            guiGraphics.drawString(this.font, tag, 0, 0, textColor, false);
-            guiGraphics.pose().popPose();
+            int bx = x + 6 + i * 24;
+            int by = y + 24;
+            boolean selected = bp.id().equals(activeBp.id());
+            int bg = selected ? 0xFF21382B : 0xFF1D2229;
+            int border = selected ? 0xFF3CFF82 : 0xFF323943;
+            guiGraphics.fill(bx, by, bx + 22, by + 18, bg);
+            drawBorder(guiGraphics, bx, by, 22, 18, border);
+            guiGraphics.renderItem(bp.createDefaultResult(), bx + 3, by + 1);
         }
 
-        // Right Tactical Monitor
-        int mx = x + MON_X;
-        int my = y + MON_Y;
-        guiGraphics.fill(mx, my, mx + MON_W, my + MON_H, 0xFF0E1412);
-        drawBorder(guiGraphics, mx, my, MON_W, MON_H, 0xFF2B6E4C);
-
-        if (selectedIndex < 0 || selectedIndex >= all.size()) return;
-        StationBlueprints.Blueprint bp = all.get(selectedIndex);
-        ItemStack result = bp.createDefaultResult();
-
-        // Selected blueprint header
-        guiGraphics.renderItem(result, mx + 4, my + 4);
-        String nameStr = result.getHoverName().getString();
-        if (nameStr.length() > 17) {
-            nameStr = nameStr.substring(0, 16) + "..";
-        }
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(mx + 23, my + 5, 0);
-        guiGraphics.pose().scale(0.75f, 0.75f, 1.0f);
-        guiGraphics.drawString(this.font, nameStr, 0, 0, 0xFF5CFF9D, false);
-        guiGraphics.pose().popPose();
-
-        Component cat = Component.translatable(bp.categoryKey());
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(mx + 23, my + 13, 0);
-        guiGraphics.pose().scale(0.68f, 0.68f, 1.0f);
-        guiGraphics.drawString(this.font, cat, 0, 0, 0xFF56B4D3, false);
-        guiGraphics.pose().popPose();
-
-        // Ingredient requirements (up to 6 ingredients in 3x2 grid)
-        List<StationBlueprints.IngredientReq> reqs = bp.ingredients();
-        int startIx = mx + 6;
-        int startIy = my + 24;
+        // 2. Step-by-step Ingredient Cards (click to place onto mat, right-click to remove)
+        List<StationBlueprints.IngredientReq> reqs = activeBp.ingredients();
         for (int idx = 0; idx < reqs.size(); idx++) {
             StationBlueprints.IngredientReq req = reqs.get(idx);
-            int rCol = idx % 3;
-            int rRow = idx / 3;
-            int ix = startIx + rCol * 35;
-            int iy = startIy + rRow * 18;
+            int col = idx % 3;
+            int row = idx / 3;
+            int ix = x + 6 + col * 55;
+            int iy = y + 45 + row * 15;
 
-            int have = this.minecraft.player.isCreative()
+            int placed = StationBlueprints.countInList(staged, req.item().get());
+            int invHave = this.minecraft.player.isCreative()
                     ? req.count()
                     : StationBlueprints.countAvailable(this.minecraft.player, this.menu.getStationContainer(), req.item().get());
-            boolean ok = have >= req.count();
+            boolean done = placed >= req.count();
+            boolean canAddMore = !done && invHave > 0;
 
-            guiGraphics.fill(ix, iy, ix + 33, iy + 16, ok ? 0xFF15261C : 0xFF281618);
-            guiGraphics.renderItem(req.asStack(), ix + 1, iy);
+            int bg = done ? 0xFF153021 : (canAddMore ? 0xFF1D262D : 0xFF24171A);
+            int border = done ? 0xFF3CFF82 : (canAddMore ? 0xFF3C7C96 : 0xFF522A30);
+            guiGraphics.fill(ix, iy, ix + 53, iy + 14, bg);
+            drawBorder(guiGraphics, ix, iy, 53, 14, border);
 
-            String countLabel = Math.min(99, have) + "/" + req.count();
-            int cColor = ok ? 0xFF66FF99 : 0xFFFF6B6B;
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(ix + 18, iy + 5, 200);
-            guiGraphics.pose().scale(0.62f, 0.62f, 1.0f);
-            guiGraphics.drawString(this.font, countLabel, 0, 0, cColor, true);
+            guiGraphics.pose().translate(ix + 1, iy, 0);
+            guiGraphics.pose().scale(0.82f, 0.82f, 1.0f);
+            guiGraphics.renderItem(req.asStack(), 0, 0);
+            guiGraphics.pose().popPose();
+
+            String label = placed + "/" + req.count();
+            int color = done ? 0xFF5CFF9D : (canAddMore ? 0xFF8BE2FF : 0xFFFF7A7A);
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(ix + 18, iy + 4, 200);
+            guiGraphics.pose().scale(0.68f, 0.68f, 1.0f);
+            guiGraphics.drawString(this.font, label, 0, 0, color, true);
             guiGraphics.pose().popPose();
         }
     }
 
     private void renderModifyTab(GuiGraphics guiGraphics, int x, int y) {
-        // Tactical Modify / Flash / Repair Panel
-        guiGraphics.fill(x + 8, y + 26, x + GUI_W - 8, y + 98, 0xFF101618);
-        drawBorder(guiGraphics, x + 8, y + 26, GUI_W - 16, 72, 0xFF2F4F58);
+        guiGraphics.fill(x + 6, y + 25, x + GUI_W - 6, y + 90, 0xFF11161A);
+        drawBorder(guiGraphics, x + 6, y + 25, GUI_W - 12, 65, 0xFF2F4F58);
 
-        // Station Slots at exact Menu coordinates (56, 39), (92, 39), (128, 39)
-        drawSlotBox(guiGraphics, x + 55, y + 38);
-        drawSlotBox(guiGraphics, x + 91, y + 38);
-        drawSlotBox(guiGraphics, x + 127, y + 38);
+        // Station Slots at exact Menu coordinates (34, 42), (70, 42), (106, 42)
+        drawSlotBox(guiGraphics, x + 33, y + 41);
+        drawSlotBox(guiGraphics, x + 69, y + 41);
+        drawSlotBox(guiGraphics, x + 105, y + 41);
 
-        // Plus & Arrow indicators (Arrow at 110, 40 for JEI click area)
-        guiGraphics.drawString(this.font, "+", x + 79, y + 43, 0xFF56B4D3, false);
-        guiGraphics.drawString(this.font, "->", x + 111, y + 43, 0xFF3CFF82, false);
+        guiGraphics.drawString(this.font, "+", x + 57, y + 46, 0xFF56B4D3, false);
+        guiGraphics.drawString(this.font, "->", x + 89, y + 46, 0xFF3CFF82, false);
 
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(x + 14, y + 66, 0);
-        guiGraphics.pose().scale(0.75f, 0.75f, 1.0f);
+        guiGraphics.pose().translate(x + 10, y + 66, 0);
+        guiGraphics.pose().scale(0.66f, 0.66f, 1.0f);
         guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.modify.hint1"), 0, 0, 0xFF9FB3C0, false);
         guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.modify.hint2"), 0, 12, 0xFF6E828E, false);
         guiGraphics.pose().popPose();
@@ -295,33 +304,24 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         if (this.menu.getCurrentTab() != ModificationStationMenu.TAB_ASSEMBLE) return;
         List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
         for (int i = 0; i < all.size(); i++) {
-            int col = i % 2;
-            int row = i / 2;
-            int cx = this.leftPos + GRID_X + col * (CELL_W + CELL_GAP);
-            int cy = this.topPos + GRID_Y + row * (CELL_H + CELL_GAP);
-            if (mouseX >= cx && mouseX < cx + CELL_W && mouseY >= cy && mouseY < cy + CELL_H) {
+            int bx = this.leftPos + 6 + i * 24;
+            int by = this.topPos + 24;
+            if (mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18) {
                 guiGraphics.renderTooltip(this.font, all.get(i).createDefaultResult(), mouseX, mouseY);
                 return;
             }
         }
-        if (selectedIndex >= 0 && selectedIndex < all.size()) {
-            StationBlueprints.Blueprint bp = all.get(selectedIndex);
-            int mx = this.leftPos + MON_X;
-            int my = this.topPos + MON_Y;
-            if (mouseX >= mx + 4 && mouseX < mx + 22 && mouseY >= my + 4 && mouseY < my + 22) {
-                guiGraphics.renderTooltip(this.font, bp.createDefaultResult(), mouseX, mouseY);
+        ModificationStationBlockEntity station = getStation();
+        StationBlueprints.Blueprint bp = getSelectedBlueprint(station);
+        List<StationBlueprints.IngredientReq> reqs = bp.ingredients();
+        for (int idx = 0; idx < reqs.size(); idx++) {
+            int col = idx % 3;
+            int row = idx / 3;
+            int ix = this.leftPos + 6 + col * 55;
+            int iy = this.topPos + 45 + row * 15;
+            if (mouseX >= ix && mouseX < ix + 53 && mouseY >= iy && mouseY < iy + 14) {
+                guiGraphics.renderTooltip(this.font, reqs.get(idx).asStack(), mouseX, mouseY);
                 return;
-            }
-            List<StationBlueprints.IngredientReq> reqs = bp.ingredients();
-            for (int idx = 0; idx < reqs.size(); idx++) {
-                int rCol = idx % 3;
-                int rRow = idx / 3;
-                int ix = mx + 6 + rCol * 35;
-                int iy = my + 24 + rRow * 18;
-                if (mouseX >= ix && mouseX < ix + 33 && mouseY >= iy && mouseY < iy + 16) {
-                    guiGraphics.renderTooltip(this.font, reqs.get(idx).asStack(), mouseX, mouseY);
-                    return;
-                }
             }
         }
     }

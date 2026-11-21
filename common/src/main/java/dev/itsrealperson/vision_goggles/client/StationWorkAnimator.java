@@ -10,35 +10,74 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Dedicated-server-safe state machine for the first-person and 3rd-person
- * two-handed assembly animation at the Modification Station.
+ * interactive workbench hand animations at the Modification Station.
  */
 public final class StationWorkAnimator {
 
-    private static final float WORK_DURATION_SECONDS = 1.25f;
+    private static final float OPEN_DURATION_SECONDS = 0.22f;
+    private static final float PLACE_DURATION_SECONDS = 0.28f;
+    private static final float ASSEMBLE_DURATION_SECONDS = 1.05f;
     private static final float MAX_DT_SECONDS = 0.05f;
     private static final long REMOTE_EXPIRE_NANOS = 1_500_000_000L;
 
-    private static boolean working = false;
-    private static float progress = 0.0f;
-    private static long lastNanos = 0L;
+    private static boolean workbenchOpen = false;
+    private static float openBlend = 0.0f;
     private static BlockPos stationPos = null;
+
+    private static boolean placing = false;
+    private static boolean placingRightHand = true;
+    private static float placeProgress = 0.0f;
+
+    private static boolean assembling = false;
+    private static float assembleProgress = 0.0f;
+
+    private static long lastNanos = 0L;
 
     private static final Map<UUID, Long> REMOTE_WORKERS = new ConcurrentHashMap<>();
 
     private StationWorkAnimator() {}
 
+    public static void setWorkbenchOpen(boolean open, BlockPos pos) {
+        workbenchOpen = open;
+        if (open) {
+            stationPos = pos;
+            if (lastNanos == 0L) {
+                lastNanos = System.nanoTime();
+            }
+        } else {
+            stationPos = null;
+        }
+    }
+
+    public static void triggerPlacePart(boolean rightHand) {
+        placing = true;
+        placingRightHand = rightHand;
+        placeProgress = 0.0f;
+        if (lastNanos == 0L) {
+            lastNanos = System.nanoTime();
+        }
+    }
+
     public static void startLocalWork(BlockPos pos) {
-        working = true;
-        progress = 0.0f;
-        lastNanos = System.nanoTime();
-        stationPos = pos;
+        assembling = true;
+        assembleProgress = 0.0f;
+        if (pos != null) {
+            stationPos = pos;
+        }
+        if (lastNanos == 0L) {
+            lastNanos = System.nanoTime();
+        }
     }
 
     public static void reset() {
-        working = false;
-        progress = 0.0f;
-        lastNanos = 0L;
+        workbenchOpen = false;
+        openBlend = 0.0f;
         stationPos = null;
+        placing = false;
+        placeProgress = 0.0f;
+        assembling = false;
+        assembleProgress = 0.0f;
+        lastNanos = 0L;
     }
 
     public static void markEntityWorking(UUID uuid) {
@@ -47,14 +86,8 @@ public final class StationWorkAnimator {
         }
     }
 
-    public static void clearEntityWorking(UUID uuid) {
-        if (uuid != null) {
-            REMOTE_WORKERS.remove(uuid);
-        }
-    }
-
     public static boolean isEntityWorking(UUID uuid, boolean isLocalPlayer) {
-        if (isLocalPlayer && working) {
+        if (isLocalPlayer && (workbenchOpen || assembling)) {
             return true;
         }
         if (uuid == null) return false;
@@ -68,12 +101,11 @@ public final class StationWorkAnimator {
     }
 
     public static void syncFromRender(Player player) {
-        if (!working) return;
         if (player == null || !player.isAlive()) {
             reset();
             return;
         }
-        if (stationPos != null && player.distanceToSqr(stationPos.getX() + 0.5, stationPos.getY() + 0.5, stationPos.getZ() + 0.5) > 36.0) {
+        if (stationPos != null && player.distanceToSqr(stationPos.getX() + 0.5, stationPos.getY() + 0.5, stationPos.getZ() + 0.5) > 64.0) {
             reset();
             return;
         }
@@ -82,20 +114,61 @@ public final class StationWorkAnimator {
         float dt = computeDeltaSeconds(now, lastNanos);
         lastNanos = now;
 
-        if (dt > 0.0f) {
-            progress += dt / WORK_DURATION_SECONDS;
-            if (progress >= 1.0f) {
-                reset();
+        if (dt <= 0.0f) return;
+
+        boolean shouldStayActive = workbenchOpen || assembling || placing;
+        if (shouldStayActive) {
+            openBlend = Math.min(1.0f, openBlend + dt / OPEN_DURATION_SECONDS);
+        } else if (openBlend > 0.0f) {
+            openBlend = Math.max(0.0f, openBlend - dt / OPEN_DURATION_SECONDS);
+            if (openBlend <= 0.001f) {
+                openBlend = 0.0f;
+            }
+        }
+
+        if (placing) {
+            placeProgress += dt / PLACE_DURATION_SECONDS;
+            if (placeProgress >= 1.0f) {
+                placing = false;
+                placeProgress = 0.0f;
+            }
+        }
+
+        if (assembling) {
+            assembleProgress += dt / ASSEMBLE_DURATION_SECONDS;
+            if (assembleProgress >= 1.0f) {
+                assembling = false;
+                assembleProgress = 0.0f;
             }
         }
     }
 
     public static boolean isWorking() {
-        return working;
+        return workbenchOpen || assembling || placing || openBlend > 0.001f;
+    }
+
+    public static float getOpenBlend() {
+        return Mth.clamp(openBlend, 0.0f, 1.0f);
+    }
+
+    public static boolean isPlacing() {
+        return placing;
+    }
+
+    public static boolean isPlacingRightHand() {
+        return placingRightHand;
+    }
+
+    public static float getPlaceProgress() {
+        return Mth.clamp(placeProgress, 0.0f, 1.0f);
+    }
+
+    public static boolean isAssembling() {
+        return assembling;
     }
 
     public static float getProgress() {
-        return Mth.clamp(progress, 0.0f, 1.0f);
+        return Mth.clamp(assembleProgress, 0.0f, 1.0f);
     }
 
     private static float computeDeltaSeconds(long nowNanos, long prevNanos) {

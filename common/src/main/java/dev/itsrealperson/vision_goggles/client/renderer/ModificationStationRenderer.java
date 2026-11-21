@@ -17,11 +17,25 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.List;
+
 /**
- * Renders goggles, modules, and blueprint assembly in real-time 3D on the
+ * Renders staged parts, goggles, and assembly progress in real-time 3D on the
  * Modification Station's green cutting mat.
  */
 public class ModificationStationRenderer implements BlockEntityRenderer<ModificationStationBlockEntity> {
+
+    private static final float[][] MAT_OFFSETS = {
+            {-0.18f, -0.10f},
+            { 0.18f, -0.10f},
+            {-0.18f,  0.12f},
+            { 0.18f,  0.12f},
+            { 0.00f, -0.16f},
+            { 0.00f,  0.15f},
+            {-0.08f,  0.02f},
+            { 0.08f,  0.02f},
+            { 0.00f,  0.00f}
+    };
 
     private final ItemRenderer itemRenderer;
 
@@ -58,34 +72,51 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                     / (float) ModificationStationBlockEntity.ASSEMBLY_DURATION_TICKS;
             float p = Mth.clamp(rawProgress, 0.0f, 1.0f);
             float hover = (float) Math.sin(p * Math.PI) * 0.045f;
-            float baseScale = (assembling.getItem() instanceof VisionGogglesItem) ? 0.54f : 0.44f;
-            float scale = baseScale * Mth.lerp(Math.min(1.0f, p * 2.2f), 0.65f, 1.0f);
 
-            poseStack.pushPose();
-            poseStack.translate(0.0f, 0.965f + hover, 0.04f);
-            poseStack.mulPose(Axis.XP.rotationDegrees(72.0f - (float) Math.sin(p * Math.PI * 2.0f) * 6.0f));
-            poseStack.mulPose(Axis.ZP.rotationDegrees((float) Math.sin(p * Math.PI * 4.0f) * 4.0f));
-            poseStack.scale(scale, scale, scale);
-            itemRenderer.renderStatic(assembling, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, poseStack, buffer, station.getLevel(), 0);
-            poseStack.popPose();
-        } else {
-            ItemStack slot0 = station.getItem(0);
-            ItemStack slot1 = station.getItem(1);
-            ItemStack slot2 = station.getItem(2);
-
-            if (!slot2.isEmpty() && slot2.getItem() instanceof VisionGogglesItem) {
-                renderMatItem(station, slot2, 0.0f, 0.962f, 0.04f, 0.52f, 76.0f, poseStack, buffer, light);
+            if (assembling.getItem() instanceof VisionGogglesItem) {
+                float scale = 0.44f * Mth.lerp(Math.min(1.0f, p * 2.2f), 0.70f, 1.0f);
+                renderUprightGoggles(station, assembling, 0.0f, 1.02f + hover, 0.02f, scale, (float) Math.sin(p * Math.PI * 2.0f) * 8.0f, poseStack, buffer, light);
             } else {
-                boolean hasBoth = !slot0.isEmpty() && !slot1.isEmpty();
-                if (!slot0.isEmpty()) {
-                    float scale0 = (slot0.getItem() instanceof VisionGogglesItem) ? 0.50f : 0.36f;
-                    float x0 = hasBoth ? -0.13f : 0.0f;
-                    renderMatItem(station, slot0, x0, 0.960f, 0.04f, scale0, 82.0f, poseStack, buffer, light);
+                float scale = 0.42f * Mth.lerp(Math.min(1.0f, p * 2.2f), 0.70f, 1.0f);
+                renderFlatItem(station, assembling, 0.0f, 0.955f + hover, 0.02f, scale, 90.0f, poseStack, buffer, light);
+            }
+        } else {
+            List<ItemStack> staged = station.getStagedItems();
+            if (!staged.isEmpty()) {
+                int flatIdx = 0;
+                for (ItemStack s : staged) {
+                    if (s.isEmpty()) continue;
+                    if (s.getItem() instanceof VisionGogglesItem) {
+                        renderUprightGoggles(station, s, 0.0f, 1.01f, 0.02f, 0.42f, 0.0f, poseStack, buffer, light);
+                    } else {
+                        float[] off = MAT_OFFSETS[flatIdx % MAT_OFFSETS.length];
+                        renderFlatItem(station, s, off[0], 0.946f + (flatIdx * 0.002f), off[1], 0.28f, 90.0f, poseStack, buffer, light);
+                        flatIdx++;
+                    }
                 }
-                if (!slot1.isEmpty()) {
-                    float scale1 = (slot1.getItem() instanceof VisionGogglesItem) ? 0.48f : 0.32f;
-                    float x1 = hasBoth ? 0.19f : 0.0f;
-                    renderMatItem(station, slot1, x1, 0.956f, 0.02f, scale1, 88.0f, poseStack, buffer, light);
+            } else {
+                // Modify / Repair tab slots preview on the mat
+                ItemStack slot0 = station.getItem(0);
+                ItemStack slot1 = station.getItem(1);
+                ItemStack slot2 = station.getItem(2);
+
+                if (!slot2.isEmpty() && slot2.getItem() instanceof VisionGogglesItem) {
+                    renderUprightGoggles(station, slot2, 0.0f, 1.01f, 0.02f, 0.44f, 0.0f, poseStack, buffer, light);
+                } else {
+                    if (!slot0.isEmpty()) {
+                        if (slot0.getItem() instanceof VisionGogglesItem) {
+                            renderUprightGoggles(station, slot0, -0.06f, 1.01f, 0.02f, 0.42f, 0.0f, poseStack, buffer, light);
+                        } else {
+                            renderFlatItem(station, slot0, -0.14f, 0.948f, 0.02f, 0.30f, 90.0f, poseStack, buffer, light);
+                        }
+                    }
+                    if (!slot1.isEmpty()) {
+                        if (slot1.getItem() instanceof VisionGogglesItem) {
+                            renderUprightGoggles(station, slot1, 0.08f, 1.01f, 0.02f, 0.40f, 0.0f, poseStack, buffer, light);
+                        } else {
+                            renderFlatItem(station, slot1, 0.19f, 0.948f, 0.02f, 0.28f, 90.0f, poseStack, buffer, light);
+                        }
+                    }
                 }
             }
         }
@@ -93,7 +124,27 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
         poseStack.popPose();
     }
 
-    private void renderMatItem(
+    private void renderUprightGoggles(
+            ModificationStationBlockEntity station,
+            ItemStack stack,
+            float x,
+            float y,
+            float z,
+            float scale,
+            float yawOffset,
+            PoseStack poseStack,
+            MultiBufferSource buffer,
+            int light
+    ) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0f + yawOffset));
+        poseStack.scale(scale, scale, scale);
+        itemRenderer.renderStatic(stack, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, poseStack, buffer, station.getLevel(), 0);
+        poseStack.popPose();
+    }
+
+    private void renderFlatItem(
             ModificationStationBlockEntity station,
             ItemStack stack,
             float x,
