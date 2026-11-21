@@ -19,6 +19,7 @@ public class NetworkManager {
         INSTANCE.register(SyncFlashlightPacket.class, SyncFlashlightPacket::encode, SyncFlashlightPacket::new, SyncFlashlightPacket::handle);
         INSTANCE.register(CycleFlashlightModePacket.class, CycleFlashlightModePacket::encode, CycleFlashlightModePacket::new, CycleFlashlightModePacket::handle);
         INSTANCE.register(OpenLuaScreenPacket.class, OpenLuaScreenPacket::encode, OpenLuaScreenPacket::new, OpenLuaScreenPacket::handle);
+        INSTANCE.register(OpenProtoPreviewPacket.class, OpenProtoPreviewPacket::encode, OpenProtoPreviewPacket::new, OpenProtoPreviewPacket::handle);
         INSTANCE.register(SelectVisionModePacket.class, SelectVisionModePacket::encode, SelectVisionModePacket::new, SelectVisionModePacket::handle);
         INSTANCE.register(AssembleBlueprintPacket.class, AssembleBlueprintPacket::encode, AssembleBlueprintPacket::new, AssembleBlueprintPacket::handle);
     }

@@ -25,6 +25,7 @@ Antes de escribir código, determina el tipo de proyecto y versión leyendo ÚNI
   - En **1.20.1**, usa el sistema de `initializeClient` (Forge) o `GeoItemRenderer` correspondiente a esa versión. En **1.21+ / 26.x**, usa `GeoRenderProvider` de forma segura para el servidor.
   - Verifica que los nombres de los *bones* en Java coincidan exactamente con el `.geo.json`.
 - **Mixins:** Último recurso si no existe evento nativo. Prefiere `@Inject` y **MixinExtras** (`@WrapOperation`, `@ModifyExpressionValue`). PROHIBIDO usar `@Overwrite` o `@Redirect` salvo orden explícita. Prefija métodos inyectados con `modid$`.
+- **Skills Modding & Guardrails:** Activa según subsistema las skills globales `mc-architectury-forge-fabric`, `mc-shaders-fbo-embeddium`, `mc-luaj-scripting-sandbox` y `mc-animations-ui-and-blockbench`. Modelos 3D nuevos vía MCP `blockbench`/`bbmodel` + `minecraft-model` sin destruir originales; GUIs en estética 3D biselada/pixel-art Minecraft (sin tarjetas neón "tipo IA") con JEI filtrado por pestaña; antes de copiar JARs a ATLauncher verifica que `javaw.exe`/`java.exe` de Minecraft no esté ejecutándose.
 
 ## 4. Reglas para Plugins (Paper / Folia / Spigot / Velocity)
 - **Compatibilidad Folia y Multithreading:**

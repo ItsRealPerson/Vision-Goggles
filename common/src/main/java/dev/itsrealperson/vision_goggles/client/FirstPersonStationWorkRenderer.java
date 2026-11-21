@@ -64,92 +64,94 @@ public final class FirstPersonStationWorkRenderer {
         float breath = (float) Math.sin(idleTime * 2.2f) * 0.008f;
 
         // Base poised workbench positions (bottom-left and bottom-right, framing the green mat)
-        float lx = -0.34f - offscreen * 0.24f;
-        float ly = -0.36f - offscreen * 0.44f + breath;
-        float lz = -0.62f + offscreen * 0.22f;
-        float lRotZ = -26.0f;
-        float lRotX = -46.0f;
-        float lRotY = 180.0f + 22.0f;
+        float lx = -0.34f - offscreen * 0.22f;
+        float ly = -0.37f - offscreen * 0.40f + breath;
+        float lz = -0.68f + offscreen * 0.20f;
+        float lRotZ = -22.0f;
+        float lRotX = -62.0f;
+        float lRotY = 180.0f + 18.0f;
 
-        float rx = 0.34f + offscreen * 0.24f;
-        float ry = -0.36f - offscreen * 0.44f - breath;
-        float rz = -0.62f + offscreen * 0.22f;
-        float rRotZ = 26.0f;
-        float rRotX = -46.0f;
-        float rRotY = 180.0f - 22.0f;
+        float rx = 0.34f + offscreen * 0.22f;
+        float ry = -0.37f - offscreen * 0.40f - breath;
+        float rz = -0.68f + offscreen * 0.20f;
+        float rRotZ = 22.0f;
+        float rRotX = -62.0f;
+        float rRotY = 180.0f - 18.0f;
 
-        // Single-hand placement reach pulse when adding/removing a component
+        // Single-hand placement reach pulse forward onto the mat edge
         if (StationWorkAnimator.isPlacing()) {
             float p = (float) Math.sin(StationWorkAnimator.getPlaceProgress() * Math.PI);
             if (StationWorkAnimator.isPlacingRightHand()) {
-                rx = Mth.lerp(p, rx, 0.14f);
-                ry = Mth.lerp(p, ry, -0.24f);
-                rz = Mth.lerp(p, rz, -0.54f);
-                rRotX += p * 12.0f;
-                rRotZ -= p * 8.0f;
+                rx = Mth.lerp(p, rx, 0.20f);
+                ry = Mth.lerp(p, ry, -0.30f);
+                rz = Mth.lerp(p, rz, -0.76f);
+                rRotX -= p * 10.0f;
+                rRotZ += p * 6.0f;
             } else {
-                lx = Mth.lerp(p, lx, -0.14f);
-                ly = Mth.lerp(p, ly, -0.24f);
-                lz = Mth.lerp(p, lz, -0.54f);
-                lRotX += p * 12.0f;
-                lRotZ += p * 8.0f;
+                lx = Mth.lerp(p, lx, -0.20f);
+                ly = Mth.lerp(p, ly, -0.30f);
+                lz = Mth.lerp(p, lz, -0.76f);
+                lRotX -= p * 10.0f;
+                lRotZ -= p * 6.0f;
             }
         }
 
-        // Full 2-hand assembly motion: reach inward to hold chassis, fit/press parts + lens, then present
+        // Full 2-hand assembly motion: cradle/align on mat, press/fit parts + lens, then settle
         if (StationWorkAnimator.isAssembling()) {
             float t = StationWorkAnimator.getProgress();
             float w = smoothstep01(t / 0.14f) * (1.0f - smoothstep01((t - 0.84f) / 0.16f));
 
             if (t < 0.28f) {
-                // Stage 1: Both hands cradle & align the chassis in the center
+                // Stage 1: Both hands reach forward onto the mat to cradle & align the chassis
                 float cT = smoothstep01(t / 0.28f);
-                lx = Mth.lerp(w, lx, Mth.lerp(cT, -0.22f, -0.14f));
-                ly = Mth.lerp(w, ly, Mth.lerp(cT, -0.28f, -0.18f));
-                lz = Mth.lerp(w, lz, Mth.lerp(cT, -0.54f, -0.47f));
-                lRotZ = Mth.lerp(w, lRotZ, -38.0f);
-                lRotX = Mth.lerp(w, lRotX, -32.0f);
-                lRotY = Mth.lerp(w, lRotY, 214.0f);
+                lx = Mth.lerp(w, lx, Mth.lerp(cT, -0.29f, -0.25f));
+                ly = Mth.lerp(w, ly, Mth.lerp(cT, -0.34f, -0.31f));
+                lz = Mth.lerp(w, lz, Mth.lerp(cT, -0.70f, -0.73f));
+                lRotZ = Mth.lerp(w, lRotZ, Mth.lerp(cT, -24.0f, -30.0f));
+                lRotX = Mth.lerp(w, lRotX, Mth.lerp(cT, -62.0f, -64.0f));
+                lRotY = Mth.lerp(w, lRotY, Mth.lerp(cT, 202.0f, 212.0f));
 
-                rx = Mth.lerp(w, rx, Mth.lerp(cT, 0.22f, 0.14f));
-                ry = Mth.lerp(w, ry, Mth.lerp(cT, -0.28f, -0.18f));
-                rz = Mth.lerp(w, rz, Mth.lerp(cT, -0.54f, -0.47f));
-                rRotZ = Mth.lerp(w, rRotZ, 38.0f);
-                rRotX = Mth.lerp(w, rRotX, -32.0f);
-                rRotY = Mth.lerp(w, rRotY, 146.0f);
+                rx = Mth.lerp(w, rx, Mth.lerp(cT, 0.29f, 0.26f));
+                ry = Mth.lerp(w, ry, Mth.lerp(cT, -0.34f, -0.31f));
+                rz = Mth.lerp(w, rz, Mth.lerp(cT, -0.70f, -0.72f));
+                rRotZ = Mth.lerp(w, rRotZ, 24.0f);
+                rRotX = Mth.lerp(w, rRotX, Mth.lerp(cT, -62.0f, -66.0f));
+                rRotY = Mth.lerp(w, rRotY, Mth.lerp(cT, 158.0f, 154.0f));
             } else if (t < 0.72f) {
-                // Stage 2: Left hand holds chassis steady; Right hand reaches to press parts & front lens in
+                // Stage 2: Left hand holds chassis steady; Right hand presses parts & front lens along the mat
                 float stageT = (t - 0.28f) / 0.44f;
                 float pressCycle = (float) Math.abs(Math.sin(stageT * Math.PI * 3.0f));
                 float snapJolt = (float) Math.sin(stageT * Math.PI * 6.0f) * 0.008f;
 
-                lx = Mth.lerp(w, lx, -0.14f);
-                ly = Mth.lerp(w, ly, -0.18f - snapJolt);
-                lz = Mth.lerp(w, lz, -0.47f);
-                lRotZ = Mth.lerp(w, lRotZ, -40.0f);
-                lRotX = Mth.lerp(w, lRotX, -30.0f);
-                lRotY = Mth.lerp(w, lRotY, 216.0f);
+                lx = Mth.lerp(w, lx, -0.25f);
+                ly = Mth.lerp(w, ly, -0.31f - snapJolt);
+                lz = Mth.lerp(w, lz, -0.73f);
+                lRotZ = Mth.lerp(w, lRotZ, -30.0f);
+                lRotX = Mth.lerp(w, lRotX, -64.0f);
+                lRotY = Mth.lerp(w, lRotY, 212.0f);
 
-                rx = Mth.lerp(w, rx, Mth.lerp(pressCycle, 0.21f, 0.08f));
-                ry = Mth.lerp(w, ry, Mth.lerp(pressCycle, -0.22f, -0.14f));
-                rz = Mth.lerp(w, rz, Mth.lerp(pressCycle, -0.50f, -0.43f));
-                rRotZ = Mth.lerp(w, rRotZ, Mth.lerp(pressCycle, 28.0f, 44.0f));
-                rRotX = Mth.lerp(w, rRotX, Mth.lerp(pressCycle, -38.0f, -22.0f));
-                rRotY = Mth.lerp(w, rRotY, Mth.lerp(pressCycle, 152.0f, 138.0f));
+                rx = Mth.lerp(w, rx, Mth.lerp(pressCycle, 0.26f, 0.17f));
+                ry = Mth.lerp(w, ry, Mth.lerp(pressCycle, -0.31f, -0.26f));
+                rz = Mth.lerp(w, rz, Mth.lerp(pressCycle, -0.72f, -0.80f));
+                rRotZ = Mth.lerp(w, rRotZ, Mth.lerp(pressCycle, 24.0f, 34.0f));
+                rRotX = Mth.lerp(w, rRotX, Mth.lerp(pressCycle, -66.0f, -76.0f));
+                rRotY = Mth.lerp(w, rRotY, Mth.lerp(pressCycle, 154.0f, 142.0f));
             } else {
-                // Stage 3: Both hands pull back slightly to present finished goggles
+                // Stage 3: Both hands settle back to frame the finished goggles on the mat
                 float relT = smoothstep01((t - 0.72f) / 0.28f);
-                lx = Mth.lerp(w, lx, Mth.lerp(relT, -0.14f, -0.28f));
-                ly = Mth.lerp(w, ly, Mth.lerp(relT, -0.18f, -0.28f));
-                lz = Mth.lerp(w, lz, Mth.lerp(relT, -0.47f, -0.56f));
-                lRotZ = Mth.lerp(w, lRotZ, Mth.lerp(relT, -40.0f, -26.0f));
-                lRotX = Mth.lerp(w, lRotX, Mth.lerp(relT, -30.0f, -46.0f));
+                lx = Mth.lerp(w, lx, Mth.lerp(relT, -0.25f, -0.32f));
+                ly = Mth.lerp(w, ly, Mth.lerp(relT, -0.31f, -0.35f));
+                lz = Mth.lerp(w, lz, Mth.lerp(relT, -0.73f, -0.70f));
+                lRotZ = Mth.lerp(w, lRotZ, Mth.lerp(relT, -30.0f, -22.0f));
+                lRotX = Mth.lerp(w, lRotX, Mth.lerp(relT, -64.0f, -62.0f));
+                lRotY = Mth.lerp(w, lRotY, Mth.lerp(relT, 212.0f, 198.0f));
 
-                rx = Mth.lerp(w, rx, Mth.lerp(relT, 0.14f, 0.28f));
-                ry = Mth.lerp(w, ry, Mth.lerp(relT, -0.18f, -0.28f));
-                rz = Mth.lerp(w, rz, Mth.lerp(relT, -0.47f, -0.56f));
-                rRotZ = Mth.lerp(w, rRotZ, Mth.lerp(relT, 40.0f, 26.0f));
-                rRotX = Mth.lerp(w, rRotX, Mth.lerp(relT, -30.0f, -46.0f));
+                rx = Mth.lerp(w, rx, Mth.lerp(relT, 0.26f, 0.32f));
+                ry = Mth.lerp(w, ry, Mth.lerp(relT, -0.31f, -0.35f));
+                rz = Mth.lerp(w, rz, Mth.lerp(relT, -0.72f, -0.70f));
+                rRotZ = Mth.lerp(w, rRotZ, Mth.lerp(relT, 24.0f, 22.0f));
+                rRotX = Mth.lerp(w, rRotX, Mth.lerp(relT, -66.0f, -62.0f));
+                rRotY = Mth.lerp(w, rRotY, Mth.lerp(relT, 154.0f, 162.0f));
             }
         }
 

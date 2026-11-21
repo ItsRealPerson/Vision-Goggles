@@ -91,7 +91,23 @@ public abstract class MixinHumanoidModel<T extends LivingEntity> {
         }
 
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-        if (helmet.isEmpty() || !(helmet.getItem() instanceof VisionGogglesItem)) {
+        boolean hasRealGoggles = !helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem;
+        if (!hasRealGoggles
+                && isLocal
+                && dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.isHeadPreviewEnabled()) {
+            float reach = dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.getInGameArmReach();
+            if (reach > 0.002f) {
+                float visorDown = dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.peekInGameVisorDownProgress();
+                float visorUp = 1.0f - visorDown;
+                HumanoidArm mainArm = player.getMainArm();
+                ModelPart arm = (mainArm == HumanoidArm.RIGHT) ? this.rightArm : this.leftArm;
+                float targetXRot = -1.98f - (0.22f * visorUp) + (headPitchRad * 0.45f);
+                visionGoggles$lerpArmPose(arm, mainArm, targetXRot, -0.35f, -0.22f, reach);
+            }
+            return;
+        }
+
+        if (!hasRealGoggles) {
             return;
         }
 

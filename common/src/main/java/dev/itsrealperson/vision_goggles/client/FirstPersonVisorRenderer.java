@@ -6,6 +6,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
+import dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensGeoRenderer;
+import dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
@@ -80,19 +82,36 @@ public class FirstPersonVisorRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         if (!mc.options.getCameraType().isFirstPerson()) return;
-        if (!GogglesFlipAnimator.isLocalTransitioning()) return;
 
         ItemStack stack = PlatformMethods.getEquippedHelmet(mc.player);
-        if (stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem goggles)) return;
+        boolean hasRealGoggles = !stack.isEmpty() && stack.getItem() instanceof VisionGogglesItem;
+        boolean realTransitioning = hasRealGoggles && GogglesFlipAnimator.isLocalTransitioning();
+        boolean protoTransitioning = !hasRealGoggles
+                && mc.screen == null
+                && ProtoTriLensPreviewState.isHeadPreviewEnabled()
+                && ProtoTriLensPreviewState.isInGameFlipTransitioning();
+        if (!realTransitioning && !protoTransitioning) return;
 
-        float rawT = Mth.clamp(GogglesFlipAnimator.peekLocalLinearProgress(), 0.0f, 1.0f);
-        float visorProgress = Mth.clamp(GogglesFlipAnimator.peekLocalProgress(), 0.0f, 1.0f);
+        VisionGogglesItem goggles = realTransitioning ? (VisionGogglesItem) stack.getItem() : null;
+
+        float rawT = realTransitioning
+                ? Mth.clamp(GogglesFlipAnimator.peekLocalLinearProgress(), 0.0f, 1.0f)
+                : Mth.clamp(ProtoTriLensPreviewState.peekInGameLinearProgress(), 0.0f, 1.0f);
+        float visorProgress = realTransitioning
+                ? Mth.clamp(GogglesFlipAnimator.peekLocalProgress(), 0.0f, 1.0f)
+                : Mth.clamp(ProtoTriLensPreviewState.peekInGameVisorDownProgress(), 0.0f, 1.0f);
         int width = gui.guiWidth();
         int height = gui.guiHeight();
 
-        float reachEnd = GogglesFlipAnimator.getReachPhaseEnd();
-        float visorEnd = GogglesFlipAnimator.getVisorPhaseEnd();
-        float handoffT = GogglesFlipAnimator.getOpticsHandoffThreshold();
+        float reachEnd = realTransitioning
+                ? GogglesFlipAnimator.getReachPhaseEnd()
+                : ProtoTriLensPreviewState.getInGameReachPhaseEnd();
+        float visorEnd = realTransitioning
+                ? GogglesFlipAnimator.getVisorPhaseEnd()
+                : ProtoTriLensPreviewState.getInGameVisorPhaseEnd();
+        float handoffT = realTransitioning
+                ? GogglesFlipAnimator.getOpticsHandoffThreshold()
+                : ProtoTriLensPreviewState.getInGameOpticsHandoffThreshold();
 
         float browPresence = smoothstep01(rawT / reachEnd);
         float ez = smoothstep01(visorProgress);
@@ -104,6 +123,9 @@ public class FirstPersonVisorRenderer {
         float sealAlpha = (rawT <= handoffT)
                 ? smoothstep01((rawT - 0.72f) / (handoffT - 0.72f))
                 : 1.0f - smoothstep01((rawT - handoffT) / (1.0f - handoffT));
+        if (protoTransitioning) {
+            sealAlpha *= 0.48f;
+        }
 
         float reachIn = smoothstep01(rawT / reachEnd);
         float retract = smoothstep01((rawT - visorEnd) / 0.14f);
@@ -117,15 +139,6 @@ public class FirstPersonVisorRenderer {
 
         // Pass 1: Render the 3D tactical visor descending from above viewport onto the eyes
         if (rawT < handoffT) {
-            VisionMode mode = resolveMode(stack, goggles);
-            ResourceLocation baseTex = resolveBaseTexture(mode);
-            ResourceLocation glowTex = resolveGlowTexture(mode);
-
-            FirstPersonVisorModel visorModel = getModel();
-            visorModel.visorPivot.xRot = Mth.lerp(visorProgress, -1.15f, 0.08f);
-            visorModel.visorPivot.yRot = 0.0f;
-            visorModel.visorPivot.zRot = 0.0f;
-
             gui.flush();
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask(true);
@@ -138,13 +151,33 @@ public class FirstPersonVisorRenderer {
             poseStack.mulPose(Axis.YP.rotationDegrees(6.0f * sideSign * (1.0f - visorProgress * 0.5f)));
             poseStack.mulPose(Axis.XP.rotationDegrees(14.0f));
 
-            VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
-            visorModel.renderToBuffer(poseStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
-
             float glowIntensity = smoothstep01((visorProgress - 0.60f) / 0.28f);
-            if (glowIntensity > 0.01f) {
-                VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
-                visorModel.renderToBuffer(poseStack, glowConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, glowIntensity, glowIntensity, glowIntensity, 1.0f);
+            if (realTransitioning) {
+                VisionMode mode = resolveMode(stack, goggles);
+                ResourceLocation baseTex = resolveBaseTexture(mode);
+                ResourceLocation glowTex = resolveGlowTexture(mode);
+
+                FirstPersonVisorModel visorModel = getModel();
+                visorModel.visorPivot.xRot = Mth.lerp(visorProgress, -1.15f, 0.08f);
+                visorModel.visorPivot.yRot = 0.0f;
+                visorModel.visorPivot.zRot = 0.0f;
+
+                VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
+                visorModel.renderToBuffer(poseStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+
+                if (glowIntensity > 0.01f) {
+                    VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
+                    visorModel.renderToBuffer(poseStack, glowConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, glowIntensity, glowIntensity, glowIntensity, 1.0f);
+                }
+            } else {
+                ProtoTriLensGeoRenderer.renderFirstPersonVisor(
+                        poseStack,
+                        bufferSource,
+                        ProtoTriLensPreviewState.getSelectedVariant(),
+                        packedLight,
+                        visorProgress,
+                        glowIntensity
+                );
             }
             poseStack.popPose();
 
