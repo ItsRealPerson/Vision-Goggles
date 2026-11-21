@@ -175,5 +175,9 @@
   "gui.vision_goggles.category.tactical": "Tactical Gear",
   "gui.vision_goggles.modify.hint1": "Slot 1+2: Install Module / Flash Lua / Repair",
   "gui.vision_goggles.modify.hint2": "Slot 1 Only: Extract Last Installed Module",
-  "jei.vision_goggles.station_assembly": "Modification Station Assembly"
+  "jei.vision_goggles.station_assembly": "Modification Station Assembly",
+  "config.vision_goggles.modular_max_modules": "Modular Goggles Max Modules",
+  "config.vision_goggles.modular_max_modules.tooltip": "Maximum number of modules installable in standard Modular Goggles.",
+  "config.vision_goggles.pro_modular_max_modules": "Pro Modular Goggles Max Modules",
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Maximum number of modules installable in Pro Modular Goggles."
 }
