@@ -71,11 +71,12 @@ public abstract class MixinItemInHandRenderer {
             return;
         }
 
+        StationWorkAnimator.syncFromRender(player);
+
         if (player.isScoping() || !Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
             return;
         }
 
-        StationWorkAnimator.syncFromRender(player);
         if (StationWorkAnimator.isWorking()) {
             if (hand == InteractionHand.MAIN_HAND) {
                 FirstPersonStationWorkRenderer.render(player, poseStack, buffer, combinedLight);

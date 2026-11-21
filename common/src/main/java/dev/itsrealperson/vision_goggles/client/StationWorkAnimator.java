@@ -38,14 +38,20 @@ public final class StationWorkAnimator {
     private StationWorkAnimator() {}
 
     public static void setWorkbenchOpen(boolean open, BlockPos pos) {
-        workbenchOpen = open;
         if (open) {
+            boolean newSession = !workbenchOpen || !java.util.Objects.equals(stationPos, pos);
+            workbenchOpen = true;
             stationPos = pos;
-            if (lastNanos == 0L) {
-                lastNanos = System.nanoTime();
+            if (newSession) {
+                openBlend = 0.0f;
+                placing = false;
+                placeProgress = 0.0f;
+                assembling = false;
+                assembleProgress = 0.0f;
             }
+            lastNanos = System.nanoTime();
         } else {
-            stationPos = null;
+            reset();
         }
     }
 
