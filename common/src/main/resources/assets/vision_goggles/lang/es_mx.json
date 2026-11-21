@@ -171,5 +171,13 @@
   "gui.vision_goggles.category.tactical": "Equipo Táctico",
   "gui.vision_goggles.modify.hint1": "Slot 1+2: Instalar Módulo / Grabar Lua / Reparar",
   "gui.vision_goggles.modify.hint2": "Solo Slot 1: Extraer Último Módulo Instalado",
-  "jei.vision_goggles.station_assembly": "Ensamblaje en Estación de Modificación"
+  "jei.vision_goggles.station_assembly": "Ensamblaje en Estación de Modificación",
+  "jei.vision_goggles.extract_module": "Extracción / Desmontaje de Módulo",
+  "jei.vision_goggles.maintenance_repair": "Mantenimiento de Campo (+35% Durabilidad)",
+  "jei.vision_goggles.overhaul_repair": "Reparación Integral (100% Durabilidad)",
+  "message.vision_goggles.flashlight_mode.strobe": "§eLinterna: §cEstroboscópico Táctico (13Hz)",
+  "config.vision_goggles.modular_max_modules": "Máximo de Módulos (Gafas Modulares)",
+  "config.vision_goggles.modular_max_modules.tooltip": "Número máximo de módulos instalables en las Gafas Modulares estándar.",
+  "config.vision_goggles.pro_modular_max_modules": "Máximo de Módulos (Gafas Modulares Pro)",
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Número máximo de módulos instalables en las Gafas Modulares Pro."
 }
