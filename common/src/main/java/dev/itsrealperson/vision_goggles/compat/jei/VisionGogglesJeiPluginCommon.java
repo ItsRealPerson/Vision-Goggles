@@ -5,6 +5,7 @@ import dev.itsrealperson.vision_goggles.client.gui.ModificationStationScreen;
 import dev.itsrealperson.vision_goggles.item.InstallationScriptItem;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.ProgrammableModuleItem;
+import dev.itsrealperson.vision_goggles.recipe.StationBlueprints;
 import dev.itsrealperson.vision_goggles.registry.ModBlocks;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
@@ -25,23 +26,32 @@ public class VisionGogglesJeiPluginCommon {
     public static final RecipeType<ModificationStationJeiRecipe> MODIFICATION_TYPE =
         RecipeType.create(Vision_goggles.MOD_ID, "modification_station", ModificationStationJeiRecipe.class);
 
+    public static final RecipeType<StationBlueprints.Blueprint> ASSEMBLY_TYPE =
+        RecipeType.create(Vision_goggles.MOD_ID, "station_assembly", StationBlueprints.Blueprint.class);
+
     public static void registerCategories(IRecipeCategoryRegistration registration) {
-        registration.addRecipeCategories(new ModificationStationRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
+        registration.addRecipeCategories(
+            new StationAssemblyCategory(registration.getJeiHelpers().getGuiHelper()),
+            new ModificationStationRecipeCategory(registration.getJeiHelpers().getGuiHelper())
+        );
     }
 
     public static void registerRecipes(IRecipeRegistration registration) {
+        registration.addRecipes(ASSEMBLY_TYPE, StationBlueprints.getAll());
         registration.addRecipes(MODIFICATION_TYPE, generateRecipes());
     }
 
     public static void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
-        registration.addRecipeCatalyst(new ItemStack(ModBlocks.MODIFICATION_STATION.get()), MODIFICATION_TYPE);
+        ItemStack stationStack = new ItemStack(ModBlocks.MODIFICATION_STATION.get());
+        registration.addRecipeCatalyst(stationStack, ASSEMBLY_TYPE);
+        registration.addRecipeCatalyst(stationStack, MODIFICATION_TYPE);
     }
 
     public static void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        // Registers click area over progress arrow in ModificationStationScreen (x=98, y=36, w=16, h=14)
+        // Registers click area over progress arrow in ModificationStationScreen Modify tab (x=110, y=40, w=16, h=14)
         registration.addRecipeClickArea(
             ModificationStationScreen.class,
-            98, 36, 16, 14,
+            110, 40, 16, 14,
             MODIFICATION_TYPE
         );
     }

@@ -162,5 +162,14 @@
   "item.vision_goggles.lifesign_sensor": "Biometric Lifesign Sensor",
   "jei.vision_goggles.install_module": "Install Hardware Module",
   "jei.vision_goggles.flash_firmware": "Flash Script onto Programmable Module",
-  "jei.vision_goggles.install_script_module": "Install Programmed Script Module"
+  "jei.vision_goggles.install_script_module": "Install Programmed Script Module",
+  "gui.vision_goggles.tab.assemble": "Assemble",
+  "gui.vision_goggles.tab.modify": "Modify / Repair",
+  "gui.vision_goggles.button.assemble": "Assemble",
+  "gui.vision_goggles.category.specialized": "Specialized Visor",
+  "gui.vision_goggles.category.modular": "Modular System",
+  "gui.vision_goggles.category.tactical": "Tactical Gear",
+  "gui.vision_goggles.modify.hint1": "Slot 1+2: Install Module / Flash Lua / Repair",
+  "gui.vision_goggles.modify.hint2": "Slot 1 Only: Extract Last Installed Module",
+  "jei.vision_goggles.station_assembly": "Modification Station Assembly"
 }

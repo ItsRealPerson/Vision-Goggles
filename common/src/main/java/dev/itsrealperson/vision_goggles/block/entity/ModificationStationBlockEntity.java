@@ -2,19 +2,30 @@ package dev.itsrealperson.vision_goggles.block.entity;
 
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionModuleItem;
+import dev.itsrealperson.vision_goggles.recipe.StationBlueprints;
 import dev.itsrealperson.vision_goggles.registry.ModBlockEntities;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
+import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -27,8 +38,16 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.UUID;
+
 public class ModificationStationBlockEntity extends BlockEntity implements WorldlyContainer, dev.architectury.registry.menu.ExtendedMenuProvider {
+    public static final int ASSEMBLY_DURATION_TICKS = 24;
+
     private final NonNullList<ItemStack> items = NonNullList.withSize(3, ItemStack.EMPTY);
+    private int assemblingTicks = 0;
+    private ItemStack assemblingResult = ItemStack.EMPTY;
+    @Nullable
+    private UUID assemblingPlayerUuid = null;
 
     public ModificationStationBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MODIFICATION_STATION_BE.get(), pos, state);
@@ -36,7 +55,7 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
     @Override
     public void saveExtraData(net.minecraft.network.FriendlyByteBuf buf) {
-        // No extra data needed for now, but we must implement it for ExtendedMenuProvider
+        buf.writeBlockPos(this.worldPosition);
     }
 
     @Override
@@ -55,6 +74,84 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         super.setChanged();
         if (this.level != null && !this.level.isClientSide) {
             updateResult();
+            syncToClient();
+        }
+    }
+
+    public void syncToClient() {
+        if (this.level != null && !this.level.isClientSide) {
+            this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+        }
+    }
+
+    public boolean isAssembling() {
+        return this.assemblingTicks > 0 && !this.assemblingResult.isEmpty();
+    }
+
+    public int getAssemblingTicks() {
+        return this.assemblingTicks;
+    }
+
+    public ItemStack getAssemblingResult() {
+        return this.assemblingResult;
+    }
+
+    @Nullable
+    public UUID getAssemblingPlayerUuid() {
+        return this.assemblingPlayerUuid;
+    }
+
+    public void startAssembly(ServerPlayer player, StationBlueprints.Blueprint blueprint) {
+        if (this.level == null || this.level.isClientSide || player == null || blueprint == null) return;
+        if (isAssembling()) return;
+
+        ItemStack built = StationBlueprints.consumeAndBuildResult(player, this, blueprint);
+        if (built.isEmpty()) return;
+
+        this.assemblingResult = built;
+        this.assemblingTicks = ASSEMBLY_DURATION_TICKS;
+        this.assemblingPlayerUuid = player.getUUID();
+
+        this.level.playSound(null, this.worldPosition, SoundEvents.ARMOR_EQUIP_IRON, SoundSource.BLOCKS, 0.80F, 1.15F);
+        player.inventoryMenu.broadcastChanges();
+        super.setChanged();
+        syncToClient();
+    }
+
+    public static void serverTick(Level level, BlockPos pos, BlockState state, ModificationStationBlockEntity station) {
+        if (level.isClientSide || !station.isAssembling()) return;
+
+        station.assemblingTicks--;
+
+        if (station.assemblingTicks == 16 || station.assemblingTicks == 8) {
+            float pitch = (station.assemblingTicks == 16) ? 1.35F : 1.55F;
+            level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.35F, pitch);
+            if (level instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 0.98, pos.getZ() + 0.5, 4, 0.14, 0.04, 0.14, 0.02);
+            }
+        }
+
+        if (station.assemblingTicks <= 0) {
+            ItemStack finished = station.assemblingResult.copy();
+            Player owner = (station.assemblingPlayerUuid != null) ? level.getPlayerByUUID(station.assemblingPlayerUuid) : null;
+            if (owner instanceof ServerPlayer serverOwner && serverOwner.isAlive() && serverOwner.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0) {
+                serverOwner.getInventory().placeItemBackInInventory(finished);
+            } else {
+                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, finished);
+            }
+
+            level.playSound(null, pos, ModSounds.VISOR_ON.get(), SoundSource.BLOCKS, 0.70F, 1.10F);
+            level.playSound(null, pos, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.30F, 1.55F);
+            if (level instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 1.02, pos.getZ() + 0.5, 10, 0.18, 0.06, 0.18, 0.04);
+            }
+
+            station.assemblingResult = ItemStack.EMPTY;
+            station.assemblingPlayerUuid = null;
+            station.assemblingTicks = 0;
+            station.setChanged();
+        } else {
+            station.syncToClient();
         }
     }
 
@@ -306,12 +403,41 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
     public void load(CompoundTag tag) {
         super.load(tag);
         ContainerHelper.loadAllItems(tag, items);
+        this.assemblingTicks = tag.getInt("AssemblingTicks");
+        if (tag.contains("AssemblingResult", Tag.TAG_COMPOUND)) {
+            this.assemblingResult = ItemStack.of(tag.getCompound("AssemblingResult"));
+        } else {
+            this.assemblingResult = ItemStack.EMPTY;
+        }
+        if (tag.hasUUID("AssemblingPlayer")) {
+            this.assemblingPlayerUuid = tag.getUUID("AssemblingPlayer");
+        } else {
+            this.assemblingPlayerUuid = null;
+        }
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         ContainerHelper.saveAllItems(tag, items);
+        tag.putInt("AssemblingTicks", this.assemblingTicks);
+        if (!this.assemblingResult.isEmpty()) {
+            tag.put("AssemblingResult", this.assemblingResult.save(new CompoundTag()));
+        }
+        if (this.assemblingPlayerUuid != null) {
+            tag.putUUID("AssemblingPlayer", this.assemblingPlayerUuid);
+        }
+    }
+
+    @Override
+    public CompoundTag getUpdateTag() {
+        return this.saveWithoutMetadata();
+    }
+
+    @Nullable
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     // WorldlyContainer methods

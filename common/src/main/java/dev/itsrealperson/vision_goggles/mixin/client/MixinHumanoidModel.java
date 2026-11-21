@@ -54,6 +54,14 @@ public abstract class MixinHumanoidModel<T extends LivingEntity> {
 
         float headPitchRad = headPitch * ((float) Math.PI / 180.0f);
 
+        boolean isLocal = (player == Minecraft.getInstance().player);
+        if (dev.itsrealperson.vision_goggles.client.StationWorkAnimator.isEntityWorking(player.getUUID(), isLocal)) {
+            float wave = Mth.sin(ageInTicks * 0.65f) * 0.14f;
+            visionGoggles$lerpArmPose(this.leftArm, HumanoidArm.LEFT, -1.05f + headPitchRad * 0.35f, 0.22f, -0.10f, 0.90f);
+            visionGoggles$lerpArmPose(this.rightArm, HumanoidArm.RIGHT, -1.00f + headPitchRad * 0.35f + wave, 0.24f, 0.10f, 0.95f);
+            return;
+        }
+
         if (player.isUsingItem() && player.getUseItem().getItem() instanceof VisionGogglesItem) {
             ItemStack useStack = player.getUseItem();
             int duration = Math.max(1, useStack.getUseDuration());
@@ -87,7 +95,6 @@ public abstract class MixinHumanoidModel<T extends LivingEntity> {
             return;
         }
 
-        boolean isLocal = (player == Minecraft.getInstance().player);
         float reach = GogglesFlipAnimator.getEntityArmReach(player.getUUID(), isLocal);
         if (reach <= 0.002f) {
             return;

@@ -97,6 +97,7 @@ public class VisionRenderer {
         dev.architectury.event.events.client.ClientPlayerEvent.CLIENT_PLAYER_QUIT.register(player -> {
             Minecraft mc = Minecraft.getInstance();
             GogglesEquipAnimator.reset();
+            StationWorkAnimator.reset();
             cleanup(mc);
         });
     }

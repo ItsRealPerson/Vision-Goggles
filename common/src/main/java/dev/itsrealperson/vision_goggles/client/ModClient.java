@@ -1,8 +1,11 @@
 package dev.itsrealperson.vision_goggles.client;
 
 import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry;
+import dev.architectury.registry.client.rendering.BlockEntityRendererRegistry;
 import dev.architectury.registry.menu.MenuRegistry;
 import dev.itsrealperson.vision_goggles.client.gui.ModificationStationScreen;
+import dev.itsrealperson.vision_goggles.client.renderer.ModificationStationRenderer;
+import dev.itsrealperson.vision_goggles.registry.ModBlockEntities;
 import dev.itsrealperson.vision_goggles.registry.ModMenus;
 
 import dev.itsrealperson.vision_goggles.client.hud.VitalInfoModule;
@@ -13,6 +16,7 @@ import dev.itsrealperson.vision_goggles.client.hud.GogglesStatusModule;
 public class ModClient {
     public static void init() {
         EntityModelLayerRegistry.register(VisionGoggleModel.LAYER_LOCATION, VisionGoggleModel::createBodyLayer);
+        BlockEntityRendererRegistry.register(ModBlockEntities.MODIFICATION_STATION_BE.get(), ModificationStationRenderer::new);
         MenuRegistry.registerScreenFactory(ModMenus.MODIFICATION_STATION_MENU.get(), ModificationStationScreen::new);
         ModKeyMappings.init();
         VisionRenderer.init();

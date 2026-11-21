@@ -166,5 +166,14 @@
   "jei.vision_goggles.install_script_module": "Instalar Módulo con Script Programado",
   "jei.vision_goggles.overhaul_repair": "Reparación Integral (100% Durabilidad)",
   "jei.vision_goggles.maintenance_repair": "Mantenimiento de Campo (+35% Durabilidad)",
-  "jei.vision_goggles.extract_module": "Extracción / Desmontaje de Módulo"
+  "jei.vision_goggles.extract_module": "Extracción / Desmontaje de Módulo",
+  "gui.vision_goggles.tab.assemble": "Ensamblar",
+  "gui.vision_goggles.tab.modify": "Modificar / Reparar",
+  "gui.vision_goggles.button.assemble": "Ensamblar",
+  "gui.vision_goggles.category.specialized": "Visor Especializado",
+  "gui.vision_goggles.category.modular": "Sistema Modular",
+  "gui.vision_goggles.category.tactical": "Equipo Táctico",
+  "gui.vision_goggles.modify.hint1": "Slot 1+2: Instalar Módulo / Grabar Lua / Reparar",
+  "gui.vision_goggles.modify.hint2": "Solo Slot 1: Extraer Último Módulo Instalado",
+  "jei.vision_goggles.station_assembly": "Ensamblaje en Estación de Modificación"
 }
