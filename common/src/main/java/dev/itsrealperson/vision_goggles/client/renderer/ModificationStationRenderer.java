@@ -25,16 +25,20 @@ import java.util.List;
  */
 public class ModificationStationRenderer implements BlockEntityRenderer<ModificationStationBlockEntity> {
 
-    private static final float[][] MAT_OFFSETS = {
-            {-0.18f, -0.10f},
-            { 0.18f, -0.10f},
-            {-0.18f,  0.12f},
-            { 0.18f,  0.12f},
-            { 0.00f, -0.16f},
-            { 0.00f,  0.15f},
-            {-0.08f,  0.02f},
-            { 0.08f,  0.02f},
-            { 0.00f,  0.00f}
+    private static final float[][] GRID_2X2 = {
+            {-0.11f, -0.09f},
+            { 0.11f, -0.09f},
+            {-0.11f,  0.06f},
+            { 0.11f,  0.06f}
+    };
+
+    private static final float[][] GRID_3X2 = {
+            {-0.14f, -0.09f},
+            { 0.00f, -0.09f},
+            { 0.14f, -0.09f},
+            {-0.14f,  0.06f},
+            { 0.00f,  0.06f},
+            { 0.14f,  0.06f}
     };
 
     private final ItemRenderer itemRenderer;
@@ -83,17 +87,7 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
         } else {
             List<ItemStack> staged = station.getStagedItems();
             if (!staged.isEmpty()) {
-                int flatIdx = 0;
-                for (ItemStack s : staged) {
-                    if (s.isEmpty()) continue;
-                    if (s.getItem() instanceof VisionGogglesItem) {
-                        renderUprightGoggles(station, s, 0.0f, 1.01f, 0.02f, 0.42f, 0.0f, poseStack, buffer, light);
-                    } else {
-                        float[] off = MAT_OFFSETS[flatIdx % MAT_OFFSETS.length];
-                        renderFlatItem(station, s, off[0], 0.946f + (flatIdx * 0.002f), off[1], 0.28f, 90.0f, poseStack, buffer, light);
-                        flatIdx++;
-                    }
-                }
+                renderOrderedStagedItems(station, staged, poseStack, buffer, light);
             } else {
                 // Modify / Repair tab slots preview on the mat
                 ItemStack slot0 = station.getItem(0);
@@ -103,18 +97,21 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                 if (!slot2.isEmpty() && slot2.getItem() instanceof VisionGogglesItem) {
                     renderUprightGoggles(station, slot2, 0.0f, 1.01f, 0.02f, 0.44f, 0.0f, poseStack, buffer, light);
                 } else {
+                    boolean bothGoggles = !slot0.isEmpty() && !slot1.isEmpty()
+                            && slot0.getItem() instanceof VisionGogglesItem
+                            && slot1.getItem() instanceof VisionGogglesItem;
                     if (!slot0.isEmpty()) {
                         if (slot0.getItem() instanceof VisionGogglesItem) {
-                            renderUprightGoggles(station, slot0, -0.06f, 1.01f, 0.02f, 0.42f, 0.0f, poseStack, buffer, light);
+                            renderUprightGoggles(station, slot0, bothGoggles ? -0.12f : -0.04f, 1.01f, 0.02f, bothGoggles ? 0.34f : 0.42f, 0.0f, poseStack, buffer, light);
                         } else {
-                            renderFlatItem(station, slot0, -0.14f, 0.948f, 0.02f, 0.30f, 90.0f, poseStack, buffer, light);
+                            renderFlatItem(station, slot0, -0.12f, 0.952f, 0.00f, 0.24f, 90.0f, poseStack, buffer, light);
                         }
                     }
                     if (!slot1.isEmpty()) {
                         if (slot1.getItem() instanceof VisionGogglesItem) {
-                            renderUprightGoggles(station, slot1, 0.08f, 1.01f, 0.02f, 0.40f, 0.0f, poseStack, buffer, light);
+                            renderUprightGoggles(station, slot1, bothGoggles ? 0.12f : 0.08f, 1.01f, 0.02f, bothGoggles ? 0.34f : 0.40f, 0.0f, poseStack, buffer, light);
                         } else {
-                            renderFlatItem(station, slot1, 0.19f, 0.948f, 0.02f, 0.28f, 90.0f, poseStack, buffer, light);
+                            renderFlatItem(station, slot1, 0.14f, 0.952f, 0.00f, 0.22f, 90.0f, poseStack, buffer, light);
                         }
                     }
                 }
@@ -122,6 +119,57 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
         }
 
         poseStack.popPose();
+    }
+
+    private void renderOrderedStagedItems(
+            ModificationStationBlockEntity station,
+            List<ItemStack> staged,
+            PoseStack poseStack,
+            MultiBufferSource buffer,
+            int light
+    ) {
+        ItemStack uprightGoggles = ItemStack.EMPTY;
+        java.util.Map<net.minecraft.world.item.Item, java.util.List<ItemStack>> flatGroups = new java.util.LinkedHashMap<>();
+
+        for (ItemStack s : staged) {
+            if (s.isEmpty()) continue;
+            if (s.getItem() instanceof VisionGogglesItem && uprightGoggles.isEmpty()) {
+                uprightGoggles = s;
+            } else {
+                flatGroups.computeIfAbsent(s.getItem(), k -> new java.util.ArrayList<>()).add(s);
+            }
+        }
+
+        boolean hasGoggles = !uprightGoggles.isEmpty();
+        if (hasGoggles) {
+            renderUprightGoggles(station, uprightGoggles, 0.0f, 1.00f, -0.07f, 0.36f, 0.0f, poseStack, buffer, light);
+        }
+
+        int groupCount = flatGroups.size();
+        if (groupCount == 0) return;
+
+        int groupIdx = 0;
+        for (java.util.List<ItemStack> group : flatGroups.values()) {
+            float x;
+            float z;
+            if (hasGoggles) {
+                float step = (groupCount == 1) ? 0.0f : 0.12f;
+                float startX = -step * (groupCount - 1) * 0.5f;
+                x = startX + groupIdx * step;
+                z = 0.08f;
+            } else {
+                float[][] grid = (groupCount <= 4) ? GRID_2X2 : GRID_3X2;
+                float[] pos = grid[groupIdx % grid.length];
+                x = pos[0];
+                z = pos[1];
+            }
+
+            for (int stackIdx = 0; stackIdx < group.size(); stackIdx++) {
+                float y = 0.952f + (stackIdx * 0.014f);
+                renderFlatItem(station, group.get(stackIdx), x, y, z, 0.21f, 90.0f, poseStack, buffer, light);
+            }
+            groupIdx++;
+        }
     }
 
     private void renderUprightGoggles(

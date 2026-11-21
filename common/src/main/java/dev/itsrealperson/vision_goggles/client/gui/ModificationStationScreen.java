@@ -76,6 +76,10 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         StationWorkAnimator.setWorkbenchOpen(false, null);
     }
 
+    public boolean isModifyTabActive() {
+        return this.menu.getCurrentTab() == ModificationStationMenu.TAB_MODIFY;
+    }
+
     private ModificationStationBlockEntity getStation() {
         if (this.minecraft == null || this.minecraft.level == null) return null;
         BlockEntity be = this.minecraft.level.getBlockEntity(this.menu.getStationPos());

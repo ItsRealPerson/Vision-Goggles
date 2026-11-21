@@ -10,6 +10,8 @@ import dev.itsrealperson.vision_goggles.registry.ModBlocks;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
+import mezz.jei.api.gui.handlers.IGuiClickableArea;
+import mezz.jei.api.gui.handlers.IGuiContainerHandler;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
@@ -48,12 +50,22 @@ public class VisionGogglesJeiPluginCommon {
     }
 
     public static void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        // Registers click area over progress arrow in ModificationStationScreen Modify tab (x=88, y=43, w=16, h=14)
-        registration.addRecipeClickArea(
-            ModificationStationScreen.class,
-            88, 43, 16, 14,
-            MODIFICATION_TYPE
-        );
+        // Only expose JEI recipe click area over the progress arrow when the Modify/Repair tab is active
+        registration.addGuiContainerHandler(ModificationStationScreen.class, new IGuiContainerHandler<>() {
+            @Override
+            public java.util.Collection<IGuiClickableArea> getGuiClickableAreas(
+                    ModificationStationScreen containerScreen,
+                    double guiMouseX,
+                    double guiMouseY
+            ) {
+                if (containerScreen != null && containerScreen.isModifyTabActive()) {
+                    return java.util.List.of(
+                        IGuiClickableArea.createBasic(88, 43, 16, 14, MODIFICATION_TYPE)
+                    );
+                }
+                return java.util.Collections.emptyList();
+            }
+        });
     }
 
     public static List<ModificationStationJeiRecipe> generateRecipes() {
