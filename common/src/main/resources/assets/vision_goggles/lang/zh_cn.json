@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "模块化护目镜最大模块数",
   "config.vision_goggles.modular_max_modules.tooltip": "标准模块化护目镜可安装的最大模块数量。",
   "config.vision_goggles.pro_modular_max_modules": "专业模块化护目镜最大模块数",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "专业模块化护目镜可安装的最大模块数量。"
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "专业模块化护目镜可安装的最大模块数量。",
+  "gui.vision_goggles.tooltip.stage_controls": "§7左键：放置1个  §8|  §7右键：取回1个"
 }

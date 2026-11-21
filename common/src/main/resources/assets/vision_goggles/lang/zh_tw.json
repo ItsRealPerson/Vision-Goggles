@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "模組化護目鏡最大模組數",
   "config.vision_goggles.modular_max_modules.tooltip": "標準模組化護目鏡可安裝的最大模組數量。",
   "config.vision_goggles.pro_modular_max_modules": "專業模組化護目鏡最大模組數",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "專業模組化護目鏡可安裝的最大模組數量。"
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "專業模組化護目鏡可安裝的最大模組數量。",
+  "gui.vision_goggles.tooltip.stage_controls": "§7左鍵：放置1個  §8|  §7右鍵：取回1個"
 }

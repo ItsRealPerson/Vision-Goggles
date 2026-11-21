@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "Max. Module (Modulare Brille)",
   "config.vision_goggles.modular_max_modules.tooltip": "Maximale Anzahl installierbarer Module in der Standard-Modularbrille.",
   "config.vision_goggles.pro_modular_max_modules": "Max. Module (Pro-Modularbrille)",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "Maximale Anzahl installierbarer Module in der Pro-Modularbrille."
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Maximale Anzahl installierbarer Module in der Pro-Modularbrille.",
+  "gui.vision_goggles.tooltip.stage_controls": "§7Linksklick: 1 ablegen  §8|  §7Rechtsklick: 1 entfernen"
 }

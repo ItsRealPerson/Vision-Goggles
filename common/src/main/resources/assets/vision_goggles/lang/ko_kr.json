@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "모듈형 고글 최대 모듈 수",
   "config.vision_goggles.modular_max_modules.tooltip": "일반 모듈형 고글에 장착할 수 있는 최대 모듈 수입니다.",
   "config.vision_goggles.pro_modular_max_modules": "프로 모듈형 고글 최대 모듈 수",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "프로 모듈형 고글에 장착할 수 있는 최대 모듈 수입니다."
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "프로 모듈형 고글에 장착할 수 있는 최대 모듈 수입니다.",
+  "gui.vision_goggles.tooltip.stage_controls": "§7좌클릭: 1개 배치  §8|  §7우클릭: 1개 제거"
 }

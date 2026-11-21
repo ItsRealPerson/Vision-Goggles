@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "Maks. modułów (Gogle Modułowe)",
   "config.vision_goggles.modular_max_modules.tooltip": "Maksymalna liczba modułów w standardowych Goglach Modułowych.",
   "config.vision_goggles.pro_modular_max_modules": "Maks. modułów (Gogle Modułowe Pro)",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "Maksymalna liczba modułów w Goglach Modułowych Pro."
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Maksymalna liczba modułów w Goglach Modułowych Pro.",
+  "gui.vision_goggles.tooltip.stage_controls": "§7LPM: Połóż 1  §8|  §7PPM: Zabierz 1"
 }

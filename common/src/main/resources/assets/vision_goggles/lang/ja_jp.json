@@ -179,5 +179,6 @@
   "config.vision_goggles.modular_max_modules": "モジュラーゴーグル最大モジュール数",
   "config.vision_goggles.modular_max_modules.tooltip": "標準モジュラーゴーグルに装着可能な最大モジュール数。",
   "config.vision_goggles.pro_modular_max_modules": "Proモジュラーゴーグル最大モジュール数",
-  "config.vision_goggles.pro_modular_max_modules.tooltip": "Proモジュラーゴーグルに装着可能な最大モジュール数。"
+  "config.vision_goggles.pro_modular_max_modules.tooltip": "Proモジュラーゴーグルに装着可能な最大モジュール数。",
+  "gui.vision_goggles.tooltip.stage_controls": "§7左クリック: 1個配置  §8|  §7右クリック: 1個回収"
 }
