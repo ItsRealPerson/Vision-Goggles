@@ -2,8 +2,10 @@ package dev.itsrealperson.vision_goggles.mixin.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.itsrealperson.vision_goggles.client.FirstPersonEquipRenderer;
+import dev.itsrealperson.vision_goggles.client.FirstPersonStationWorkRenderer;
 import dev.itsrealperson.vision_goggles.client.GogglesEquipAnimator;
 import dev.itsrealperson.vision_goggles.client.GogglesFlipAnimator;
+import dev.itsrealperson.vision_goggles.client.StationWorkAnimator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -27,6 +29,12 @@ public abstract class MixinItemInHandRenderer {
 
     @Shadow
     private float oMainHandHeight;
+
+    @Shadow
+    private float offHandHeight;
+
+    @Shadow
+    private float oOffHandHeight;
 
     @Shadow
     public abstract void renderItem(
@@ -64,6 +72,20 @@ public abstract class MixinItemInHandRenderer {
         }
 
         if (player.isScoping() || !Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
+            return;
+        }
+
+        StationWorkAnimator.syncFromRender(player);
+        if (StationWorkAnimator.isWorking()) {
+            if (hand == InteractionHand.MAIN_HAND) {
+                FirstPersonStationWorkRenderer.render(player, poseStack, buffer, combinedLight);
+                this.mainHandHeight = 0.0f;
+                this.oMainHandHeight = 0.0f;
+            } else {
+                this.offHandHeight = 0.0f;
+                this.oOffHandHeight = 0.0f;
+            }
+            ci.cancel();
             return;
         }
 

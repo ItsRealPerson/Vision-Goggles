@@ -166,5 +166,14 @@
   "jei.vision_goggles.install_script_module": "安装已编程脚本模块",
   "jei.vision_goggles.overhaul_repair": "全面大修 (恢复100%耐久)",
   "jei.vision_goggles.maintenance_repair": "战地维护 (+35%耐久)",
-  "jei.vision_goggles.extract_module": "模块拆卸 / 提取"
+  "jei.vision_goggles.extract_module": "模块拆卸 / 提取",
+  "gui.vision_goggles.tab.assemble": "Assemble",
+  "gui.vision_goggles.tab.modify": "Modify / Repair",
+  "gui.vision_goggles.button.assemble": "Assemble",
+  "gui.vision_goggles.category.specialized": "Specialized Visor",
+  "gui.vision_goggles.category.modular": "Modular System",
+  "gui.vision_goggles.category.tactical": "Tactical Gear",
+  "gui.vision_goggles.modify.hint1": "Slot 1+2: Install Module / Flash Lua / Repair",
+  "gui.vision_goggles.modify.hint2": "Slot 1 Only: Extract Last Installed Module",
+  "jei.vision_goggles.station_assembly": "Modification Station Assembly"
 }

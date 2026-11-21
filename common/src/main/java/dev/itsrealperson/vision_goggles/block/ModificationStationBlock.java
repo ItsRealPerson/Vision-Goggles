@@ -61,6 +61,12 @@ public class ModificationStationBlock extends BaseEntityBlock {
         return new ModificationStationBlockEntity(pos, state);
     }
 
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return level.isClientSide ? null : createTickerHelper(type, ModBlockEntities.MODIFICATION_STATION_BE.get(), ModificationStationBlockEntity::serverTick);
+    }
+
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
@@ -93,6 +99,9 @@ public class ModificationStationBlock extends BaseEntityBlock {
                 }
                 if (!station.getItem(1).isEmpty()) {
                     drops.add(station.getItem(1).copy());
+                }
+                if (!station.getAssemblingResult().isEmpty()) {
+                    drops.add(station.getAssemblingResult().copy());
                 }
                 net.minecraft.world.Containers.dropContents(level, pos, drops);
 

@@ -166,5 +166,14 @@
   "jei.vision_goggles.install_script_module": "프로그래밍된 스크립트 모듈 장착",
   "jei.vision_goggles.overhaul_repair": "완전 수리 (내구도 100%)",
   "jei.vision_goggles.maintenance_repair": "야전 정비 (내구도 +35%)",
-  "jei.vision_goggles.extract_module": "모듈 추출 / 분해"
+  "jei.vision_goggles.extract_module": "모듈 추출 / 분해",
+  "gui.vision_goggles.tab.assemble": "Assemble",
+  "gui.vision_goggles.tab.modify": "Modify / Repair",
+  "gui.vision_goggles.button.assemble": "Assemble",
+  "gui.vision_goggles.category.specialized": "Specialized Visor",
+  "gui.vision_goggles.category.modular": "Modular System",
+  "gui.vision_goggles.category.tactical": "Tactical Gear",
+  "gui.vision_goggles.modify.hint1": "Slot 1+2: Install Module / Flash Lua / Repair",
+  "gui.vision_goggles.modify.hint2": "Slot 1 Only: Extract Last Installed Module",
+  "jei.vision_goggles.station_assembly": "Modification Station Assembly"
 }
