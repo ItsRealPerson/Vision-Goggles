@@ -1,6 +1,7 @@
 package dev.itsrealperson.vision_goggles.client.gui;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.itsrealperson.vision_goggles.client.ModKeyMappings;
 import dev.itsrealperson.vision_goggles.client.VisionRenderer;
@@ -25,6 +26,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
@@ -33,10 +35,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Minecraft-styled radial action wheel using crisp pixel-aligned panels,
- * recessed 18x18 item slots, and a classic Minecraft tooltip hub.
+ * Minecraft-styled radial action wheel rendered from a 256x256 pixel-art GUI sprite sheet.
  */
 public class TacticalRadialScreen extends Screen {
+
+    private static final ResourceLocation RADIAL_TEXTURE = new ResourceLocation("vision_goggles", "textures/gui/radial_wheel.png");
 
     public static class RadialOption {
         public final String title;
@@ -62,9 +65,9 @@ public class TacticalRadialScreen extends Screen {
     private int openTicks = 0;
     private boolean executed = false;
 
-    private static final int TILE_W = 54;
-    private static final int TILE_H = 34;
-    private static final int DEADZONE_RADIUS = 24;
+    private static final int WHEEL_SIZE = 192;
+    private static final int NODE_RADIUS = 63;
+    private static final int DEADZONE_RADIUS = 30;
 
     public TacticalRadialScreen() {
         super(Component.translatable("gui.vision_goggles.radial.title"));
@@ -290,7 +293,6 @@ public class TacticalRadialScreen extends Screen {
         int cx = this.width / 2;
         int cy = this.height / 2;
         int count = options.size();
-        int nodeRadius = (count >= 7) ? 82 : 74;
 
         // Subtle vanilla-style screen darkening
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x55000000, 0x77000000);
@@ -323,109 +325,65 @@ public class TacticalRadialScreen extends Screen {
             lastHoverIndex = selectedIndex;
         }
 
-        // Minecraft beveled action buttons arranged in a clean circle (no lines or rings)
+        // 1. Pixel-art wheel base & slot sprites from radial_wheel.png
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        guiGraphics.blit(RADIAL_TEXTURE, cx - WHEEL_SIZE / 2, cy - WHEEL_SIZE / 2, 0, 0, WHEEL_SIZE, WHEEL_SIZE, 256, 256);
+
         double sliceAngle = (2.0 * Math.PI) / Math.max(1, count);
         for (int i = 0; i < count; i++) {
             RadialOption opt = options.get(i);
             boolean isSel = (i == selectedIndex);
             double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
-            int nodeCx = cx + (int) Math.round(Math.cos(midAngle) * nodeRadius);
-            int nodeCy = cy + (int) Math.round(Math.sin(midAngle) * nodeRadius);
+            int nodeCx = cx + (int) Math.round(Math.cos(midAngle) * NODE_RADIUS);
+            int nodeCy = cy + (int) Math.round(Math.sin(midAngle) * NODE_RADIUS);
 
-            int tx = nodeCx - TILE_W / 2;
-            int ty = nodeCy - TILE_H / 2;
-
-            renderActionTile(guiGraphics, tx, ty, opt, isSel);
+            int vOffset = !opt.enabled ? 48 : (isSel ? 24 : 0);
+            guiGraphics.blit(RADIAL_TEXTURE, nodeCx - 12, nodeCy - 14, 192, vOffset, 24, 24, 256, 256);
         }
 
-        // Compact Minecraft beveled center info badge
-        renderCenterHub(guiGraphics, cx, cy, count);
-    }
+        // 2. Item icons, selection highlight & labels
+        for (int i = 0; i < count; i++) {
+            RadialOption opt = options.get(i);
+            boolean isSel = (i == selectedIndex);
+            double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
+            int nodeCx = cx + (int) Math.round(Math.cos(midAngle) * NODE_RADIUS);
+            int nodeCy = cy + (int) Math.round(Math.sin(midAngle) * NODE_RADIUS);
 
-    private void renderActionTile(GuiGraphics guiGraphics, int tx, int ty, RadialOption opt, boolean isSel) {
-        if (!opt.enabled) {
-            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xFF1F2227, 0xFF32363E, 0xFF131519, 0xFF0E1012);
-        } else if (isSel) {
-            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xFF3E4550, 0xFF7A8494, 0xFF22262C, 0xFF0E1012);
-        } else {
-            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xFF2B2F36, 0xFF545B66, 0xFF191C20, 0xFF0E1012);
+            if (!opt.icon.isEmpty()) {
+                guiGraphics.renderItem(opt.icon, nodeCx - 8, nodeCy - 10);
+            }
+            if (isSel && opt.enabled) {
+                guiGraphics.fill(nodeCx - 8, nodeCy - 10, nodeCx + 8, nodeCy + 6, 0x38FFFFFF);
+            }
+
+            int textColor = !opt.enabled ? 0xFF777777 : (isSel ? 0xFFFFFF55 : 0xFFE0E0E0);
+            drawCenteredScaledText(guiGraphics, opt.title, nodeCx, nodeCy + 11, 44, textColor);
         }
 
-        // Classic 18x18 recessed Minecraft slot for the item icon
-        int slotX = tx + (TILE_W - 18) / 2;
-        int slotY = ty + 3;
-        drawSlotBox(guiGraphics, slotX, slotY);
-
-        if (!opt.icon.isEmpty()) {
-            guiGraphics.renderItem(opt.icon, slotX + 1, slotY + 1);
-        }
-
-        if (isSel && opt.enabled) {
-            guiGraphics.fill(slotX + 1, slotY + 1, slotX + 17, slotY + 17, 0x40FFFFFF);
-        }
-
-        // Centered shadowed label below the slot
-        int textColor = !opt.enabled ? 0xFF777777 : (isSel ? 0xFFFFFF55 : 0xFFE0E0E0);
-        int strW = this.font.width(opt.title);
-        int maxTextW = TILE_W - 6;
-
-        if (strW > maxTextW) {
-            float scale = Math.max(0.68f, (float) maxTextW / (float) strW);
-            PoseStack pose = guiGraphics.pose();
-            pose.pushPose();
-            pose.translate(tx + TILE_W / 2.0f, ty + 23.5f, 200);
-            pose.scale(scale, scale, 1.0f);
-            guiGraphics.drawString(this.font, opt.title, -strW / 2, 0, textColor, true);
-            pose.popPose();
-        } else {
-            guiGraphics.drawString(this.font, opt.title, tx + (TILE_W - strW) / 2, ty + 23, textColor, true);
-        }
-    }
-
-    private void renderCenterHub(GuiGraphics guiGraphics, int cx, int cy, int count) {
+        // 3. Center hub text (fits cleanly inside the 66px recessed center circle)
         if (selectedIndex >= 0 && selectedIndex < count) {
             RadialOption sel = options.get(selectedIndex);
-            String line1 = sel.title;
-            String line2 = sel.subtitle;
-            int color1 = sel.enabled ? sel.color : 0xFF888888;
-
-            int w1 = this.font.width(line1);
-            int w2 = this.font.width(line2);
-            int boxW = Math.max(76, Math.max(w1, w2) + 14);
-            int boxH = 26;
-            int bx = cx - boxW / 2;
-            int by = cy - boxH / 2;
-
-            drawBevelPanel(guiGraphics, bx, by, boxW, boxH, 0xFF23272D, 0xFF4A505A, 0xFF15181C, 0xFF0E1012);
-            guiGraphics.drawString(this.font, line1, cx - w1 / 2, by + 4, color1, true);
-            guiGraphics.drawString(this.font, line2, cx - w2 / 2, by + 15, 0xFFB0B8C2, true);
+            int titleCol = sel.enabled ? sel.color : 0xFF888888;
+            drawCenteredScaledText(guiGraphics, sel.title, cx, cy - 9, 58, titleCol);
+            drawCenteredScaledText(guiGraphics, sel.subtitle, cx, cy + 2, 58, 0xFFB0B8C2);
         } else {
-            String titleStr = this.title.getString();
-            int w1 = this.font.width(titleStr);
-            int boxW = Math.max(72, w1 + 14);
-            int boxH = 16;
-            int bx = cx - boxW / 2;
-            int by = cy - boxH / 2;
-
-            drawBevelPanel(guiGraphics, bx, by, boxW, boxH, 0xFF23272D, 0xFF4A505A, 0xFF15181C, 0xFF0E1012);
-            guiGraphics.drawString(this.font, titleStr, cx - w1 / 2, by + 4, 0xFFE0E0E0, true);
+            drawCenteredScaledText(guiGraphics, this.title.getString(), cx, cy - 4, 58, 0xFFD0D6DE);
         }
     }
 
-    private static void drawSlotBox(GuiGraphics guiGraphics, int x, int y) {
-        guiGraphics.fill(x, y, x + 18, y + 18, 0xFF1D2025);
-        guiGraphics.fill(x, y, x + 17, y + 1, 0xFF101215);
-        guiGraphics.fill(x, y, x + 1, y + 17, 0xFF101215);
-        guiGraphics.fill(x + 1, y + 17, x + 18, y + 18, 0xFF4A505A);
-        guiGraphics.fill(x + 17, y + 1, x + 18, y + 18, 0xFF4A505A);
-    }
-
-    private static void drawBevelPanel(GuiGraphics guiGraphics, int x, int y, int w, int h, int body, int light, int dark, int outline) {
-        guiGraphics.fill(x, y, x + w, y + h, outline);
-        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, body);
-        guiGraphics.fill(x + 1, y + 1, x + w - 2, y + 2, light);
-        guiGraphics.fill(x + 1, y + 1, x + 2, y + h - 2, light);
-        guiGraphics.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, dark);
-        guiGraphics.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, dark);
+    private void drawCenteredScaledText(GuiGraphics guiGraphics, String text, int centerX, int y, int maxWidth, int color) {
+        int strW = this.font.width(text);
+        if (strW > maxWidth && maxWidth > 0) {
+            float scale = Math.max(0.62f, (float) maxWidth / (float) strW);
+            PoseStack pose = guiGraphics.pose();
+            pose.pushPose();
+            pose.translate(centerX, y, 200);
+            pose.scale(scale, scale, 1.0f);
+            guiGraphics.drawString(this.font, text, -strW / 2, 0, color, true);
+            pose.popPose();
+        } else {
+            guiGraphics.drawString(this.font, text, centerX - strW / 2, y, color, true);
+        }
     }
 }
