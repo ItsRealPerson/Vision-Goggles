@@ -212,10 +212,6 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             renderModifyTab(guiGraphics, x, y);
         }
 
-        // Divider groove above player inventory
-        guiGraphics.fill(x + 6, y + 100, x + GUI_W - 6, y + 101, 0xFF171A1E);
-        guiGraphics.fill(x + 6, y + 101, x + GUI_W - 6, y + 102, 0xFF444A54);
-
         // Classic Recessed Minecraft Inventory & Hotbar Slots
         int invX = x + 7;
         int invY = y + 103;
@@ -245,11 +241,12 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             boolean selected = bp.id().equals(activeBp.id());
             boolean hovered = mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18;
             if (selected) {
-                drawBevelPanel(guiGraphics, bx, by, 22, 18, 0xFF28382E, 0xFF4F785D, 0xFF18221B, 0xFF111417);
-                guiGraphics.fill(bx + 2, by + 15, bx + 20, by + 17, 0xFF52B778);
+                // Classic Minecraft Stonecutter-style selected button bevel
+                drawBevelPanel(guiGraphics, bx, by, 22, 18, 0xFF434A54, 0xFF8A94A3, 0xFF23272E, 0xFF0E1012);
             } else {
-                int fill = hovered ? 0xFF2B3038 : 0xFF21252B;
-                drawRecessedBox(guiGraphics, bx, by, 22, 18, fill);
+                int body = hovered ? 0xFF333942 : 0xFF262A31;
+                int light = hovered ? 0xFF5A6270 : 0xFF3F454F;
+                drawBevelPanel(guiGraphics, bx, by, 22, 18, body, light, 0xFF16181D, 0xFF0E1012);
             }
             guiGraphics.renderItem(bp.createDefaultResult(), bx + 3, by + 1);
         }
@@ -271,23 +268,26 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             boolean canAddMore = !done && invHave > 0;
             boolean hovered = mouseX >= ix && mouseX < ix + 53 && mouseY >= iy && mouseY < iy + 14;
 
-            int fill = done ? 0xFF202B24 : (hovered && canAddMore ? 0xFF2A3038 : 0xFF1D2026);
+            int fill;
+            if (done) {
+                fill = hovered ? 0xFF28382B : 0xFF202C22;
+            } else if (canAddMore) {
+                fill = hovered ? 0xFF2B3038 : 0xFF1D2025;
+            } else {
+                fill = hovered ? 0xFF452323 : 0xFF381C1C;
+            }
             drawRecessedBox(guiGraphics, ix, iy, 53, 14, fill);
 
-            // Subtle 2px status indicator bar on left edge
-            int pipColor = done ? 0xFF47A866 : (canAddMore ? 0xFFD99B38 : 0xFF8C3F3F);
-            guiGraphics.fill(ix + 1, iy + 2, ix + 3, iy + 12, pipColor);
-
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(ix + 4, iy + 1, 0);
+            guiGraphics.pose().translate(ix + 2, iy + 1, 0);
             guiGraphics.pose().scale(0.75f, 0.75f, 1.0f);
             guiGraphics.renderItem(req.asStack(), 0, 0);
             guiGraphics.pose().popPose();
 
             String label = placed + "/" + req.count();
-            int textColor = done ? 0xFF8BE0A4 : (canAddMore ? 0xFFE5E9F0 : 0xFFCC7676);
+            int textColor = done ? 0xFF55FF55 : (canAddMore ? 0xFFFFFFFF : 0xFFFF5555);
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(ix + 21, iy + 4, 200);
+            guiGraphics.pose().translate(ix + 19, iy + 4, 200);
             guiGraphics.pose().scale(0.72f, 0.72f, 1.0f);
             guiGraphics.drawString(this.font, label, 0, 0, textColor, true);
             guiGraphics.pose().popPose();
@@ -302,13 +302,22 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         drawSlotBox(guiGraphics, x + 69, y + 41);
         drawSlotBox(guiGraphics, x + 105, y + 41);
 
-        // Clean pixel "+" and "->" arrow
-        guiGraphics.fill(x + 56, y + 49, x + 63, y + 51, 0xFF8B95A1);
-        guiGraphics.fill(x + 59, y + 46, x + 60, y + 54, 0xFF8B95A1);
+        // Classic Minecraft Anvil/Smithing "+" (symmetrical 8x8 with 1px shadow)
+        guiGraphics.fill(x + 57, y + 50, x + 65, y + 52, 0xFF101215);
+        guiGraphics.fill(x + 60, y + 47, x + 62, y + 55, 0xFF101215);
+        guiGraphics.fill(x + 56, y + 49, x + 64, y + 51, 0xFF8B8B8B);
+        guiGraphics.fill(x + 59, y + 46, x + 61, y + 54, 0xFF8B8B8B);
 
-        guiGraphics.fill(x + 90, y + 49, x + 99, y + 51, 0xFF52B778);
-        guiGraphics.fill(x + 97, y + 47, x + 99, y + 53, 0xFF52B778);
-        guiGraphics.fill(x + 99, y + 48, x + 101, y + 52, 0xFF52B778);
+        // Classic Minecraft Crafting/Furnace "->" arrow (gray with 1px shadow)
+        guiGraphics.fill(x + 91, y + 50, x + 99, y + 52, 0xFF101215);
+        guiGraphics.fill(x + 98, y + 48, x + 100, y + 54, 0xFF101215);
+        guiGraphics.fill(x + 100, y + 49, x + 102, y + 53, 0xFF101215);
+        guiGraphics.fill(x + 102, y + 50, x + 103, y + 52, 0xFF101215);
+
+        guiGraphics.fill(x + 90, y + 49, x + 98, y + 51, 0xFF8B8B8B);
+        guiGraphics.fill(x + 97, y + 47, x + 99, y + 53, 0xFF8B8B8B);
+        guiGraphics.fill(x + 99, y + 48, x + 101, y + 52, 0xFF8B8B8B);
+        guiGraphics.fill(x + 101, y + 49, x + 102, y + 51, 0xFF8B8B8B);
 
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(x + 10, y + 66, 0);
@@ -388,13 +397,13 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
                 // !this.active means this tab is currently selected
                 boolean selected = !this.active;
                 if (selected) {
-                    drawBevelPanel(guiGraphics, bx, by, bw, bh, 0xFF343942, 0xFF5D6572, 0xFF20242A, 0xFF0E1012);
-                    guiGraphics.fill(bx + 2, by + 1, bx + bw - 2, by + 3, 0xFF52B778);
+                    drawBevelPanel(guiGraphics, bx, by, bw, bh, 0xFF3A404A, 0xFF6B7382, 0xFF1F2329, 0xFF0E1012);
                 } else {
-                    int fill = this.isHovered() ? 0xFF2A2F37 : 0xFF1F2329;
-                    drawRecessedBox(guiGraphics, bx, by, bw, bh, fill);
+                    int body = this.isHovered() ? 0xFF2C313A : 0xFF22262D;
+                    int light = this.isHovered() ? 0xFF474E5C : 0xFF343A44;
+                    drawBevelPanel(guiGraphics, bx, by, bw, bh, body, light, 0xFF15181C, 0xFF0E1012);
                 }
-                int textCol = selected ? 0xFFF2F5F8 : (this.isHovered() ? 0xFFD0D6DE : 0xFF8B94A0);
+                int textCol = selected ? 0xFFFFFFFF : (this.isHovered() ? 0xFFE0E0E0 : 0xFFA0A0A0);
                 guiGraphics.drawCenteredString(ModificationStationScreen.this.font, this.getMessage(), bx + bw / 2, by + (bh - 8) / 2, textCol);
             } else {
                 if (this.active) {
