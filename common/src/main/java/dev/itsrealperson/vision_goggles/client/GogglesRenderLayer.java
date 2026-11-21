@@ -70,9 +70,19 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
             matrixStack.popPose();
         }
 
-        // 2. Render Goggles on head
+        // 2. Render Goggles on head (real VisionGogglesItem always takes priority over prototype preview)
         ItemStack stack = PlatformMethods.getEquippedHelmet(player);
-        if (stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem goggles)) return;
+        boolean hasRealGoggles = !stack.isEmpty() && stack.getItem() instanceof VisionGogglesItem;
+        if (!hasRealGoggles
+                && player == Minecraft.getInstance().player
+                && dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.isHeadPreviewEnabled()) {
+            dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensGeoRenderer.renderOnPlayerHead(
+                    matrixStack, buffer, packedLight, this.getParentModel()
+            );
+            return;
+        }
+
+        if (!hasRealGoggles) return;
 
         if (this.model == null) {
             this.model = new VisionGoggleModel<>(Minecraft.getInstance().getEntityModels().bakeLayer(VisionGoggleModel.LAYER_LOCATION));

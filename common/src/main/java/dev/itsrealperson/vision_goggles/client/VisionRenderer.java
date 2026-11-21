@@ -58,6 +58,7 @@ public class VisionRenderer {
 
     private static long nKeyHoldStart = 0L;
     private static boolean radialMenuOpened = false;
+    private static boolean lastPreviewZoomKeyDown = false;
 
     private static boolean lastFlashlightActive = false;
     private static int lastFlashlightModeId = -1;
@@ -98,12 +99,14 @@ public class VisionRenderer {
             Minecraft mc = Minecraft.getInstance();
             GogglesEquipAnimator.reset();
             StationWorkAnimator.reset();
+            dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.reset();
             cleanup(mc);
         });
     }
 
     public static void syncOpticsForRenderFrame(Minecraft mc) {
         opticsSyncedThisFrame = true;
+        dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.tickInGameFlipFrame();
         if (mc == null || mc.player == null || mc.level == null || !cachedHasHelmet) {
             return;
         }
@@ -142,6 +145,7 @@ public class VisionRenderer {
     public static void onClientTick(Minecraft mc) {
         if (mc.player == null || mc.level == null) {
             GogglesEquipAnimator.reset();
+            lastPreviewZoomKeyDown = false;
             return;
         }
 
@@ -159,28 +163,8 @@ public class VisionRenderer {
         if (mc.screen instanceof dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen) {
             nKeyHoldStart = 0L;
             radialMenuOpened = false;
+            lastPreviewZoomKeyDown = false;
             return;
-        }
-
-        // 'N' Key: Quick tap (< 220ms) = Toggle on/off; Long press (> 220ms) = Tactical Radial Menu
-        if (ModKeyMappings.toggleGrayscaleKey.isDown()) {
-            if (nKeyHoldStart == 0L) {
-                nKeyHoldStart = System.currentTimeMillis();
-                radialMenuOpened = false;
-            } else if (!radialMenuOpened && (System.currentTimeMillis() - nKeyHoldStart > 220L)) {
-                if (mc.screen == null && mc.player != null) {
-                    radialMenuOpened = true;
-                    mc.setScreen(new dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen());
-                }
-            }
-        } else {
-            if (nKeyHoldStart != 0L) {
-                if (!radialMenuOpened) {
-                    NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(false));
-                }
-                nKeyHoldStart = 0L;
-                radialMenuOpened = false;
-            }
         }
 
         ItemStack helmet = PlatformMethods.getEquippedHelmet(mc.player);
@@ -188,6 +172,49 @@ public class VisionRenderer {
         VisionGogglesItem goggles = hasHelmet ? (VisionGogglesItem) helmet.getItem() : null;
         boolean hasSonar = hasHelmet && goggles.hasModule(helmet, ModConstants.ID_SONAR);
         boolean hasZoom = hasHelmet && goggles.hasModule(helmet, ModConstants.ID_ZOOM);
+        boolean protoPreviewHeadActive = !hasHelmet
+                && dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.isHeadPreviewEnabled();
+
+        // 'N' Key: Quick tap (< 220ms) = Toggle on/off; Long press (> 220ms) = Tactical Radial Menu
+        if (ModKeyMappings.toggleGrayscaleKey.isDown()) {
+            if (mc.screen != null) {
+                nKeyHoldStart = 0L;
+                radialMenuOpened = false;
+            } else if (nKeyHoldStart == 0L) {
+                nKeyHoldStart = System.currentTimeMillis();
+                radialMenuOpened = false;
+            } else if (!radialMenuOpened && (System.currentTimeMillis() - nKeyHoldStart > 220L)) {
+                if (!protoPreviewHeadActive
+                        && (hasHelmet || dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen.hasFlashlightAvailable(mc.player))) {
+                    radialMenuOpened = true;
+                    mc.setScreen(new dev.itsrealperson.vision_goggles.client.gui.TacticalRadialScreen());
+                }
+            }
+        } else {
+            if (nKeyHoldStart != 0L) {
+                if (!radialMenuOpened) {
+                    if (protoPreviewHeadActive) {
+                        if (mc.screen == null && (System.currentTimeMillis() - nKeyHoldStart <= 220L)) {
+                            toggleProtoVisorWithSound(mc);
+                        }
+                    } else {
+                        NetworkManager.INSTANCE.sendToServer(new ToggleNVGPacket(false));
+                    }
+                }
+                nKeyHoldStart = 0L;
+                radialMenuOpened = false;
+            }
+        }
+
+        if (protoPreviewHeadActive && mc.screen == null) {
+            boolean zoomDown = ModKeyMappings.zoomKey.isDown();
+            if (zoomDown && !lastPreviewZoomKeyDown) {
+                toggleProtoVisorWithSound(mc);
+            }
+            lastPreviewZoomKeyDown = zoomDown;
+        } else {
+            lastPreviewZoomKeyDown = false;
+        }
 
         
         while (ModKeyMappings.toggleFlashlightKey.consumeClick()) {
@@ -620,7 +647,16 @@ public class VisionRenderer {
         return maxRange;
     }
 
+    private static void toggleProtoVisorWithSound(Minecraft mc) {
+        boolean flippingDown = dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.toggleInGameVisor();
+        mc.getSoundManager().play(SimpleSoundInstance.forUI(
+                flippingDown ? net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON : net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC,
+                flippingDown ? 1.25F : 0.85F
+        ));
+    }
+
     private static void cleanup(Minecraft mc) {
+        lastPreviewZoomKeyDown = false;
         visorActive = false;
         visionModeActive = false;
         currentVisionMode = null;

@@ -27,6 +27,25 @@ public class CommandVisionGoggles {
             .then(Commands.literal("gui")
                 .executes(context -> openGui(context.getSource()))
             )
+            .then(Commands.literal("preview")
+                .executes(context -> openProtoPreview(context.getSource(), ""))
+                .then(Commands.argument("variant", StringArgumentType.word())
+                    .suggests((ctx, builder) -> {
+                        builder.suggest("nvg", Component.literal("Tri-Lens NVG"));
+                        builder.suggest("thermal", Component.literal("Tri-Lens Thermal"));
+                        builder.suggest("bio", Component.literal("Tri-Lens Biometric"));
+                        builder.suggest("hydro", Component.literal("Tri-Lens Hydro"));
+                        builder.suggest("modular", Component.literal("Tri-Lens Modular"));
+                        builder.suggest("flip", Component.literal("Toggle Tri-Lens prototype visor flip"));
+                        builder.suggest("off", Component.literal("Disable local F5 head preview"));
+                        return builder.buildFuture();
+                    })
+                    .executes(context -> openProtoPreview(
+                        context.getSource(),
+                        StringArgumentType.getString(context, "variant")
+                    ))
+                )
+            )
             .then(Commands.literal("reload")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> {
@@ -204,6 +223,33 @@ public class CommandVisionGoggles {
             }
         } catch (Exception e) {
             source.sendFailure(Component.literal("§cError al abrir la terminal: " + e.getMessage()));
+        }
+        return 0;
+    }
+
+    private static int openProtoPreview(CommandSourceStack source, String rawVariant) {
+        try {
+            String normalized = rawVariant == null ? "" : rawVariant.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!normalized.isEmpty()
+                    && !normalized.equals("nvg")
+                    && !normalized.equals("thermal")
+                    && !normalized.equals("bio")
+                    && !normalized.equals("hydro")
+                    && !normalized.equals("modular")
+                    && !normalized.equals("flip")
+                    && !normalized.equals("off")) {
+                source.sendFailure(Component.literal("Unknown prototype variant '" + rawVariant + "'. Valid: nvg, thermal, bio, hydro, modular, flip, off."));
+                return 0;
+            }
+            if (source.getEntity() instanceof ServerPlayer player) {
+                NetworkManager.INSTANCE.sendToPlayer(player, new dev.itsrealperson.vision_goggles.network.OpenProtoPreviewPacket(normalized));
+                if ("off".equals(normalized)) {
+                    source.sendSuccess(() -> Component.literal("[Vision Goggles] Tri-Lens F5 head preview disabled."), false);
+                }
+                return 1;
+            }
+        } catch (Exception e) {
+            source.sendFailure(Component.literal("Error opening Tri-Lens preview: " + e.getMessage()));
         }
         return 0;
     }

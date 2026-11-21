@@ -180,13 +180,13 @@ public final class StationWorkAnimator {
     public static float getWorkbenchZoomMultiplier() {
         if (openBlend <= 0.001f) return 1.0f;
         float openT = openBlend * openBlend * (3.0f - 2.0f * openBlend);
-        float targetZoom = 0.80f;
+        float targetZoom = 0.90f;
         if (assembling) {
             float p = getProgress();
             float inW = Mth.clamp(p / 0.16f, 0.0f, 1.0f);
             float outW = 1.0f - Mth.clamp((p - 0.84f) / 0.16f, 0.0f, 1.0f);
             float w = (inW * inW * (3.0f - 2.0f * inW)) * (outW * outW * (3.0f - 2.0f * outW));
-            targetZoom = Mth.lerp(w, 0.80f, 0.62f);
+            targetZoom = Mth.lerp(w, 0.90f, 0.85f);
         }
         return Mth.lerp(openT, 1.0f, targetZoom);
     }
