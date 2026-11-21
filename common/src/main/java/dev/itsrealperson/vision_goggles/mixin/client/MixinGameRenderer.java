@@ -66,7 +66,11 @@ public class MixinGameRenderer {
 
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
     private void vision_goggles$applyZoom(CallbackInfoReturnable<Double> cir) {
-        cir.setReturnValue(cir.getReturnValue() * VisionRenderer.getZoomMultiplier());
+        cir.setReturnValue(
+                cir.getReturnValue()
+                        * VisionRenderer.getZoomMultiplier()
+                        * dev.itsrealperson.vision_goggles.client.StationWorkAnimator.getWorkbenchZoomMultiplier()
+        );
     }
 
     @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
