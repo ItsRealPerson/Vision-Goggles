@@ -1,13 +1,9 @@
 package dev.itsrealperson.vision_goggles.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.itsrealperson.vision_goggles.client.ModKeyMappings;
+import dev.itsrealperson.vision_goggles.client.VisionRenderer;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
@@ -16,6 +12,7 @@ import dev.itsrealperson.vision_goggles.network.BatteryPacket;
 import dev.itsrealperson.vision_goggles.network.NetworkManager;
 import dev.itsrealperson.vision_goggles.network.SelectVisionModePacket;
 import dev.itsrealperson.vision_goggles.network.ToggleFlashlightPacket;
+import dev.itsrealperson.vision_goggles.network.ToggleSonarPacket;
 import dev.itsrealperson.vision_goggles.registry.ModItems;
 import dev.itsrealperson.vision_goggles.registry.ModSounds;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
@@ -25,16 +22,20 @@ import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Minecraft-styled radial action wheel using crisp pixel-aligned panels,
+ * recessed 18x18 item slots, and a classic Minecraft tooltip hub.
+ */
 public class TacticalRadialScreen extends Screen {
 
     public static class RadialOption {
@@ -61,18 +62,15 @@ public class TacticalRadialScreen extends Screen {
     private int openTicks = 0;
     private boolean executed = false;
 
-    // Dimensiones calibradas para eliminar solapamientos y alojar sockets tácticos
-    private static final float INNER_RADIUS = 42.0f;
-    private static final float OUTER_RADIUS = 112.0f;
-    private static final float MID_RADIUS = (INNER_RADIUS + OUTER_RADIUS) / 2.0f; // 77.0f
-    private static final float COMPASS_RING_RADIUS = 120.0f;
-    private static final double GAP_RADIANS = Math.toRadians(3.0);
+    private static final int TILE_W = 54;
+    private static final int TILE_H = 34;
+    private static final int DEADZONE_RADIUS = 24;
 
     public TacticalRadialScreen() {
         super(Component.translatable("gui.vision_goggles.radial.title"));
     }
 
-    public static boolean hasFlashlightAvailable(net.minecraft.world.entity.player.Player player) {
+    public static boolean hasFlashlightAvailable(Player player) {
         if (player == null) return false;
         if (!TacticalFlashlightItem.getAnyHeldFlashlight(player).isEmpty()) return true;
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
@@ -103,90 +101,119 @@ public class TacticalRadialScreen extends Screen {
             }
         }
 
-        // Modos de visión instalados
         for (VisionMode m : modes) {
             if (m == VisionMode.NIGHT_VISION) {
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.nvg").getString(),
-                        Component.translatable("gui.vision_goggles.radial.nvg.desc").getString(), 0xFF00FF55,
-                        ModItems.NVG_MODULE.get().getDefaultInstance(), true, () -> {
-                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.NIGHT_VISION.getId()));
-                }));
+                options.add(new RadialOption(
+                        Component.translatable("gui.vision_goggles.radial.nvg").getString(),
+                        Component.translatable("gui.vision_goggles.radial.nvg.desc").getString(),
+                        0xFF55FF55,
+                        ModItems.NVG_MODULE.get().getDefaultInstance(),
+                        true,
+                        () -> NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.NIGHT_VISION.getId()))
+                ));
             } else if (m == VisionMode.THERMAL) {
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.thermal").getString(),
-                        Component.translatable("gui.vision_goggles.radial.thermal.desc").getString(), 0xFFFF5533,
-                        ModItems.THERMAL_MODULE.get().getDefaultInstance(), true, () -> {
-                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.THERMAL.getId()));
-                }));
+                options.add(new RadialOption(
+                        Component.translatable("gui.vision_goggles.radial.thermal").getString(),
+                        Component.translatable("gui.vision_goggles.radial.thermal.desc").getString(),
+                        0xFFFF5555,
+                        ModItems.THERMAL_MODULE.get().getDefaultInstance(),
+                        true,
+                        () -> NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.THERMAL.getId()))
+                ));
             } else if (m == VisionMode.BIOMETRIC) {
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.bio").getString(),
-                        Component.translatable("gui.vision_goggles.radial.bio.desc").getString(), 0xFFFFAA00,
-                        ModItems.BIO_MODULE.get().getDefaultInstance(), true, () -> {
-                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.BIOMETRIC.getId()));
-                }));
+                options.add(new RadialOption(
+                        Component.translatable("gui.vision_goggles.radial.bio").getString(),
+                        Component.translatable("gui.vision_goggles.radial.bio.desc").getString(),
+                        0xFFFFAA00,
+                        ModItems.BIO_MODULE.get().getDefaultInstance(),
+                        true,
+                        () -> NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.BIOMETRIC.getId()))
+                ));
             } else if (m == VisionMode.HYDRO) {
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.hydro").getString(),
-                        Component.translatable("gui.vision_goggles.radial.hydro.desc").getString(), 0xFF00CCFF,
-                        ModItems.HYDRO_MODULE.get().getDefaultInstance(), true, () -> {
-                    NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.HYDRO.getId()));
-                }));
+                options.add(new RadialOption(
+                        Component.translatable("gui.vision_goggles.radial.hydro").getString(),
+                        Component.translatable("gui.vision_goggles.radial.hydro.desc").getString(),
+                        0xFF55FFFF,
+                        ModItems.HYDRO_MODULE.get().getDefaultInstance(),
+                        true,
+                        () -> NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(VisionMode.HYDRO.getId()))
+                ));
             }
         }
 
-        // Opciones de Gafas Equipadas
         if (hasHelmet) {
-            // Se usa el ítem modular limpio de registro para evitar que el casco 3D se vea oscuro
-            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.standby").getString(),
-                    Component.translatable("gui.vision_goggles.radial.standby.desc").getString(), 0xFFAAAAAA,
-                    ModItems.MODULAR_GOGGLES.get().getDefaultInstance(), true, () -> {
-                NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1));
-            }));
+            options.add(new RadialOption(
+                    Component.translatable("gui.vision_goggles.radial.standby").getString(),
+                    Component.translatable("gui.vision_goggles.radial.standby.desc").getString(),
+                    0xFFAAAAAA,
+                    ModItems.MODULAR_GOGGLES.get().getDefaultInstance(),
+                    true,
+                    () -> NetworkManager.INSTANCE.sendToServer(new SelectVisionModePacket(-1))
+            ));
 
             if (goggles.hasModule(helmet, ModConstants.ID_SONAR)) {
                 CompoundTag nbt = helmet.getTag();
                 int currentMode = (nbt != null && nbt.contains(ModConstants.TAG_SONAR_MODE)) ? nbt.getInt(ModConstants.TAG_SONAR_MODE) : 0;
                 String modeDesc = Component.translatable("gui.vision_goggles.radial.sonar." + (currentMode == 0 ? "all" : (currentMode == 1 ? "players" : "undead"))).getString();
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.sonar").getString(), modeDesc, 0xFF00EEEE,
-                        ModItems.SONAR_MODULE.get().getDefaultInstance(), true, () -> {
-                    NetworkManager.INSTANCE.sendToServer(new dev.itsrealperson.vision_goggles.network.ToggleSonarPacket());
-                }));
+                options.add(new RadialOption(
+                        Component.translatable("gui.vision_goggles.radial.sonar").getString(),
+                        modeDesc,
+                        0xFF55FFFF,
+                        ModItems.SONAR_MODULE.get().getDefaultInstance(),
+                        true,
+                        () -> NetworkManager.INSTANCE.sendToServer(new ToggleSonarPacket())
+                ));
             }
 
             if (goggles.hasModule(helmet, ModConstants.ID_ZOOM)) {
-                boolean locked = dev.itsrealperson.vision_goggles.client.VisionRenderer.isZoomLocked();
+                boolean locked = VisionRenderer.isZoomLocked();
                 String zoomDesc = Component.translatable(locked ? "gui.vision_goggles.radial.zoom.locked" : "gui.vision_goggles.radial.zoom.desc").getString();
-                options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.zoom").getString(), zoomDesc, 0xFF55FFFF,
-                        ModItems.ZOOM_MODULE.get().getDefaultInstance(), true, () -> {
-                    dev.itsrealperson.vision_goggles.client.VisionRenderer.toggleZoomLock(mc);
-                }));
+                options.add(new RadialOption(
+                        Component.translatable("gui.vision_goggles.radial.zoom").getString(),
+                        zoomDesc,
+                        0xFF55FFFF,
+                        ModItems.ZOOM_MODULE.get().getDefaultInstance(),
+                        true,
+                        () -> VisionRenderer.toggleZoomLock(mc)
+                ));
             }
         }
 
-        // Linterna táctica (solo si está disponible)
         if (hasFlashlightAvailable(mc.player)) {
-            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.flashlight").getString(),
-                    Component.translatable("gui.vision_goggles.radial.flashlight.desc").getString(), 0xFFFFFF88,
-                    ModItems.TACTICAL_FLASHLIGHT.get().getDefaultInstance(), true, () -> {
-                NetworkManager.INSTANCE.sendToServer(new ToggleFlashlightPacket());
-                if (mc != null) {
-                    mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.FLASHLIGHT_SWITCH.get(), 1.0F));
-                }
-            }));
+            options.add(new RadialOption(
+                    Component.translatable("gui.vision_goggles.radial.flashlight").getString(),
+                    Component.translatable("gui.vision_goggles.radial.flashlight.desc").getString(),
+                    0xFFFFFF55,
+                    ModItems.TACTICAL_FLASHLIGHT.get().getDefaultInstance(),
+                    true,
+                    () -> {
+                        NetworkManager.INSTANCE.sendToServer(new ToggleFlashlightPacket());
+                        mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.FLASHLIGHT_SWITCH.get(), 1.0F));
+                    }
+            ));
         }
 
-        // Recarga rápida de batería
         boolean hasRechargeable = hasHelmet || hasFlashlightAvailable(mc.player);
         if (hasRechargeable) {
-            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.battery").getString(),
-                    Component.translatable("gui.vision_goggles.radial.battery.desc").getString(), 0xFF55FF55,
-                    ModItems.NVG_BATTERY.get().getDefaultInstance(), true, () -> {
-                NetworkManager.INSTANCE.sendToServer(new BatteryPacket());
-            }));
+            options.add(new RadialOption(
+                    Component.translatable("gui.vision_goggles.radial.battery").getString(),
+                    Component.translatable("gui.vision_goggles.radial.battery.desc").getString(),
+                    0xFF55FF55,
+                    ModItems.NVG_BATTERY.get().getDefaultInstance(),
+                    true,
+                    () -> NetworkManager.INSTANCE.sendToServer(new BatteryPacket())
+            ));
         }
 
         if (options.isEmpty()) {
-            options.add(new RadialOption(Component.translatable("gui.vision_goggles.radial.no_gear").getString(),
-                    Component.translatable("gui.vision_goggles.radial.no_gear.desc").getString(), 0xFF888888,
-                    ItemStack.EMPTY, false, () -> {}));
+            options.add(new RadialOption(
+                    Component.translatable("gui.vision_goggles.radial.no_gear").getString(),
+                    Component.translatable("gui.vision_goggles.radial.no_gear.desc").getString(),
+                    0xFF888888,
+                    ItemStack.EMPTY,
+                    false,
+                    () -> {}
+            ));
         }
     }
 
@@ -198,11 +225,11 @@ public class TacticalRadialScreen extends Screen {
     private boolean isKeyPhysicallyDown() {
         if (minecraft == null) return false;
         long window = minecraft.getWindow().getWindow();
-        com.mojang.blaze3d.platform.InputConstants.Key key = ((KeyMappingAccessor) ModKeyMappings.toggleGrayscaleKey).vision_goggles$getKey();
-        if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
-            return com.mojang.blaze3d.platform.InputConstants.isKeyDown(window, key.getValue());
-        } else if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
-            return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, key.getValue()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        InputConstants.Key key = ((KeyMappingAccessor) ModKeyMappings.toggleGrayscaleKey).vision_goggles$getKey();
+        if (key.getType() == InputConstants.Type.KEYSYM) {
+            return InputConstants.isKeyDown(window, key.getValue());
+        } else if (key.getType() == InputConstants.Type.MOUSE) {
+            return GLFW.glfwGetMouseButton(window, key.getValue()) == GLFW.GLFW_PRESS;
         }
         return false;
     }
@@ -227,7 +254,7 @@ public class TacticalRadialScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             onClose();
             return true;
         }
@@ -260,22 +287,20 @@ public class TacticalRadialScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        float cx = this.width / 2.0f;
-        float cy = this.height / 2.0f;
+        int cx = this.width / 2;
+        int cy = this.height / 2;
         int count = options.size();
+        int nodeRadius = (count >= 7) ? 84 : 76;
 
-        // 1. Viñeta oscura de fondo
-        guiGraphics.fillGradient(0, 0, this.width, this.height, 0x66000000, 0x88000000);
+        // Subtle vanilla-style screen darkening
+        guiGraphics.fillGradient(0, 0, this.width, this.height, 0x55000000, 0x77000000);
 
-        // 2. Encabezado de telemetría militar Alpha
-        guiGraphics.drawString(this.font, Component.translatable("gui.vision_goggles.radial.header").getString(), 12, 12, 0xFFAAAAAA, false);
-
-        // 3. Detección polar de la rebanada bajo el ratón
+        // Polar angle selection from center
         double dx = mouseX - cx;
         double dy = mouseY - cy;
         double dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist >= INNER_RADIUS - 4.0f && count > 0) {
+        if (dist >= DEADZONE_RADIUS && count > 0) {
             double angleRad = Math.atan2(dy, dx);
             double relAngle = angleRad - (-Math.PI / 2.0);
             while (relAngle < 0) relAngle += 2.0 * Math.PI;
@@ -291,7 +316,6 @@ public class TacticalRadialScreen extends Screen {
             selectedIndex = -1;
         }
 
-        // Sonido táctico al cambiar de sector
         if (selectedIndex != lastHoverIndex) {
             if (selectedIndex >= 0 && minecraft != null && options.get(selectedIndex).enabled) {
                 minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 1.6F, 0.25F));
@@ -299,322 +323,179 @@ public class TacticalRadialScreen extends Screen {
             lastHoverIndex = selectedIndex;
         }
 
-        Matrix4f matrix = guiGraphics.pose().last().pose();
+        // 1. Pixel-aligned stone/iron wheel ring behind the tiles
+        drawPixelRing(guiGraphics, cx, cy, nodeRadius - 9, nodeRadius + 9);
 
-        // 4. PASO 1: Renderizado de Geometría Táctica 2D con Blaze3D
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableCull();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder builder = tesselator.getBuilder();
-        builder.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
-
-        // A. Cuñas Donut (Sectores Anulares)
-        double sliceAngle = (2.0 * Math.PI) / count;
-        for (int i = 0; i < count; i++) {
-            RadialOption opt = options.get(i);
-            boolean isSel = (i == selectedIndex);
-
-            double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
-            double startAngle = midAngle - (sliceAngle / 2.0) + (GAP_RADIANS / 2.0);
-            double endAngle = midAngle + (sliceAngle / 2.0) - (GAP_RADIANS / 2.0);
-
-            float rOut = isSel ? (OUTER_RADIUS + 4.0f) : OUTER_RADIUS;
-            float rIn = INNER_RADIUS;
-
-            int colorInner;
-            int colorOuter;
-
-            if (!opt.enabled) {
-                colorInner = 0x550A0E12;
-                colorOuter = 0x5511171E;
-            } else if (isSel) {
-                colorInner = 0xCC112520;
-                colorOuter = (opt.color & 0x00FFFFFF) | 0x88000000;
-            } else {
-                colorInner = 0xAA0B1116;
-                colorOuter = 0xCC0E1820;
-            }
-
-            drawDonutWedge(builder, matrix, cx, cy, rIn, rOut, startAngle, endAngle, colorInner, colorOuter, 16);
-
-            // Borde exterior acentuado
-            int rimColor = !opt.enabled ? 0x33444444 : (isSel ? opt.color : 0x44336655);
-            float rimThickness = isSel ? 2.5f : 1.2f;
-            drawDonutWedge(builder, matrix, cx, cy, rOut - rimThickness, rOut, startAngle, endAngle, rimColor, rimColor, 16);
-
-            // Borde interior fino
-            int inRimColor = isSel ? (opt.color & 0x88FFFFFF) : 0x3322443B;
-            drawDonutWedge(builder, matrix, cx, cy, rIn, rIn + 1.2f, startAngle, endAngle, inRimColor, inRimColor, 16);
-
-            // Sockets tácticos militares centrados para el icono
-            if (!opt.icon.isEmpty()) {
-                float wedgeCx = (float) (cx + Math.cos(midAngle) * MID_RADIUS);
-                float wedgeCy = (float) (cy + Math.sin(midAngle) * MID_RADIUS);
-                drawTacticalSocket(builder, matrix, wedgeCx, wedgeCy - 6.0f, isSel, opt.color, opt.enabled);
-            }
-        }
-
-        // B. Disco Central de Telemetría (Hub Interior)
-        drawFilledCircle(builder, matrix, cx, cy, INNER_RADIUS - 2.0f, 0xDD090F13, 32);
-        drawDonutWedge(builder, matrix, cx, cy, INNER_RADIUS - 3.5f, INNER_RADIUS - 2.0f, 0, Math.PI * 2, 0x66336655, 0x66336655, 32);
-
-        // C. Anillo Exterior de Compás con Marcas de Grados (Ticks)
-        drawCompassRingAndTicks(builder, matrix, cx, cy, COMPASS_RING_RADIUS);
-
-        // D. Retícula / Mira Central Militar
-        drawCenterReticle(builder, matrix, cx, cy, selectedIndex >= 0 ? options.get(selectedIndex).color : 0xFF00FFAA);
-
-        tesselator.end();
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
-
-        // 5. PASO 2: Renderizado de Iconos dentro del Socket Táctico
-        for (int i = 0; i < count; i++) {
-            RadialOption opt = options.get(i);
-            if (opt.icon.isEmpty()) continue;
-
-            boolean isSel = (i == selectedIndex);
-            double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
-
-            float wedgeCx = (float) (cx + Math.cos(midAngle) * MID_RADIUS);
-            float wedgeCy = (float) (cy + Math.sin(midAngle) * MID_RADIUS);
-
-            PoseStack pose = guiGraphics.pose();
-            pose.pushPose();
-            pose.translate(wedgeCx, wedgeCy - 6.0f, 0);
-            if (isSel) {
-                pose.scale(1.15f, 1.15f, 1.0f);
-            }
-            guiGraphics.renderItem(opt.icon, -8, -8);
-            pose.popPose();
-        }
-
-        // 6. PASO 3: Restaurar estado para texto 2D (Stacking Cartesiano sin Colisiones)
-        RenderSystem.disableDepthTest();
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-
-        float availableWidth = (float) (MID_RADIUS * sliceAngle - Math.toRadians(3.5) * MID_RADIUS);
-
-        for (int i = 0; i < count; i++) {
-            RadialOption opt = options.get(i);
-            boolean isSel = (i == selectedIndex);
-            double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
-
-            float wedgeCx = (float) (cx + Math.cos(midAngle) * MID_RADIUS);
-            float wedgeCy = (float) (cy + Math.sin(midAngle) * MID_RADIUS);
-
-            int textColor = !opt.enabled ? 0x66888888 : (isSel ? 0xFFFFFFFF : (opt.color & 0x00FFFFFF | 0xCC000000));
-            int strW = this.font.width(opt.title);
-
-            // Auto-escala dinámica para que títulos largos nunca se salgan de su cuña
-            float textScale = 1.0f;
-            if (strW > availableWidth && availableWidth > 15.0f) {
-                textScale = Math.max(0.70f, availableWidth / (float) strW);
-            }
-
-            if (textScale < 1.0f) {
-                PoseStack pose = guiGraphics.pose();
-                pose.pushPose();
-                pose.translate(wedgeCx, wedgeCy + 7.0f, 0);
-                pose.scale(textScale, textScale, 1.0f);
-                guiGraphics.drawString(this.font, opt.title, (int) (-strW / 2.0f), -4, textColor, false);
-                pose.popPose();
-            } else {
-                guiGraphics.drawString(this.font, opt.title, (int) (wedgeCx - strW / 2.0f), (int) (wedgeCy + 3.0f), textColor, false);
-            }
-        }
-
-        // Telemetría en el Hub Central
+        // 2. Pixel-stepped connector spoke from center to active tile
+        double sliceAngle = (2.0 * Math.PI) / Math.max(1, count);
         if (selectedIndex >= 0 && selectedIndex < count) {
             RadialOption sel = options.get(selectedIndex);
-            int subW = this.font.width(sel.subtitle);
-            int titleW = this.font.width(sel.title);
+            double midAngle = -Math.PI / 2.0 + (selectedIndex * sliceAngle);
+            int targetX = cx + (int) Math.round(Math.cos(midAngle) * nodeRadius);
+            int targetY = cy + (int) Math.round(Math.sin(midAngle) * nodeRadius);
+            drawPixelSpoke(guiGraphics, cx, cy, targetX, targetY, sel.enabled ? sel.color : 0xFF666666);
+        }
 
-            guiGraphics.drawString(this.font, sel.title, (int) (cx - titleW / 2.0f), (int) (cy - 12), sel.color, true);
-            guiGraphics.drawString(this.font, sel.subtitle, (int) (cx - subW / 2.0f), (int) (cy + 2), 0xFFA0B0B8, false);
+        // 3. Minecraft beveled action tiles arranged around the ring
+        for (int i = 0; i < count; i++) {
+            RadialOption opt = options.get(i);
+            boolean isSel = (i == selectedIndex);
+            double midAngle = -Math.PI / 2.0 + (i * sliceAngle);
+            int nodeCx = cx + (int) Math.round(Math.cos(midAngle) * nodeRadius);
+            int nodeCy = cy + (int) Math.round(Math.sin(midAngle) * nodeRadius);
 
-            guiGraphics.hLine((int) (cx - Math.max(titleW, subW) / 2 - 4), (int) (cx + Math.max(titleW, subW) / 2 + 4), (int) (cy + 13), sel.color);
+            int tx = nodeCx - TILE_W / 2;
+            int ty = nodeCy - TILE_H / 2;
+
+            renderActionTile(guiGraphics, tx, ty, opt, isSel);
+        }
+
+        // 4. Classic Minecraft tooltip-style central hub
+        renderCenterHub(guiGraphics, cx, cy, count);
+    }
+
+    private void renderActionTile(GuiGraphics guiGraphics, int tx, int ty, RadialOption opt, boolean isSel) {
+        if (!opt.enabled) {
+            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xCC181A1E, 0xFF282B30, 0xFF101114, 0xFF0A0B0D);
+        } else if (isSel) {
+            int accent = (opt.color & 0x00FFFFFF) | 0xFF000000;
+            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xF0343B46, accent, 0xFF181C22, 0xFF0A0B0D);
         } else {
-            guiGraphics.drawString(this.font, "VG-OS // v2.0-ALPHA", (int) (cx - this.font.width("VG-OS // v2.0-ALPHA") / 2.0f), (int) (cy - 10), 0xFF00EEEE, true);
-            String readyText = Component.translatable("gui.vision_goggles.radial.ready").getString();
-            guiGraphics.drawString(this.font, readyText, (int) (cx - this.font.width(readyText) / 2.0f), (int) (cy + 2), 0xFF668899, false);
+            drawBevelPanel(guiGraphics, tx, ty, TILE_W, TILE_H, 0xE625282E, 0xFF4A505C, 0xFF14161A, 0xFF0A0B0D);
+        }
+
+        // Classic 18x18 recessed Minecraft slot for the item icon
+        int slotX = tx + (TILE_W - 18) / 2;
+        int slotY = ty + 3;
+        drawSlotBox(guiGraphics, slotX, slotY);
+
+        if (!opt.icon.isEmpty()) {
+            guiGraphics.renderItem(opt.icon, slotX + 1, slotY + 1);
+        }
+
+        if (isSel && opt.enabled) {
+            guiGraphics.fill(slotX + 1, slotY + 1, slotX + 17, slotY + 17, 0x33FFFFFF);
+        }
+
+        // Centered shadowed label below the slot
+        int textColor = !opt.enabled ? 0xFF777777 : (isSel ? 0xFFFFFFFF : 0xFFD0D6DE);
+        int strW = this.font.width(opt.title);
+        int maxTextW = TILE_W - 6;
+
+        if (strW > maxTextW) {
+            float scale = Math.max(0.68f, (float) maxTextW / (float) strW);
+            PoseStack pose = guiGraphics.pose();
+            pose.pushPose();
+            pose.translate(tx + TILE_W / 2.0f, ty + 23.5f, 200);
+            pose.scale(scale, scale, 1.0f);
+            guiGraphics.drawString(this.font, opt.title, -strW / 2, 0, textColor, true);
+            pose.popPose();
+        } else {
+            guiGraphics.drawString(this.font, opt.title, tx + (TILE_W - strW) / 2, ty + 23, textColor, true);
         }
     }
 
-    // =========================================================================
-    // UTILIDADES DE RENDERIZADO TÁCTICO PURO BLAZE3D / JOML
-    // =========================================================================
+    private void renderCenterHub(GuiGraphics guiGraphics, int cx, int cy, int count) {
+        String line1;
+        String line2;
+        int color1;
+        int borderColor;
 
-    private static void drawTacticalSocket(BufferBuilder builder, Matrix4f matrix, float x, float y, boolean isSel, int accentColor, boolean enabled) {
-        float half = isSel ? 9.5f : 9.0f;
-        float x1 = x - half;
-        float y1 = y - half;
-        float x2 = x + half;
-        float y2 = y + half;
-
-        // Placa de cristal blindado / backplate
-        int backColor = !enabled ? 0x66080C10 : (isSel ? 0xDD0D1E24 : 0xAA070E14);
-        drawRect(builder, matrix, x1, y1, x2, y2, backColor);
-
-        if (isSel && enabled) {
-            int glowWash = (accentColor & 0x00FFFFFF) | 0x25000000;
-            drawRect(builder, matrix, x1 + 1, y1 + 1, x2 - 1, y2 - 1, glowWash);
+        if (selectedIndex >= 0 && selectedIndex < count) {
+            RadialOption sel = options.get(selectedIndex);
+            line1 = sel.title;
+            line2 = sel.subtitle;
+            color1 = sel.enabled ? sel.color : 0xFF888888;
+            borderColor = sel.enabled ? ((sel.color & 0x00FFFFFF) | 0xCC000000) : 0xFF555555;
+        } else {
+            line1 = this.title.getString();
+            line2 = Component.translatable("gui.vision_goggles.radial.ready").getString();
+            color1 = 0xFFFFFFFF;
+            borderColor = 0xFF5000FF;
         }
 
-        // Bisel perimetral
-        int frameColor = !enabled ? 0x22444444 : (isSel ? (accentColor & 0x00FFFFFF | 0x77000000) : 0x33224438);
-        drawRect(builder, matrix, x1, y1, x2, y1 + 1.0f, frameColor);
-        drawRect(builder, matrix, x1, y2 - 1.0f, x2, y2, frameColor);
-        drawRect(builder, matrix, x1, y1 + 1.0f, x1 + 1.0f, y2 - 1.0f, frameColor);
-        drawRect(builder, matrix, x2 - 1.0f, y1 + 1.0f, x2, y2 - 1.0f, frameColor);
+        int w1 = this.font.width(line1);
+        int w2 = this.font.width(line2);
+        int boxW = Math.max(76, Math.max(w1, w2) + 14);
+        int boxH = 28;
+        int bx = cx - boxW / 2;
+        int by = cy - boxH / 2;
 
-        // Brackets tácticos de esquina estilo HUD militar
-        int bracketColor = !enabled ? 0x44555555 : (isSel ? accentColor : 0x8800EEEE);
-        float arm = isSel ? 3.5f : 3.0f;
-        float th = 1.0f;
+        // Classic Minecraft tooltip box (dark purple-black interior + 1px inner frame)
+        guiGraphics.fill(bx + 1, by, bx + boxW - 1, by + boxH, 0xF0100010);
+        guiGraphics.fill(bx, by + 1, bx + 1, by + boxH - 1, 0xF0100010);
+        guiGraphics.fill(bx + boxW - 1, by + 1, bx + boxW, by + boxH - 1, 0xF0100010);
 
-        // Esquina superior izquierda
-        drawRect(builder, matrix, x1, y1, x1 + arm, y1 + th, bracketColor);
-        drawRect(builder, matrix, x1, y1 + th, x1 + th, y1 + arm, bracketColor);
+        // 1px inner border
+        guiGraphics.fill(bx + 1, by + 1, bx + boxW - 1, by + 2, borderColor);
+        guiGraphics.fill(bx + 1, by + boxH - 2, bx + boxW - 1, by + boxH - 1, borderColor);
+        guiGraphics.fill(bx + 1, by + 2, bx + 2, by + boxH - 2, borderColor);
+        guiGraphics.fill(bx + boxW - 2, by + 2, bx + boxW - 1, by + boxH - 2, borderColor);
 
-        // Esquina superior derecha
-        drawRect(builder, matrix, x2 - arm, y1, x2, y1 + th, bracketColor);
-        drawRect(builder, matrix, x2 - th, y1 + th, x2, y1 + arm, bracketColor);
-
-        // Esquina inferior izquierda
-        drawRect(builder, matrix, x1, y2 - th, x1 + arm, y2, bracketColor);
-        drawRect(builder, matrix, x1, y2 - arm, x1 + th, y2 - th, bracketColor);
-
-        // Esquina inferior derecha
-        drawRect(builder, matrix, x2 - arm, y2 - th, x2, y2, bracketColor);
-        drawRect(builder, matrix, x2 - th, y2 - arm, x2, y2 - th, bracketColor);
+        guiGraphics.drawString(this.font, line1, cx - w1 / 2, by + 5, color1, true);
+        guiGraphics.drawString(this.font, line2, cx - w2 / 2, by + 16, 0xFFAAAAAA, true);
     }
 
-    private static void drawDonutWedge(BufferBuilder builder, Matrix4f matrix, float cx, float cy,
-                                       float inR, float outR, double startAngle, double endAngle,
-                                       int inColor, int outColor, int segments) {
-        int segs = Math.max(4, segments);
-        double span = endAngle - startAngle;
-        double step = span / segs;
+    /**
+     * Draws a crisp pixel-rasterized ring using integer scanlines so edges match
+     * Minecraft's native pixel grid without smooth vector anti-aliasing.
+     */
+    private static void drawPixelRing(GuiGraphics guiGraphics, int cx, int cy, int innerR, int outerR) {
+        int rOutSq = outerR * outerR;
+        int rInSq = innerR * innerR;
+        for (int dy = -outerR; dy <= outerR; dy++) {
+            int outerX = (int) Math.round(Math.sqrt(rOutSq - dy * dy));
+            if (outerX <= 0) continue;
 
-        for (int s = 0; s < segs; s++) {
-            double a1 = startAngle + s * step;
-            double a2 = startAngle + (s + 1) * step;
+            int innerX = (Math.abs(dy) < innerR) ? (int) Math.round(Math.sqrt(rInSq - dy * dy)) : 0;
+            int py = cy + dy;
 
-            float cos1 = (float) Math.cos(a1);
-            float sin1 = (float) Math.sin(a1);
-            float cos2 = (float) Math.cos(a2);
-            float sin2 = (float) Math.sin(a2);
+            if (innerX <= 0) {
+                guiGraphics.fill(cx - outerX, py, cx + outerX, py + 1, 0x99181B20);
+                guiGraphics.fill(cx - outerX, py, cx - outerX + 1, py + 1, 0xCC0B0D10);
+                guiGraphics.fill(cx + outerX - 1, py, cx + outerX, py + 1, 0xCC0B0D10);
+            } else {
+                // Left span
+                guiGraphics.fill(cx - outerX, py, cx - innerX, py + 1, 0x99181B20);
+                guiGraphics.fill(cx - outerX, py, cx - outerX + 1, py + 1, 0xCC0B0D10);
+                guiGraphics.fill(cx - innerX - 1, py, cx - innerX, py + 1, 0xCC0B0D10);
 
-            float inX1 = cx + inR * cos1;
-            float inY1 = cy + inR * sin1;
-            float outX1 = cx + outR * cos1;
-            float outY1 = cy + outR * sin1;
-
-            float inX2 = cx + inR * cos2;
-            float inY2 = cy + inR * sin2;
-            float outX2 = cx + outR * cos2;
-            float outY2 = cy + outR * sin2;
-
-            // Triángulo 1
-            addV(builder, matrix, inX1, inY1, 0, inColor);
-            addV(builder, matrix, outX1, outY1, 0, outColor);
-            addV(builder, matrix, outX2, outY2, 0, outColor);
-
-            // Triángulo 2
-            addV(builder, matrix, inX1, inY1, 0, inColor);
-            addV(builder, matrix, outX2, outY2, 0, outColor);
-            addV(builder, matrix, inX2, inY2, 0, inColor);
+                // Right span
+                guiGraphics.fill(cx + innerX, py, cx + outerX, py + 1, 0x99181B20);
+                guiGraphics.fill(cx + innerX, py, cx + innerX + 1, py + 1, 0xCC0B0D10);
+                guiGraphics.fill(cx + outerX - 1, py, cx + outerX, py + 1, 0xCC0B0D10);
+            }
         }
     }
 
-    private static void drawFilledCircle(BufferBuilder builder, Matrix4f matrix, float cx, float cy, float radius, int color, int segments) {
-        int segs = Math.max(8, segments);
-        double step = (Math.PI * 2) / segs;
-        for (int i = 0; i < segs; i++) {
-            double a1 = i * step;
-            double a2 = (i + 1) * step;
-
-            float x1 = cx + (float) Math.cos(a1) * radius;
-            float y1 = cy + (float) Math.sin(a1) * radius;
-            float x2 = cx + (float) Math.cos(a2) * radius;
-            float y2 = cy + (float) Math.sin(a2) * radius;
-
-            addV(builder, matrix, cx, cy, 0, color);
-            addV(builder, matrix, x1, y1, 0, color);
-            addV(builder, matrix, x2, y2, 0, color);
+    /**
+     * Draws a 2px-thick pixel-stepped spoke from center to the hovered node.
+     */
+    private static void drawPixelSpoke(GuiGraphics guiGraphics, int x0, int y0, int x1, int y1, int color) {
+        int steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+        if (steps <= 0) return;
+        int drawColor = (color & 0x00FFFFFF) | 0xCC000000;
+        for (int i = 10; i <= steps; i += 2) {
+            int px = x0 + (x1 - x0) * i / steps;
+            int py = y0 + (y1 - y0) * i / steps;
+            guiGraphics.fill(px - 1, py - 1, px + 1, py + 1, drawColor);
         }
     }
 
-    private static void drawCompassRingAndTicks(BufferBuilder builder, Matrix4f matrix, float cx, float cy, float radius) {
-        drawDonutWedge(builder, matrix, cx, cy, radius, radius + 1.0f, 0, Math.PI * 2, 0x4400EEEE, 0x4400EEEE, 48);
-
-        for (int deg = 0; deg < 360; deg += 10) {
-            double rad = Math.toRadians(deg);
-            float cos = (float) Math.cos(rad);
-            float sin = (float) Math.sin(rad);
-
-            boolean isMajor = (deg % 30 == 0);
-            boolean isCardinal = (deg % 90 == 0);
-
-            float tickLen = isCardinal ? 8.0f : (isMajor ? 5.0f : 2.5f);
-            int tickColor = isCardinal ? 0xFF00EEEE : (isMajor ? 0xAA00EEEE : 0x4400EEEE);
-            float tickThickness = isCardinal ? 1.5f : 1.0f;
-
-            float r1 = radius + 1.0f;
-            float r2 = r1 + tickLen;
-
-            float perpX = -sin * (tickThickness / 2.0f);
-            float perpY = cos * (tickThickness / 2.0f);
-
-            float x1 = cx + cos * r1;
-            float y1 = cy + sin * r1;
-            float x2 = cx + cos * r2;
-            float y2 = cy + sin * r2;
-
-            addV(builder, matrix, x1 + perpX, y1 + perpY, 0, tickColor);
-            addV(builder, matrix, x2 + perpX, y2 + perpY, 0, tickColor);
-            addV(builder, matrix, x2 - perpX, y2 - perpY, 0, tickColor);
-
-            addV(builder, matrix, x1 + perpX, y1 + perpY, 0, tickColor);
-            addV(builder, matrix, x2 - perpX, y2 - perpY, 0, tickColor);
-            addV(builder, matrix, x1 - perpX, y1 - perpY, 0, tickColor);
-        }
+    private static void drawSlotBox(GuiGraphics guiGraphics, int x, int y) {
+        guiGraphics.fill(x, y, x + 18, y + 18, 0xFF1D2025);
+        guiGraphics.fill(x, y, x + 17, y + 1, 0xFF101215);
+        guiGraphics.fill(x, y, x + 1, y + 17, 0xFF101215);
+        guiGraphics.fill(x + 1, y + 17, x + 18, y + 18, 0xFF4A505A);
+        guiGraphics.fill(x + 17, y + 1, x + 18, y + 18, 0xFF4A505A);
     }
 
-    private static void drawCenterReticle(BufferBuilder builder, Matrix4f matrix, float cx, float cy, int accentColor) {
-        float armStart = 3.5f;
-        float armEnd = 8.5f;
-        float thickness = 1.0f;
-        int reticleColor = (accentColor & 0x00FFFFFF) | 0xAA000000;
-
-        drawRect(builder, matrix, cx - armEnd, cy - thickness / 2.0f, cx - armStart, cy + thickness / 2.0f, reticleColor);
-        drawRect(builder, matrix, cx + armStart, cy - thickness / 2.0f, cx + armEnd, cy + thickness / 2.0f, reticleColor);
-        drawRect(builder, matrix, cx - thickness / 2.0f, cy - armEnd, cx + thickness / 2.0f, cy - armStart, reticleColor);
-        drawRect(builder, matrix, cx - thickness / 2.0f, cy + armStart, cx + thickness / 2.0f, cy + armEnd, reticleColor);
-
-        drawRect(builder, matrix, cx - 0.75f, cy - 0.75f, cx + 0.75f, cy + 0.75f, accentColor);
-    }
-
-    private static void drawRect(BufferBuilder builder, Matrix4f matrix, float x1, float y1, float x2, float y2, int color) {
-        addV(builder, matrix, x1, y1, 0, color);
-        addV(builder, matrix, x1, y2, 0, color);
-        addV(builder, matrix, x2, y2, 0, color);
-
-        addV(builder, matrix, x1, y1, 0, color);
-        addV(builder, matrix, x2, y2, 0, color);
-        addV(builder, matrix, x2, y1, 0, color);
-    }
-
-    private static void addV(VertexConsumer builder, Matrix4f matrix, float x, float y, float z, int argb) {
-        int a = (argb >> 24) & 0xFF;
-        int r = (argb >> 16) & 0xFF;
-        int g = (argb >> 8) & 0xFF;
-        int b = argb & 0xFF;
-        builder.vertex(matrix, x, y, z).color(r, g, b, a).endVertex();
+    private static void drawBevelPanel(GuiGraphics guiGraphics, int x, int y, int w, int h, int body, int light, int dark, int outline) {
+        guiGraphics.fill(x, y, x + w, y + h, outline);
+        guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, body);
+        guiGraphics.fill(x + 1, y + 1, x + w - 2, y + 2, light);
+        guiGraphics.fill(x + 1, y + 1, x + 2, y + h - 2, light);
+        guiGraphics.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, dark);
+        guiGraphics.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, dark);
     }
 }
