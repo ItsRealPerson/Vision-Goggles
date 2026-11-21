@@ -32,18 +32,24 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class ModificationStationBlockEntity extends BlockEntity implements WorldlyContainer, dev.architectury.registry.menu.ExtendedMenuProvider {
-    public static final int ASSEMBLY_DURATION_TICKS = 24;
+    public static final int ASSEMBLY_DURATION_TICKS = 20;
 
     private final NonNullList<ItemStack> items = NonNullList.withSize(3, ItemStack.EMPTY);
+    private String activeBlueprintId = "night_vision_goggles";
+    private final List<ItemStack> stagedItems = new ArrayList<>();
     private int assemblingTicks = 0;
     private ItemStack assemblingResult = ItemStack.EMPTY;
     @Nullable
@@ -101,21 +107,146 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
         return this.assemblingPlayerUuid;
     }
 
-    public void startAssembly(ServerPlayer player, StationBlueprints.Blueprint blueprint) {
-        if (this.level == null || this.level.isClientSide || player == null || blueprint == null) return;
-        if (isAssembling()) return;
+    public String getActiveBlueprintId() {
+        return this.activeBlueprintId;
+    }
 
-        ItemStack built = StationBlueprints.consumeAndBuildResult(player, this, blueprint);
+    public List<ItemStack> getStagedItems() {
+        return Collections.unmodifiableList(this.stagedItems);
+    }
+
+    public static boolean isCreativeStaged(ItemStack stack) {
+        return !stack.isEmpty() && stack.hasTag() && stack.getTag().getBoolean("vg_creative_staged");
+    }
+
+    public void clearStagedItems() {
+        this.stagedItems.clear();
+        this.stagedOwnerUuid = null;
+    }
+
+    private UUID stagedOwnerUuid = null;
+
+    public void selectBlueprint(ServerPlayer player, String blueprintId) {
+        if (this.level == null || this.level.isClientSide || player == null || isAssembling()) return;
+        StationBlueprints.Blueprint bp = StationBlueprints.byId(blueprintId);
+        if (bp == null) return;
+        if (!bp.id().equals(this.activeBlueprintId)) {
+            if (!this.stagedItems.isEmpty() && this.stagedOwnerUuid != null && !this.stagedOwnerUuid.equals(player.getUUID())) {
+                return;
+            }
+            refundStagedItems(player);
+            this.activeBlueprintId = bp.id();
+            super.setChanged();
+            syncToClient();
+        }
+    }
+
+    public void addIngredient(ServerPlayer player, int reqIndex) {
+        if (this.level == null || this.level.isClientSide || player == null || isAssembling()) return;
+        StationBlueprints.Blueprint bp = StationBlueprints.byId(this.activeBlueprintId);
+        if (bp == null || reqIndex < 0 || reqIndex >= bp.ingredients().size()) return;
+
+        StationBlueprints.IngredientReq req = bp.ingredients().get(reqIndex);
+        Item target = req.item().get();
+        int alreadyStaged = StationBlueprints.countInList(this.stagedItems, target);
+        if (alreadyStaged >= req.count()) return;
+
+        ItemStack placed = ItemStack.EMPTY;
+        if (player.isCreative()) {
+            placed = new ItemStack(target, 1);
+            placed.getOrCreateTag().putBoolean("vg_creative_staged", true);
+        } else {
+            // Take 1 matching item from station slots 0..1 or player inventory
+            for (int i = 0; i < 2; i++) {
+                ItemStack s = this.items.get(i);
+                if (!s.isEmpty() && s.is(target)) {
+                    placed = s.split(1);
+                    break;
+                }
+            }
+            if (placed.isEmpty()) {
+                Inventory inv = player.getInventory();
+                for (int i = 0; i < inv.getContainerSize(); i++) {
+                    ItemStack s = inv.getItem(i);
+                    if (!s.isEmpty() && s.is(target)) {
+                        placed = s.split(1);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (placed.isEmpty()) return;
+
+        if (this.stagedItems.isEmpty()) {
+            this.stagedOwnerUuid = player.getUUID();
+        }
+        this.stagedItems.add(placed);
+        this.level.playSound(null, this.worldPosition, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.75F, 1.15F);
+        player.inventoryMenu.broadcastChanges();
+        this.setChanged();
+    }
+
+    public void removeIngredient(ServerPlayer player, int reqIndex) {
+        if (this.level == null || this.level.isClientSide || player == null || isAssembling()) return;
+        StationBlueprints.Blueprint bp = StationBlueprints.byId(this.activeBlueprintId);
+        if (bp == null || reqIndex < 0 || reqIndex >= bp.ingredients().size()) return;
+
+        Item target = bp.ingredients().get(reqIndex).item().get();
+        for (int i = this.stagedItems.size() - 1; i >= 0; i--) {
+            ItemStack s = this.stagedItems.get(i);
+            if (!s.isEmpty() && s.is(target)) {
+                ItemStack removed = this.stagedItems.remove(i);
+                if (this.stagedItems.isEmpty()) {
+                    this.stagedOwnerUuid = null;
+                }
+                if (!isCreativeStaged(removed)) {
+                    player.getInventory().placeItemBackInInventory(removed);
+                    player.inventoryMenu.broadcastChanges();
+                }
+                this.level.playSound(null, this.worldPosition, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.75F, 1.05F);
+                super.setChanged();
+                syncToClient();
+                return;
+            }
+        }
+    }
+
+    public void finalizeAssembly(ServerPlayer player) {
+        if (this.level == null || this.level.isClientSide || player == null || isAssembling()) return;
+        StationBlueprints.Blueprint bp = StationBlueprints.byId(this.activeBlueprintId);
+        if (bp == null || !StationBlueprints.areAllStaged(this.stagedItems, bp)) return;
+
+        ItemStack built = StationBlueprints.buildResultFromStaged(this.stagedItems, bp);
         if (built.isEmpty()) return;
+        if (built.hasTag() && built.getTag().contains("vg_creative_staged")) {
+            built.getTag().remove("vg_creative_staged");
+            if (built.getTag().isEmpty()) {
+                built.setTag(null);
+            }
+        }
 
+        this.stagedItems.clear();
+        this.stagedOwnerUuid = null;
         this.assemblingResult = built;
         this.assemblingTicks = ASSEMBLY_DURATION_TICKS;
         this.assemblingPlayerUuid = player.getUUID();
 
         this.level.playSound(null, this.worldPosition, SoundEvents.ARMOR_EQUIP_IRON, SoundSource.BLOCKS, 0.80F, 1.15F);
-        player.inventoryMenu.broadcastChanges();
         super.setChanged();
         syncToClient();
+    }
+
+    private void refundStagedItems(ServerPlayer player) {
+        if (this.stagedItems.isEmpty()) return;
+        for (ItemStack s : this.stagedItems) {
+            if (!s.isEmpty() && !isCreativeStaged(s)) {
+                player.getInventory().placeItemBackInInventory(s);
+            }
+        }
+        this.stagedItems.clear();
+        this.stagedOwnerUuid = null;
+        player.inventoryMenu.broadcastChanges();
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, ModificationStationBlockEntity station) {
@@ -123,8 +254,8 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
 
         station.assemblingTicks--;
 
-        if (station.assemblingTicks == 16 || station.assemblingTicks == 8) {
-            float pitch = (station.assemblingTicks == 16) ? 1.35F : 1.55F;
+        if (station.assemblingTicks == 14 || station.assemblingTicks == 7) {
+            float pitch = (station.assemblingTicks == 14) ? 1.35F : 1.55F;
             level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.35F, pitch);
             if (level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + 0.5, pos.getY() + 0.98, pos.getZ() + 0.5, 4, 0.14, 0.04, 0.14, 0.02);
@@ -402,7 +533,21 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
+        this.items.clear();
         ContainerHelper.loadAllItems(tag, items);
+        if (tag.contains("ActiveBlueprint", Tag.TAG_STRING)) {
+            this.activeBlueprintId = tag.getString("ActiveBlueprint");
+        }
+        this.stagedItems.clear();
+        if (tag.contains("StagedItems", Tag.TAG_LIST)) {
+            ListTag list = tag.getList("StagedItems", Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                ItemStack s = ItemStack.of(list.getCompound(i));
+                if (!s.isEmpty()) {
+                    this.stagedItems.add(s);
+                }
+            }
+        }
         this.assemblingTicks = tag.getInt("AssemblingTicks");
         if (tag.contains("AssemblingResult", Tag.TAG_COMPOUND)) {
             this.assemblingResult = ItemStack.of(tag.getCompound("AssemblingResult"));
@@ -420,6 +565,14 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         ContainerHelper.saveAllItems(tag, items);
+        tag.putString("ActiveBlueprint", this.activeBlueprintId != null ? this.activeBlueprintId : "");
+        ListTag list = new ListTag();
+        for (ItemStack s : this.stagedItems) {
+            if (!s.isEmpty()) {
+                list.add(s.save(new CompoundTag()));
+            }
+        }
+        tag.put("StagedItems", list);
         tag.putInt("AssemblingTicks", this.assemblingTicks);
         if (!this.assemblingResult.isEmpty()) {
             tag.put("AssemblingResult", this.assemblingResult.save(new CompoundTag()));

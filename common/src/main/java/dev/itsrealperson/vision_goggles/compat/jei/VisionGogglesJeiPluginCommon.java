@@ -48,10 +48,10 @@ public class VisionGogglesJeiPluginCommon {
     }
 
     public static void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        // Registers click area over progress arrow in ModificationStationScreen Modify tab (x=110, y=40, w=16, h=14)
+        // Registers click area over progress arrow in ModificationStationScreen Modify tab (x=88, y=43, w=16, h=14)
         registration.addRecipeClickArea(
             ModificationStationScreen.class,
-            110, 40, 16, 14,
+            88, 43, 16, 14,
             MODIFICATION_TYPE
         );
     }
