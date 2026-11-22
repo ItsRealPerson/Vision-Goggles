@@ -66,3 +66,4 @@ Antes de escribir código, determina el tipo de proyecto y versión leyendo ÚNI
   - Ejecutar en terminal: `agy --model gemini-4-argon -p "Analiza [error/archivos] respetando AGENTS.md y escribe la solución técnica exacta en docs/planes/solucion_argon.md"` (o usar `invoke_subagent` si la CLI no estuviera en el PATH).
   - Leer el archivo generado en disco, aplicar la solución en el código y validar con `compileJava` de inmediato sin detener el flujo ni pedir intervención al usuario.
 
+- **Scripts E2E (scripts/e2e_tests)**: usan imports relativos; ejecutar como modulo desde la raiz (python -m scripts.e2e_tests.tier1_unit), no por ruta.

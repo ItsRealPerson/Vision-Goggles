@@ -15,7 +15,6 @@ import dev.itsrealperson.vision_goggles.client.hud.GogglesStatusModule;
 
 public class ModClient {
     public static void init() {
-        EntityModelLayerRegistry.register(VisionGoggleModel.LAYER_LOCATION, VisionGoggleModel::createBodyLayer);
         BlockEntityRendererRegistry.register(ModBlockEntities.MODIFICATION_STATION_BE.get(), ModificationStationRenderer::new);
         MenuRegistry.registerScreenFactory(ModMenus.MODIFICATION_STATION_MENU.get(), ModificationStationScreen::new);
         ModKeyMappings.init();

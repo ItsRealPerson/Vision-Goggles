@@ -6,12 +6,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
-import dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensGeoRenderer;
-import dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
-import dev.itsrealperson.vision_goggles.util.VisionMode;
+import dev.itsrealperson.vision_goggles.client.renderer.TriLensManualRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.PlayerModel;
@@ -36,28 +34,8 @@ import java.util.List;
  * during the flip transition driven by {@link GogglesFlipAnimator}.
  */
 public class FirstPersonVisorRenderer {
-    private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
-    private static final ResourceLocation NVG_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_glow.png");
-
-    private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
-    private static final ResourceLocation THERMAL_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_glow.png");
-
-    private static final ResourceLocation HYDRO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_vision.png");
-    private static final ResourceLocation HYDRO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_glow.png");
-
-    private static final ResourceLocation BIO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_vision.png");
-    private static final ResourceLocation BIO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_glow.png");
-
-    private static FirstPersonVisorModel model;
     private static PlayerModel<AbstractClientPlayer> wideArmModel;
     private static PlayerModel<AbstractClientPlayer> slimArmModel;
-
-    private static FirstPersonVisorModel getModel() {
-        if (model == null) {
-            model = new FirstPersonVisorModel(FirstPersonVisorModel.createBodyLayer().bakeRoot());
-        }
-        return model;
-    }
 
     private static PlayerModel<AbstractClientPlayer> getArmModel(boolean slim) {
         if (slim) {
@@ -85,47 +63,29 @@ public class FirstPersonVisorRenderer {
 
         ItemStack stack = PlatformMethods.getEquippedHelmet(mc.player);
         boolean hasRealGoggles = !stack.isEmpty() && stack.getItem() instanceof VisionGogglesItem;
-        boolean realTransitioning = hasRealGoggles && GogglesFlipAnimator.isLocalTransitioning();
-        boolean protoTransitioning = !hasRealGoggles
-                && mc.screen == null
-                && ProtoTriLensPreviewState.isHeadPreviewEnabled()
-                && ProtoTriLensPreviewState.isInGameFlipTransitioning();
-        if (!realTransitioning && !protoTransitioning) return;
+        if (!hasRealGoggles || !GogglesFlipAnimator.isLocalTransitioning()) return;
 
-        VisionGogglesItem goggles = realTransitioning ? (VisionGogglesItem) stack.getItem() : null;
+        VisionGogglesItem goggles = (VisionGogglesItem) stack.getItem();
 
-        float rawT = realTransitioning
-                ? Mth.clamp(GogglesFlipAnimator.peekLocalLinearProgress(), 0.0f, 1.0f)
-                : Mth.clamp(ProtoTriLensPreviewState.peekInGameLinearProgress(), 0.0f, 1.0f);
-        float visorProgress = realTransitioning
-                ? Mth.clamp(GogglesFlipAnimator.peekLocalProgress(), 0.0f, 1.0f)
-                : Mth.clamp(ProtoTriLensPreviewState.peekInGameVisorDownProgress(), 0.0f, 1.0f);
+        float rawT = Mth.clamp(GogglesFlipAnimator.peekLocalLinearProgress(), 0.0f, 1.0f);
+        float visorProgress = Mth.clamp(GogglesFlipAnimator.peekLocalProgress(), 0.0f, 1.0f);
         int width = gui.guiWidth();
         int height = gui.guiHeight();
 
-        float reachEnd = realTransitioning
-                ? GogglesFlipAnimator.getReachPhaseEnd()
-                : ProtoTriLensPreviewState.getInGameReachPhaseEnd();
-        float visorEnd = realTransitioning
-                ? GogglesFlipAnimator.getVisorPhaseEnd()
-                : ProtoTriLensPreviewState.getInGameVisorPhaseEnd();
-        float handoffT = realTransitioning
-                ? GogglesFlipAnimator.getOpticsHandoffThreshold()
-                : ProtoTriLensPreviewState.getInGameOpticsHandoffThreshold();
+        float reachEnd = GogglesFlipAnimator.getReachPhaseEnd();
+        float visorEnd = GogglesFlipAnimator.getVisorPhaseEnd();
+        float handoffT = GogglesFlipAnimator.getOpticsHandoffThreshold();
 
         float browPresence = smoothstep01(rawT / reachEnd);
         float ez = smoothstep01(visorProgress);
         float eyeZoom = 0.40f * ez + 0.60f * (visorProgress * ez);
-        float scale = height * Mth.lerp(eyeZoom, 1.05f, 4.85f);
+        float scale = height * Mth.lerp(eyeZoom, 0.95f, 2.0f);
         float yOffset = height * (Mth.lerp(browPresence, -0.70f, -0.46f) + 0.38f * ez);
         float zArc = (float) Math.sin(visorProgress * Math.PI) * 35.0f;
 
         float sealAlpha = (rawT <= handoffT)
                 ? smoothstep01((rawT - 0.72f) / (handoffT - 0.72f))
                 : 1.0f - smoothstep01((rawT - handoffT) / (1.0f - handoffT));
-        if (protoTransitioning) {
-            sealAlpha *= 0.48f;
-        }
 
         float reachIn = smoothstep01(rawT / reachEnd);
         float retract = smoothstep01((rawT - visorEnd) / 0.14f);
@@ -146,39 +106,17 @@ public class FirstPersonVisorRenderer {
 
             poseStack.pushPose();
             poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 1800.0f + zArc);
-            poseStack.scale(scale, scale, scale);
-            // Slight tactical 3D angle so the dual-tube underside and side rim read clearly
-            poseStack.mulPose(Axis.YP.rotationDegrees(6.0f * sideSign * (1.0f - visorProgress * 0.5f)));
-            poseStack.mulPose(Axis.XP.rotationDegrees(14.0f));
+            // Tactical 3/4 front view: tilt in screen space before the model flip
+            poseStack.mulPose(Axis.YP.rotationDegrees(14.0f * sideSign * (1.0f - visorProgress * 0.6f)));
+            poseStack.mulPose(Axis.XP.rotationDegrees(10.0f));
+            // Geo model is Y-up and faces -Z; GUI is Y-down with viewer at +Z: rotate 180deg about X so the front faces the viewer
+            poseStack.scale(scale, -scale, -scale);
+            // Center visor_pivot on the origin
+            poseStack.translate(0.0f, -TriLensManualRenderer.PIVOT_Y_PX / 16.0f, -TriLensManualRenderer.PIVOT_Z_PX / 16.0f);
 
             float glowIntensity = smoothstep01((visorProgress - 0.60f) / 0.28f);
-            if (realTransitioning) {
-                VisionMode mode = resolveMode(stack, goggles);
-                ResourceLocation baseTex = resolveBaseTexture(mode);
-                ResourceLocation glowTex = resolveGlowTexture(mode);
-
-                FirstPersonVisorModel visorModel = getModel();
-                visorModel.visorPivot.xRot = Mth.lerp(visorProgress, -1.15f, 0.08f);
-                visorModel.visorPivot.yRot = 0.0f;
-                visorModel.visorPivot.zRot = 0.0f;
-
-                VertexConsumer baseConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(baseTex));
-                visorModel.renderToBuffer(poseStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
-
-                if (glowIntensity > 0.01f) {
-                    VertexConsumer glowConsumer = bufferSource.getBuffer(RenderType.eyes(glowTex));
-                    visorModel.renderToBuffer(poseStack, glowConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, glowIntensity, glowIntensity, glowIntensity, 1.0f);
-                }
-            } else {
-                ProtoTriLensGeoRenderer.renderFirstPersonVisor(
-                        poseStack,
-                        bufferSource,
-                        ProtoTriLensPreviewState.getSelectedVariant(),
-                        packedLight,
-                        visorProgress,
-                        glowIntensity
-                );
-            }
+            TriLensManualRenderer.render(stack, goggles, poseStack, bufferSource, visorProgress, partialTicks,
+                    packedLight, true, glowIntensity);
             poseStack.popPose();
 
             bufferSource.endBatch();
@@ -206,7 +144,7 @@ public class FirstPersonVisorRenderer {
             RenderSystem.depthMask(true);
             Lighting.setupFor3DItems();
 
-            renderPlayerArm(mc.player, poseStack, bufferSource, width, height, yOffset, zArc, ez, visorProgress, offscreen, isRightArm, sideSign, packedLight);
+            renderPlayerArm(mc.player, poseStack, bufferSource, width, height, scale, yOffset, zArc, ez, visorProgress, offscreen, isRightArm, sideSign, packedLight);
 
             bufferSource.endBatch();
             Lighting.setupForFlatItems();
@@ -220,6 +158,7 @@ public class FirstPersonVisorRenderer {
             MultiBufferSource bufferSource,
             int width,
             int height,
+            float visorScale,
             float yOffset,
             float zArc,
             float ez,
@@ -243,7 +182,7 @@ public class FirstPersonVisorRenderer {
         sleeve.visible = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
 
         // Anchor the fist directly onto the outer optical tube / side rim of the 3D goggles
-        float gripScale = height * Mth.lerp(ez, 1.05f, 2.55f);
+        float gripScale = visorScale;
         float visorEdgeX = width * 0.5f + sideSign * (gripScale * 0.17f);
         float visorEdgeY = height * 0.5f + yOffset + gripScale * 0.03f;
         float visorEdgeZ = 7200.0f + zArc;
@@ -284,22 +223,5 @@ public class FirstPersonVisorRenderer {
         float c = Mth.clamp(t, 0.0f, 1.0f);
         return c * c * (3.0f - 2.0f * c);
     }
-
-    private static VisionMode resolveMode(ItemStack stack, VisionGogglesItem goggles) {
-        return VisionGogglesItem.getActiveVisionMode(stack);
-    }
-
-    private static ResourceLocation resolveBaseTexture(VisionMode mode) {
-        if (mode == VisionMode.THERMAL) return THERMAL_TEXTURE;
-        if (mode == VisionMode.HYDRO) return HYDRO_TEXTURE;
-        if (mode == VisionMode.BIOMETRIC) return BIO_TEXTURE;
-        return NVG_TEXTURE;
-    }
-
-    private static ResourceLocation resolveGlowTexture(VisionMode mode) {
-        if (mode == VisionMode.THERMAL) return THERMAL_GLOW;
-        if (mode == VisionMode.HYDRO) return HYDRO_GLOW;
-        if (mode == VisionMode.BIOMETRIC) return BIO_GLOW;
-        return NVG_GLOW;
-    }
 }
+

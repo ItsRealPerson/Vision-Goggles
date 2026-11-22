@@ -24,20 +24,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>> extends RenderLayer<T, M> {
-    private VisionGoggleModel<T> model;
-
-    private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
-    private static final ResourceLocation NVG_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_glow.png");
-
-    private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
-    private static final ResourceLocation THERMAL_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_glow.png");
-
-    private static final ResourceLocation HYDRO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_vision.png");
-    private static final ResourceLocation HYDRO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_glow.png");
-
-    private static final ResourceLocation BIO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_vision.png");
-    private static final ResourceLocation BIO_GLOW = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_glow.png");
-
     public GogglesRenderLayer(RenderLayerParent<T, M> parent) {
         super(parent);
     }
@@ -70,33 +56,18 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
             matrixStack.popPose();
         }
 
-        // 2. Render Goggles on head (real VisionGogglesItem always takes priority over prototype preview)
+        // 2. Render Goggles on head
         ItemStack stack = PlatformMethods.getEquippedHelmet(player);
         boolean hasRealGoggles = !stack.isEmpty() && stack.getItem() instanceof VisionGogglesItem;
-        if (!hasRealGoggles
-                && player == Minecraft.getInstance().player
-                && dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState.isHeadPreviewEnabled()) {
-            dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensGeoRenderer.renderOnPlayerHead(
-                    matrixStack, buffer, packedLight, this.getParentModel()
-            );
-            return;
-        }
-
         if (!hasRealGoggles) return;
-
-        if (this.model == null) {
-            this.model = new VisionGoggleModel<>(Minecraft.getInstance().getEntityModels().bakeLayer(VisionGoggleModel.LAYER_LOCATION));
-        }
 
         matrixStack.pushPose();
 
         if (this.getParentModel() instanceof HumanoidModel<?> baseModel) {
             baseModel.head.translateAndRotate(matrixStack);
         }
-
-        this.model.head_bone.xRot = 0;
-        this.model.head_bone.yRot = 0;
-        this.model.head_bone.zRot = 0;
+        matrixStack.scale(-1.0f, -1.0f, 1.0f);
+        matrixStack.translate(0.0f, -24.0f / 16.0f, 0.0f);
 
         boolean isActive = false;
         if (stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE)) {
@@ -106,44 +77,14 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
             }
         }
 
-        // Dynamic Wilcox mount pose: Smoothly interpolate between flipped-up on helmet brow and flipped-down over eyes
         boolean isLocalPlayer = (player == Minecraft.getInstance().player);
         float progress = isLocalPlayer
             ? GogglesFlipAnimator.getLocalProgress()
             : GogglesFlipAnimator.getEntityProgress(player.getUUID(), isActive);
-        try {
-            net.minecraft.client.model.geom.ModelPart visor = this.model.head_bone.getChild("visor");
-            visor.yRot = 0.0F;
-            visor.zRot = 0.0F;
-            visor.xRot = net.minecraft.util.Mth.lerp(progress, -1.10F, 0.0F);
-            visor.y = net.minecraft.util.Mth.lerp(progress, -3.5F, -2.3355F);
-            visor.z = net.minecraft.util.Mth.lerp(progress, -6.2F, -7.7094F);
-        } catch (Exception ignored) {}
 
-        ResourceLocation baseTex = NVG_TEXTURE;
-        ResourceLocation glowTex = NVG_GLOW;
-
-        VisionMode mode = VisionGogglesItem.getActiveVisionMode(stack);
-
-        if (mode == VisionMode.THERMAL) {
-            baseTex = THERMAL_TEXTURE;
-            glowTex = THERMAL_GLOW;
-        } else if (mode == VisionMode.HYDRO) {
-            baseTex = HYDRO_TEXTURE;
-            glowTex = HYDRO_GLOW;
-        } else if (mode == VisionMode.BIOMETRIC) {
-            baseTex = BIO_TEXTURE;
-            glowTex = BIO_GLOW;
-        }
-
-        VertexConsumer baseConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(baseTex));
-        this.model.head_bone.render(matrixStack, baseConsumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-
-        // Only emit optical lens glow when the goggles are actively powered on and finished flipping down
-        if (isActive && progress >= 0.98f) {
-            VertexConsumer glowConsumer = buffer.getBuffer(RenderType.eyes(glowTex));
-            this.model.head_bone.render(matrixStack, glowConsumer, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-        }
+        dev.itsrealperson.vision_goggles.client.renderer.TriLensManualRenderer.render(
+            stack, (VisionGogglesItem) stack.getItem(), matrixStack, buffer, progress, partialTicks, packedLight,
+            isActive && progress >= 0.98f, 1.0f);
 
         matrixStack.popPose();
     }

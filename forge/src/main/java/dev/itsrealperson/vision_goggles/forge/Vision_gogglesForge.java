@@ -36,7 +36,6 @@ public final class Vision_gogglesForge {
     public static class ClientModEvents {
         @net.minecraftforge.eventbus.api.SubscribeEvent
         public static void onRegisterLayers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterLayerDefinitions event) {
-            event.registerLayerDefinition(dev.itsrealperson.vision_goggles.client.VisionGoggleModel.LAYER_LOCATION, dev.itsrealperson.vision_goggles.client.VisionGoggleModel::createBodyLayer);
         }
 
         @net.minecraftforge.eventbus.api.SubscribeEvent

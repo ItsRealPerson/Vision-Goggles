@@ -6,7 +6,6 @@ import dev.itsrealperson.vision_goggles.client.FirstPersonStationWorkRenderer;
 import dev.itsrealperson.vision_goggles.client.GogglesEquipAnimator;
 import dev.itsrealperson.vision_goggles.client.GogglesFlipAnimator;
 import dev.itsrealperson.vision_goggles.client.StationWorkAnimator;
-import dev.itsrealperson.vision_goggles.client.preview.ProtoTriLensPreviewState;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import net.minecraft.client.Minecraft;
@@ -68,13 +67,9 @@ public abstract class MixinItemInHandRenderer {
         ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
         boolean hasRealGoggles = !helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem;
         boolean realTransitioning = hasRealGoggles && GogglesFlipAnimator.isLocalTransitioning();
-        boolean protoTransitioning = !hasRealGoggles
-                && mc.screen == null
-                && ProtoTriLensPreviewState.isHeadPreviewEnabled()
-                && ProtoTriLensPreviewState.isInGameFlipTransitioning();
         HumanoidArm arm = (hand == InteractionHand.MAIN_HAND) ? player.getMainArm() : player.getMainArm().getOpposite();
         if (arm == player.getMainArm()
-                && (realTransitioning || protoTransitioning)
+                && realTransitioning
                 && mc.options.getCameraType().isFirstPerson()) {
             this.mainHandHeight = 0.0f;
             this.oMainHandHeight = 0.0f;
@@ -101,7 +96,9 @@ public abstract class MixinItemInHandRenderer {
             return;
         }
 
-        GogglesEquipAnimator.syncFromRender(player, partialTicks);
+        if (hand == InteractionHand.MAIN_HAND) {
+            GogglesEquipAnimator.syncFromRender(player, partialTicks);
+        }
 
         if (GogglesEquipAnimator.shouldRenderCustomEquip(hand)) {
             FirstPersonEquipRenderer.render(
