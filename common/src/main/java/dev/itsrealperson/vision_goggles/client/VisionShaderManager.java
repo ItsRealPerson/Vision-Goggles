@@ -53,7 +53,7 @@ public class VisionShaderManager {
     private static float flashGlare = 0.0f;
 
     public static void triggerFlash(float intensity) {
-        flashGlare = Math.max(flashGlare, intensity);
+        flashGlare = Math.min(1.15f, Math.max(intensity, flashGlare + intensity * 0.35f));
     }
 
     public static void update(VisionMode mode, float batteryPct, boolean flicker) {

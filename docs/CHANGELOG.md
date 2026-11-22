@@ -450,3 +450,6 @@
 - Thermal: capes/cloaks excluded from heat (generic cape/cloak match); lrarmor armor (textures/item/armor/) now recognized as armor instead of discarded; lrarmor items added to insulation tags as optional entries.
 - Thermal tags: added optional entries for Create, Thermal, Botania, Twilight Forest, Alex's Caves, Mekanism(+Tools), IE, Ad Astra, Cataclysm armor across 4 tiers; armor render detection extended (armor_, hazmat, mekasuit, space_suit, diving).
 - Thermal: thermal.fsh entity temp now maps mask alpha linearly (no +0.18 floor) so armor tiers separate; armor body zones retuned (head>=0.78, chest>=0.42, legs>=0.18). Full insulation kept at alpha 26 (alpha 0 would not write depth, exposing body underneath).
+
+## 2026-11-22 - Muzzle-flash NVG glare
+- MixinClientPacketListener: gunfire sound/bullet-entity detection (tacz, pointblank, vic, cgm, superbwarfare, jeg), 40ms dedupe, distance-scaled flash; triggerFlash capped at 1.15.
