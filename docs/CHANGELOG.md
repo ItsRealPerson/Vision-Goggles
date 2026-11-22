@@ -428,3 +428,5 @@
 - GogglesRenderLayer y FirstPersonVisorRenderer migrados a TriLensManualRenderer (BakedGeoModel, bones modulares, glow). syncFromRender solo MAIN_HAND. Retiradas clases/assets legacy 128x128. E2E tiers 1-4 OK, build forge/fabric OK.
 
 - v46 refinement: TriLensManualRenderer.renderVisorOnly (solo visor_pivot en 1P), tilt -6+14*progress.
+
+- v46 fix: 1P visor scale(-s,-s,s) + hinge pitch; equip gira 180 para mostrar lado ocular; eyecups 3D en visor_pivot (scripts/add_eyecups.py).
