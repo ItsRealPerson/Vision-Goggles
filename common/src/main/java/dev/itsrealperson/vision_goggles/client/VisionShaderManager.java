@@ -64,10 +64,14 @@ public class VisionShaderManager {
         if (checkHeld && d <= 3.5) {
             var tag = mc.player.getMainHandItem().getTag();
             String ts = tag == null ? "" : tag.toString().toLowerCase();
-            if (ts.contains("muzzle_silence") || ts.contains("suppress")) { lastGunFlash = now; triggerFlash(0.15f); return; }
+            if (ts.contains("muzzle_silence") || ts.contains("suppress")) { lastGunFlash = now; triggerMuzzleFlash(0.04f); return; }
         }
         lastGunFlash = now;
-        triggerFlash(d <= 3.5 ? 0.90f : 0.90f * (float) (1.0 - d / 24.0));
+        triggerMuzzleFlash(d <= 3.5 ? 0.18f : 0.18f * (float) (1.0 - d / 24.0));
+    }
+
+    public static void triggerMuzzleFlash(float intensity) {
+        flashGlare = Math.min(0.36f, Math.max(intensity, flashGlare + intensity * 0.65f));
     }
 
     public static void triggerFlash(float intensity) {
@@ -571,7 +575,7 @@ public class VisionShaderManager {
 
             if (flashGlare > 0.001f) {
                 targetGlare = Math.max(targetGlare, flashGlare);
-                flashGlare *= 0.88f;
+                flashGlare *= (flashGlare <= 0.40f) ? 0.76f : 0.88f;
             }
 
 
