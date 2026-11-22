@@ -40,6 +40,21 @@ public final class TriLensManualRenderer {
     public static final float PIVOT_Z_PX = -5.5f;
 
     public static void render(
+            ItemStack stack, VisionGogglesItem item, PoseStack poseStack, MultiBufferSource buffers,
+            float progress, float partialTick, int packedLight, boolean glow, float glowIntensity
+    ) {
+        render0(stack, item, poseStack, buffers, progress, partialTick, packedLight, glow, glowIntensity, false);
+    }
+
+    /** First-person: renders only visor_pivot (+ mod children), neutral pose (no head straps, no pitch). */
+    public static void renderVisorOnly(
+            ItemStack stack, VisionGogglesItem item, PoseStack poseStack, MultiBufferSource buffers,
+            float partialTick, int packedLight, boolean glow, float glowIntensity
+    ) {
+        render0(stack, item, poseStack, buffers, 1.0f, partialTick, packedLight, glow, glowIntensity, true);
+    }
+
+    private static void render0(
             ItemStack stack,
             VisionGogglesItem item,
             PoseStack poseStack,
@@ -48,7 +63,8 @@ public final class TriLensManualRenderer {
             float partialTick,
             int packedLight,
             boolean glow,
-            float glowIntensity
+            float glowIntensity,
+            boolean visorOnly
     ) {
         VisionGogglesGeoRenderer r = renderer();
         VisionGogglesGeoModel geo = (VisionGogglesGeoModel) r.getGeoModel();
@@ -71,9 +87,10 @@ public final class TriLensManualRenderer {
             visor.setPosZ(UP_POS_Z * up);
         }
 
+        java.util.List<GeoBone> roots = (visorOnly && visor != null) ? java.util.List.of(visor) : baked.topLevelBones();
         RenderType baseType = RenderType.entityCutoutNoCull(TriLensVisualHelper.getBaseTexture(stack, item));
         var baseBuf = buffers.getBuffer(baseType);
-        for (GeoBone bone : baked.topLevelBones()) {
+        for (GeoBone bone : roots) {
             r.renderRecursively(poseStack, item, bone, baseType, buffers, baseBuf, false, partialTick,
                     packedLight, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
         }
@@ -82,7 +99,7 @@ public final class TriLensManualRenderer {
         if (glow && glowTex != null && glowIntensity > 0.01f) {
             RenderType glowType = RenderType.eyes(glowTex);
             var glowBuf = buffers.getBuffer(glowType);
-            for (GeoBone bone : baked.topLevelBones()) {
+            for (GeoBone bone : roots) {
                 r.renderRecursively(poseStack, item, bone, glowType, buffers, glowBuf, false, partialTick,
                         LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                         glowIntensity, glowIntensity, glowIntensity, 1.0f);

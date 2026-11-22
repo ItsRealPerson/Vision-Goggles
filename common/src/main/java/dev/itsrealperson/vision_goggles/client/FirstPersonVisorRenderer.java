@@ -108,14 +108,14 @@ public class FirstPersonVisorRenderer {
             poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 1800.0f + zArc);
             // Tactical 3/4 front view: tilt in screen space before the model flip
             poseStack.mulPose(Axis.YP.rotationDegrees(14.0f * sideSign * (1.0f - visorProgress * 0.6f)));
-            poseStack.mulPose(Axis.XP.rotationDegrees(10.0f));
+            poseStack.mulPose(Axis.XP.rotationDegrees(-6.0f + 14.0f * visorProgress));
             // Geo model is Y-up and faces -Z; GUI is Y-down with viewer at +Z: rotate 180deg about X so the front faces the viewer
             poseStack.scale(scale, -scale, -scale);
             // Center visor_pivot on the origin
             poseStack.translate(0.0f, -TriLensManualRenderer.PIVOT_Y_PX / 16.0f, -TriLensManualRenderer.PIVOT_Z_PX / 16.0f);
 
             float glowIntensity = smoothstep01((visorProgress - 0.60f) / 0.28f);
-            TriLensManualRenderer.render(stack, goggles, poseStack, bufferSource, visorProgress, partialTicks,
+            TriLensManualRenderer.renderVisorOnly(stack, goggles, poseStack, bufferSource, partialTicks,
                     packedLight, true, glowIntensity);
             poseStack.popPose();
 
