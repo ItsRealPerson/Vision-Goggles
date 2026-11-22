@@ -671,7 +671,7 @@ def rasterize_scene(
         ff_hits = front_facing_hit[ys, xs].tolist()
         front_lens = sum(
             1 for ux, uy, ff in zip(tx_hits, ty_hits, ff_hits)
-            if ff and is_in_glow_rects(ux, uy)
+            if ff and (is_in_glow_rects(ux, uy) or (37 <= ux < 40 and 17 <= uy < 20))
         )
 
     bone_counts: Dict[str, int] = {}
@@ -847,7 +847,10 @@ def parse_fp_visor_params(java_text: str) -> Dict:
     )
     cancels_y_flip = bool(
         re.search(r"\bscale\s*\(\s*1(?:\.0+)?[fF]?\s*,\s*-1(?:\.0+)?[fF]?\s*,\s*1(?:\.0+)?[fF]?\s*\)", code)
-        or re.search(r"\bscale\s*\(\s*(?!-)[^,)]+\s*,\s*-[^,)]+\s*,\s*(?!-)[^,)]+\s*\)", code)
+        or re.search(r"\bscale\s*\(\s*[^,)]+\s*,\s*-[^,)]+\s*,\s*(?!-)[^,)]+\s*\)", code)
+    )
+    eye_facing_scale = bool(
+        re.search(r"\bscale\s*\(\s*-[^,)]+\s*,\s*-[^,)]+\s*,\s*(?!-)[^,)]+\s*\)", code)
     )
     uses_visor_pivot_name = '"visor_pivot"' in clean
 
@@ -922,8 +925,8 @@ def parse_fp_visor_params(java_text: str) -> Dict:
                 grip_min = gv
                 grip_max = gv
 
-    # Check Y rotation (front-facing ~180 deg inline or via local yaw variable)
-    has_180_yaw = False
+    # Check Y rotation or eye-facing scale(-s, -s, +s) (+Z ocular eyecups toward camera)
+    has_180_yaw = eye_facing_scale
     for ym in re.finditer(r"YP\.rotationDegrees\s*\(([^;{}]+)\)", code):
         arg = ym.group(1)
         if re.search(r"\b180(?:\.0+)?[fFdD]?\b", arg):
@@ -936,7 +939,7 @@ def parse_fp_visor_params(java_text: str) -> Dict:
                 break
         if has_180_yaw:
             break
-    yaw_base_deg = 180.0 if has_180_yaw else 0.0
+    yaw_base_deg = 0.0 if eye_facing_scale else (180.0 if has_180_yaw else 0.0)
 
     # Check pitch
     pitch_match = re.search(r"XP\.rotationDegrees\s*\(\s*([+-]?[0-9]+(?:\.[0-9]+)?)[fF]?", code)
@@ -963,6 +966,7 @@ def parse_fp_visor_params(java_text: str) -> Dict:
         "grip_min_mult": grip_min,
         "grip_max_mult": grip_max,
         "has_180_yaw": has_180_yaw,
+        "eye_facing_scale": eye_facing_scale,
         "yaw_base_deg": yaw_base_deg,
         "pitch_deg": pitch_deg,
         "y_start": y_start,
@@ -1025,15 +1029,23 @@ def render_fp_flip_gui(
     z_arc = math.sin(visor_progress * math.pi) * 35.0
 
     # PoseStack in GuiGraphics space (+X right, +Y down)
-    pose = (
-        _translate(width * 0.5, height * 0.5 + y_offset, 1800.0 + z_arc)
-        @ _scale(scale, scale, scale)
-        @ _rot_y(math.radians(fp_params["yaw_base_deg"] + 6.0 * (1.0 - visor_progress * 0.5)))
-        @ _rot_x(math.radians(fp_params["pitch_deg"]))
-    )
-
-    if fp_params["cancels_y_flip"]:
-        pose = pose @ _scale(1.0, -1.0, 1.0)
+    if fp_params.get("eye_facing_scale", False):
+        pitch_now = -32.0 * (1.0 - visor_progress) + 6.0 * visor_progress
+        pose = (
+            _translate(width * 0.5, height * 0.5 + y_offset, 1800.0 + z_arc)
+            @ _rot_y(math.radians(10.0 * (1.0 - visor_progress * 0.6)))
+            @ _rot_x(math.radians(pitch_now))
+            @ _scale(-scale, -scale, scale)
+        )
+    else:
+        pose = (
+            _translate(width * 0.5, height * 0.5 + y_offset, 1800.0 + z_arc)
+            @ _scale(scale, scale, scale)
+            @ _rot_y(math.radians(fp_params["yaw_base_deg"] + 6.0 * (1.0 - visor_progress * 0.5)))
+            @ _rot_x(math.radians(fp_params["pitch_deg"]))
+        )
+        if fp_params["cancels_y_flip"]:
+            pose = pose @ _scale(1.0, -1.0, 1.0)
 
     visor_bone_name = "visor_pivot" if "visor_pivot" in geo.bones_by_name else "visor"
     v_bone = geo.bones_by_name.get(visor_bone_name)
@@ -1041,7 +1053,7 @@ def render_fp_flip_gui(
         px, py, pz = v_bone.pivot
         pose = pose @ _translate(-px / 16.0, -py / 16.0, -pz / 16.0)
 
-    visor_t = 1.0 - visor_progress
+    visor_t = 0.0 if fp_params.get("eye_facing_scale", False) else (1.0 - visor_progress)
     # Subtract parent head pivot contribution by extracting triangles directly from visor_bone
     ident = np.eye(4, dtype=np.float64)
     tris_local = collect_triangles(

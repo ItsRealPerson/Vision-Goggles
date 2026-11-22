@@ -108,11 +108,11 @@ public class FirstPersonVisorRenderer {
 
             poseStack.pushPose();
             poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 1800.0f + zArc);
-            poseStack.scale(scale, scale, scale);
-            // Rotate 180 deg Y + cancel GuiGraphics Y-down flip so front objective lenses (-Z) face the camera in a 3/4 tactical view
-            poseStack.mulPose(Axis.YP.rotationDegrees(180.0f + 14.0f * sideSign * (1.0f - visorProgress * 0.6f)));
-            poseStack.mulPose(Axis.XP.rotationDegrees(-6.0f + 14.0f * visorProgress));
-            poseStack.scale(1.0f, -1.0f, 1.0f);
+            // Eye-facing 1st-person orientation: player looks into the rear ocular eyecups (+Z) while the front tubes (-Z) point forward into the world
+            poseStack.mulPose(Axis.YP.rotationDegrees(10.0f * sideSign * (1.0f - visorProgress * 0.6f)));
+            poseStack.mulPose(Axis.XP.rotationDegrees(-32.0f * (1.0f - visorProgress) + 6.0f * visorProgress));
+            // Flip X and Y (det = +1, equivalent to 180 deg Z rotation) so +Y is screen-up, player-right (-X) is screen-right (+X), and +Z faces camera
+            poseStack.scale(-scale, -scale, scale);
             // Center visor_pivot on the origin
             poseStack.translate(0.0f, -TriLensManualRenderer.PIVOT_Y_PX / 16.0f, -TriLensManualRenderer.PIVOT_Z_PX / 16.0f);
 

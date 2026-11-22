@@ -432,3 +432,5 @@
 - v46 fix: 1P visor scale(-s,-s,s) + hinge pitch; equip gira 180 para mostrar lado ocular; eyecups 3D en visor_pivot (scripts/add_eyecups.py).
 
 - v46 fix (#19): Revertidos eyecups traseros y eliminado add_eyecups.py; VisionGogglesItem usa IDLE_DOWN en item render para que equip 1P no pliegue los tubos hacia atras; fixed rotation [0,0,0] en los 6 item JSONs + 180+yawOffset en ModificationStationRenderer.
+
+- v46 fix (#22): FirstPersonVisorRenderer orientacion ocular +Z (scale(-s,-s,s), sin YP 180) coincidente con equip; eyecups binoculares 3D coherentes por variante en visor_pivot con cristal oscuro eyepiece_rear (sin glow bleed); rasterizer3d.py actualizado.

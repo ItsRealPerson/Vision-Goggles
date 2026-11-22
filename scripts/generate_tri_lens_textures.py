@@ -898,8 +898,23 @@ def generate_variant(variant: str, cfg: Dict) -> Tuple[Path, Optional[Path]]:
     draw_beveled_panel(base, ATLAS_ZONES["bezel_side"], s, rivets=False)
 
     draw_beveled_panel(base, ATLAS_ZONES["eyepiece_rear"], s, rivets=False)
-    fill_rect(base, (37, 17, 40, 20), hex_rgba("#121824"))
-    put(base, 39, 17, hex_rgba("#384C6E"))
+    ocular_tints = {
+        "nvg":         (hex_rgba("#091C12"), hex_rgba("#123822"), hex_rgba("#287046")),
+        "thermal":     (hex_rgba("#1E1108"), hex_rgba("#3B210E"), hex_rgba("#7A451D")),
+        "bio":         (hex_rgba("#20090E"), hex_rgba("#3D111A"), hex_rgba("#7A2234")),
+        "hydro":       (hex_rgba("#081A22"), hex_rgba("#103545"), hex_rgba("#226E8A")),
+        "modular":     (hex_rgba("#0E1822"), hex_rgba("#1A2D40"), hex_rgba("#385E82")),
+        "pro_modular": (hex_rgba("#0D1724"), hex_rgba("#182C44"), hex_rgba("#3B6A9E")),
+        "neutral":     (hex_rgba("#10141A"), hex_rgba("#181E28"), hex_rgba("#2A3444")),
+    }
+    oc_deep, oc_mid, oc_shine = ocular_tints.get(style, ocular_tints["neutral"])
+    fill_rect(base, (37, 17, 40, 20), oc_mid)
+    put(base, 37, 19, oc_deep)
+    put(base, 38, 19, oc_deep)
+    put(base, 39, 19, oc_deep)
+    put(base, 37, 17, oc_deep)
+    put(base, 39, 17, oc_shine)
+    put(base, 38, 18, oc_shine)
 
     draw_beveled_panel(base, ATLAS_ZONES["edge_trim"], s, rivets=False)
     for x in range(42, 54):
