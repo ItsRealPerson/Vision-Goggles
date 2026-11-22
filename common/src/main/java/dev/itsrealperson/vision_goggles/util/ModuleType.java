@@ -58,7 +58,10 @@ public enum ModuleType {
             if (stack.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE)) {
                 float baseDrain = 0.5f;
                 float drain = baseDrain * ModConfig.getBatteryDrainMultiplier();
-                float current = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
+                var nbt = stack.getOrCreateTag();
+                float current = nbt.contains(ModConstants.TAG_BATTERY)
+                        ? nbt.getFloat(ModConstants.TAG_BATTERY)
+                        : (float) ((dev.itsrealperson.vision_goggles.item.VisionGogglesItem) stack.getItem()).getBatteryCapacity(stack);
                 if (current > 0) {
                     float next = Math.max(0, current - drain);
                     stack.getOrCreateTag().putFloat(ModConstants.TAG_BATTERY, next);

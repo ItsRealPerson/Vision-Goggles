@@ -35,6 +35,11 @@ public class ModularGogglesItem extends VisionGogglesItem {
     
     @Override
     public void serverTick(ItemStack stack, ServerPlayer player) {
+        CompoundTag nbt = stack.getOrCreateTag();
+        if (!nbt.contains(ModConstants.TAG_BATTERY)) {
+            nbt.putFloat(ModConstants.TAG_BATTERY, (float) getBatteryCapacity(stack));
+        }
+
         List<ModuleType> utils = getUtilityModules(stack);
         // Apply power-related effects from modules
         for (ModuleType util : utils) {
@@ -42,10 +47,6 @@ public class ModularGogglesItem extends VisionGogglesItem {
         }
 
         // Standby drain if any module is installed and active mode is OFF
-        CompoundTag nbt = stack.getOrCreateTag();
-        if (!nbt.contains(ModConstants.TAG_BATTERY)) {
-            nbt.putFloat(ModConstants.TAG_BATTERY, (float) getBatteryCapacity(stack));
-        }
         if (!nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
             if (!getModes(stack).isEmpty() || !utils.isEmpty()) {
                 float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);

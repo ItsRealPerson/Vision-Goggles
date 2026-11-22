@@ -271,13 +271,13 @@ PALETTES: Dict[str, Dict] = {
             "base": hex_rgba("#1D212B"),
             "mid": hex_rgba("#2B313F"),
             "hi": hex_rgba("#3F4759"),
-            "bevel": hex_rgba("#667085"),
-            "trim": hex_rgba("#E0A42B"),   # Gold CNC anodized trim
+            "bevel": hex_rgba("#768599"),
+            "trim": hex_rgba("#9FB0C7"),   # Brushed titanium CNC trim
             "gasket": hex_rgba("#12151B"),
-            "accent": hex_rgba("#B87D14"), # Warm amber chamfer
+            "accent": hex_rgba("#3E6B89"), # Tactical steel-blue chamfer
             "cable": hex_rgba("#13161C"),
-            "gold_hi": hex_rgba("#FFD966"),
-            "gold_lo": hex_rgba("#7A4E0A"),
+            "gold_hi": hex_rgba("#C5D3E6"),
+            "gold_lo": hex_rgba("#2B4659"),
         },
         "lens": {
             "rim": hex_rgba("#1B5673"),
