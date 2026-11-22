@@ -82,7 +82,7 @@ public class FirstPersonVisorRenderer {
         float ez = smoothstep01(visorProgress);
         float eyeZoom = 0.40f * ez + 0.60f * (visorProgress * ez);
         float scale = height * Mth.lerp(eyeZoom, 0.95f, 2.0f);
-        float yOffset = height * (Mth.lerp(browPresence, -0.70f, -0.46f) + 0.38f * ez);
+        float yOffset = height * (Mth.lerp(browPresence, -0.58f, -0.42f) + 0.22f * ez);
         float zArc = (float) Math.sin(visorProgress * Math.PI) * 35.0f;
 
         float sealAlpha = (rawT <= handoffT)

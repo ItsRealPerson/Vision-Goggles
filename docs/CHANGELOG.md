@@ -434,3 +434,5 @@
 - v46 fix (#19): Revertidos eyecups traseros y eliminado add_eyecups.py; VisionGogglesItem usa IDLE_DOWN en item render para que equip 1P no pliegue los tubos hacia atras; fixed rotation [0,0,0] en los 6 item JSONs + 180+yawOffset en ModificationStationRenderer.
 
 - v46 fix (#22): FirstPersonVisorRenderer orientacion ocular +Z (scale(-s,-s,s), sin YP 180) coincidente con equip; eyecups binoculares 3D coherentes por variante en visor_pivot con cristal oscuro eyepiece_rear (sin glow bleed); rasterizer3d.py actualizado.
+
+- **1P Flip Upper Brow Base & Forehead Anchoring (FirstPersonVisorRenderer, *_goggles.geo.json)**: Added full-width upper brow shroud bar and Wilcox forehead cushion to isor_pivot across all 6 Tri-Lens models (with zero Steve-head overlap in idle_down/idle_up) and anchored FirstPersonVisorRenderer yOffset (Mth.lerp(browPresence, -0.58f, -0.42f) + 0.22f * ez) to the top viewport edge so the visor hinges down from a solid upper base without floating.
