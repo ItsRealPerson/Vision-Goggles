@@ -445,3 +445,4 @@
 - ThermalEntityPainter: armor layers drawn at minimum alpha (26) instead of 72% heat; still occludes body by depth. Flashlight-armor bug (night: armor/body black under beam) still under investigation.
 - FlashlightUniforms.applyToVanilla now uploads IViewRotMat (was mat3(0) -> v_VisionPos=0 -> entities/armor unlit by flashlight).
 - Flashlight: local player now also clamps beam by rCenter (+1.0m soft fade) in ShaderRewriter/SodiumShaderPatcher so light no longer passes through floors/ledges.
+- Thermal: per-slot armor insulation. Item tags vision_goggles:thermal_insulation_{low,medium,high,full} (0.75/0.50/0.25/0.00 heat factor), ThermalEntityPainter.getArmorThermalFactor with stat fallback for modded armor; factor applied by body zone (head/chest/legs/feet) in AlphaOverrideVertexConsumer (min alpha 26).

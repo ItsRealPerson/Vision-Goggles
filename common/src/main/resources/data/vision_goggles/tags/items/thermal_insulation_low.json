@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:leather_helmet",
+    "minecraft:golden_helmet",
+    "minecraft:chainmail_helmet",
+    "minecraft:leather_chestplate",
+    "minecraft:golden_chestplate",
+    "minecraft:chainmail_chestplate",
+    "minecraft:leather_leggings",
+    "minecraft:golden_leggings",
+    "minecraft:chainmail_leggings",
+    "minecraft:leather_boots",
+    "minecraft:golden_boots",
+    "minecraft:chainmail_boots",
+    "minecraft:turtle_helmet"
+  ]
+}
