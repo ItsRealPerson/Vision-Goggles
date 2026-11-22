@@ -1,9 +1,41 @@
 {
-  "replace": false,
-  "values": [
-    "minecraft:netherite_helmet",
-    "minecraft:netherite_chestplate",
-    "minecraft:netherite_leggings",
-    "minecraft:netherite_boots"
-  ]
+    "replace":  false,
+    "values":  [
+                   "minecraft:netherite_helmet",
+                   "minecraft:netherite_chestplate",
+                   "minecraft:netherite_leggings",
+                   "minecraft:netherite_boots",
+                   {
+                       "id":  "lrarmor:chemical_protective_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:chemical_protective_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:chemical_protective_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:chemical_protective_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:armored_chemical_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:armored_chemical_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:armored_chemical_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:armored_chemical_boots",
+                       "required":  false
+                   }
+               ]
 }

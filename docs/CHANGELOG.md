@@ -447,3 +447,4 @@
 - Flashlight: local player now also clamps beam by rCenter (+1.0m soft fade) in ShaderRewriter/SodiumShaderPatcher so light no longer passes through floors/ledges.
 - Thermal: per-slot armor insulation. Item tags vision_goggles:thermal_insulation_{low,medium,high,full} (0.75/0.50/0.25/0.00 heat factor), ThermalEntityPainter.getArmorThermalFactor with stat fallback for modded armor; factor applied by body zone (head/chest/legs/feet) in AlphaOverrideVertexConsumer (min alpha 26).
 - Reverted local-player Range0 beam clamp in ShaderRewriter/SodiumShaderPatcher (user preference); IViewRotMat upload and insulation tags kept.
+- Thermal: capes/cloaks excluded from heat (generic cape/cloak match); lrarmor armor (textures/item/armor/) now recognized as armor instead of discarded; lrarmor items added to insulation tags as optional entries.

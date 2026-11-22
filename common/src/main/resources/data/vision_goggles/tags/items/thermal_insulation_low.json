@@ -1,18 +1,114 @@
 {
-  "replace": false,
-  "values": [
-    "minecraft:leather_helmet",
-    "minecraft:golden_helmet",
-    "minecraft:chainmail_helmet",
-    "minecraft:leather_chestplate",
-    "minecraft:golden_chestplate",
-    "minecraft:chainmail_chestplate",
-    "minecraft:leather_leggings",
-    "minecraft:golden_leggings",
-    "minecraft:chainmail_leggings",
-    "minecraft:leather_boots",
-    "minecraft:golden_boots",
-    "minecraft:chainmail_boots",
-    "minecraft:turtle_helmet"
-  ]
+    "replace":  false,
+    "values":  [
+                   "minecraft:leather_helmet",
+                   "minecraft:golden_helmet",
+                   "minecraft:chainmail_helmet",
+                   "minecraft:leather_chestplate",
+                   "minecraft:golden_chestplate",
+                   "minecraft:chainmail_chestplate",
+                   "minecraft:leather_leggings",
+                   "minecraft:golden_leggings",
+                   "minecraft:chainmail_leggings",
+                   "minecraft:leather_boots",
+                   "minecraft:golden_boots",
+                   "minecraft:chainmail_boots",
+                   "minecraft:turtle_helmet",
+                   {
+                       "id":  "lrarmor:scout_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:scout_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:scout_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:scout_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:medical_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:medical_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:medical_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:medical_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:irs_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:irs_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:irs_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:irs_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:joker_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:joker_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:joker_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:joker_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_boots",
+                       "required":  false
+                   }
+               ]
 }
