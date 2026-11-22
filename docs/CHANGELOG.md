@@ -438,3 +438,5 @@
 - **1P Flip Upper Brow Base & Forehead Anchoring (FirstPersonVisorRenderer, *_goggles.geo.json)**: Added full-width upper brow shroud bar and Wilcox forehead cushion to isor_pivot across all 6 Tri-Lens models (with zero Steve-head overlap in idle_down/idle_up) and anchored FirstPersonVisorRenderer yOffset (Mth.lerp(browPresence, -0.58f, -0.42f) + 0.22f * ez) to the top viewport edge so the visor hinges down from a solid upper base without floating.
 
 - v46 fix (#27): Linterna de Modular Goggles independiente de TAG_ACTIVE (glow de mod_flashlight en GogglesRenderLayer/TriLensManualRenderer, orden de inicializacion TAG_BATTERY); paleta Pro Modular actualizada a obsidiana mate + titanio cepillado + azul acero (sin amarillo).
+
+- v46 fix (#30): Paleta de tri_lens_pro_modular refinada a obsidiana mate + titanio-pizarra oscuro de 10 pasos suaves (sin franjas zebra de alto contraste).

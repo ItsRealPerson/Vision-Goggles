@@ -266,18 +266,18 @@ PALETTES: Dict[str, Dict] = {
     },
     "tri_lens_pro_modular": {
         "struct": {
-            "deep": hex_rgba("#0E1015"),
-            "shadow": hex_rgba("#151820"),
-            "base": hex_rgba("#1D212B"),
-            "mid": hex_rgba("#2B313F"),
-            "hi": hex_rgba("#3F4759"),
-            "bevel": hex_rgba("#768599"),
-            "trim": hex_rgba("#9FB0C7"),   # Brushed titanium CNC trim
-            "gasket": hex_rgba("#12151B"),
-            "accent": hex_rgba("#3E6B89"), # Tactical steel-blue chamfer
-            "cable": hex_rgba("#13161C"),
-            "gold_hi": hex_rgba("#C5D3E6"),
-            "gold_lo": hex_rgba("#2B4659"),
+            "deep": hex_rgba("#111419"),
+            "shadow": hex_rgba("#171B22"),
+            "base": hex_rgba("#1E232C"),
+            "mid": hex_rgba("#272E3A"),
+            "hi": hex_rgba("#323B4A"),
+            "bevel": hex_rgba("#424E61"),
+            "trim": hex_rgba("#526178"),
+            "gasket": hex_rgba("#14181E"),
+            "accent": hex_rgba("#3A4D63"),
+            "cable": hex_rgba("#151920"),
+            "gold_hi": hex_rgba("#60738F"),
+            "gold_lo": hex_rgba("#283342"),
         },
         "lens": {
             "rim": hex_rgba("#1B5673"),
