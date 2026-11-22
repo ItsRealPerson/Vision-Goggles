@@ -440,3 +440,6 @@
 - v46 fix (#27): Linterna de Modular Goggles independiente de TAG_ACTIVE (glow de mod_flashlight en GogglesRenderLayer/TriLensManualRenderer, orden de inicializacion TAG_BATTERY); paleta Pro Modular actualizada a obsidiana mate + titanio cepillado + azul acero (sin amarillo).
 
 - v46 fix (#30): Paleta de tri_lens_pro_modular refinada a obsidiana mate + titanio-pizarra oscuro de 10 pasos suaves (sin franjas zebra de alto contraste).
+
+## 2026-11-22 - Thermal: armor emits no heat
+- ThermalEntityPainter: armor layers drawn at minimum alpha (26) instead of 72% heat; still occludes body by depth. Flashlight-armor bug (night: armor/body black under beam) still under investigation.

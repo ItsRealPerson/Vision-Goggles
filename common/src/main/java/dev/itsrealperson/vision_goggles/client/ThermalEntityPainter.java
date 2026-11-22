@@ -619,9 +619,9 @@ public class ThermalEntityPainter {
                     return DISCARD_VERTEX_CONSUMER;
                 }
 
-                // Organic body/fur/robe layers carry full heat; armor insulates moderately (~72%) without going black
+                // Organic body/fur/robe layers carry full heat; armor emits no heat: drawn at minimum alpha (cold) so it still occludes body by depth
                 boolean isArmor = isArmorRenderType(type);
-                int baseAlpha = isArmor ? Math.round(finalHeat * 185.0f) : Math.round(finalHeat * 255.0f);
+                int baseAlpha = isArmor ? 26 : Math.round(finalHeat * 255.0f);
                 return new AlphaOverrideVertexConsumer(
                         maskBufferSource.getBuffer(type),
                         baseAlpha,
