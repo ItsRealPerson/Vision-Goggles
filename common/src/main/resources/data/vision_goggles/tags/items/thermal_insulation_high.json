@@ -1,9 +1,41 @@
 {
-  "replace": false,
-  "values": [
-    "minecraft:diamond_helmet",
-    "minecraft:diamond_chestplate",
-    "minecraft:diamond_leggings",
-    "minecraft:diamond_boots"
-  ]
+    "replace":  false,
+    "values":  [
+                   "minecraft:diamond_helmet",
+                   "minecraft:diamond_chestplate",
+                   "minecraft:diamond_leggings",
+                   "minecraft:diamond_boots",
+                   {
+                       "id":  "lrarmor:attacker_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:attacker_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:attacker_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:attacker_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:defender_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:defender_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:defender_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:defender_boots",
+                       "required":  false
+                   }
+               ]
 }

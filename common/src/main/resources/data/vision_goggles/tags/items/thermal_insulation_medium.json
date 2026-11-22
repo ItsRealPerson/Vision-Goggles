@@ -1,9 +1,97 @@
 {
-  "replace": false,
-  "values": [
-    "minecraft:iron_helmet",
-    "minecraft:iron_chestplate",
-    "minecraft:iron_leggings",
-    "minecraft:iron_boots"
-  ]
+    "replace":  false,
+    "values":  [
+                   "minecraft:iron_helmet",
+                   "minecraft:iron_chestplate",
+                   "minecraft:iron_leggings",
+                   "minecraft:iron_boots",
+                   {
+                       "id":  "lrarmor:atf_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_vest_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_vest_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_vest_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:atf_vest_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_armed_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_armed_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_armed_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:dea_armed_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_armed_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_armed_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_armed_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:fbi_armed_boots",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:joker_armed_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:joker_armed_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:sniper_helmet",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:sniper_chestplate",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:sniper_leggings",
+                       "required":  false
+                   },
+                   {
+                       "id":  "lrarmor:sniper_boots",
+                       "required":  false
+                   }
+               ]
 }
