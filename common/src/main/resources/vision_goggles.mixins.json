@@ -19,6 +19,8 @@
     "client.PostChainAccessor",
     "client.MixinFogRenderer",
     "client.MixinClientPacketListener",
+    "client.MixinClientLevel",
+    "client.MixinSoundEngine",
     "client.MixinHumanoidModel",
     "lighting.ShaderInstanceMixin",
     "sodium.SodiumChunkUniformMixin",

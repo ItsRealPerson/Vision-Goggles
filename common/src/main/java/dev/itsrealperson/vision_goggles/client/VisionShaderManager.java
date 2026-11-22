@@ -52,8 +52,26 @@ public class VisionShaderManager {
     private static long startupTimestamp = 0L;
     private static float flashGlare = 0.0f;
 
+    private static long lastGunFlash = 0L;
+
+    public static void gunFlash(double x, double y, double z, boolean checkHeld) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.player == null || !VisionRenderer.isVisorActive() || !isNvgOrThermalCustomShaderActive() || isThermalShaderActive()) return;
+        long now = System.currentTimeMillis();
+        if (now - lastGunFlash < 40) return;
+        double d = Math.sqrt(mc.player.distanceToSqr(x, y, z));
+        if (d > 24.0) return;
+        if (checkHeld && d <= 3.5) {
+            var tag = mc.player.getMainHandItem().getTag();
+            String ts = tag == null ? "" : tag.toString().toLowerCase();
+            if (ts.contains("muzzle_silence") || ts.contains("suppress")) { lastGunFlash = now; triggerFlash(0.15f); return; }
+        }
+        lastGunFlash = now;
+        triggerFlash(d <= 3.5 ? 0.90f : 0.90f * (float) (1.0 - d / 24.0));
+    }
+
     public static void triggerFlash(float intensity) {
-        flashGlare = Math.min(1.15f, Math.max(intensity, flashGlare + intensity * 0.35f));
+        flashGlare = Math.min(1.35f, Math.max(intensity, flashGlare + intensity * 0.45f));
     }
 
     public static void update(VisionMode mode, float batteryPct, boolean flicker) {
