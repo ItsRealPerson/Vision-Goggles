@@ -67,4 +67,4 @@ Antes de escribir c贸digo, determina el tipo de proyecto y versi贸n leyendo 脷NI
   - Leer el archivo generado en disco, aplicar la soluci贸n en el c贸digo y validar con `compileJava` de inmediato sin detener el flujo ni pedir intervenci贸n al usuario.
 
 - **Scripts E2E (scripts/e2e_tests)**: usan imports relativos; ejecutar como modulo desde la raiz (python -m scripts.e2e_tests.tier1_unit), no por ruta.
-- **Entidades/armadura negras bajo linterna (FlashlightUniforms, ShaderRewriter)**: patchVsh usa IViewRotMat pero nunca se sub韆 (mat3 a 0 => _VisionPos=0). Soluci髇: glUniformMatrix3fv con RenderSystem.getInverseViewRotationMatrix() en pplyToVanilla.
+- **Entidades/armadura negras bajo linterna (FlashlightUniforms, ShaderRewriter)**: patchVsh usa IViewRotMat pero nunca se subia (mat3 a 0 => v_VisionPos=0). Solucion: glUniformMatrix3fv con RenderSystem.getInverseViewRotationMatrix() en applyToVanilla.
