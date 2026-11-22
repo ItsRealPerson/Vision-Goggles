@@ -140,13 +140,13 @@ void main() {
 
         // Default cyan sentinel (#00FFFF) or critical Lua targets -> smooth Ironbow orange..gold..white-hot
         if (min(normHue.g, normHue.b) - normHue.r > 0.45) {
-            float entityTemp = clamp(0.18 + entityMask.a * 0.82, 0.0, 1.0);
+            float entityTemp = clamp(entityMask.a, 0.0, 1.0);
             entityCol = ironbow(entityTemp);
         }
         // Warm FLIR Ironbow tones (#FF0000..#FF8800..#FFBB00..#FFFF00) -> stable hue-tiered heat
         else if (normHue.r > 0.65 && normHue.b < 0.35) {
             float hueTier = mix(0.56, 0.94, clamp(normHue.g, 0.0, 1.0));
-            float entityTemp = clamp(hueTier * (0.30 + 0.70 * entityMask.a), 0.12, 0.98);
+            float entityTemp = clamp(hueTier * entityMask.a, 0.0, 0.98);
             entityCol = ironbow(entityTemp);
         }
         // Custom Lua tint colors (#00FF44, #FF00FF, #FFFFFF, etc.)
