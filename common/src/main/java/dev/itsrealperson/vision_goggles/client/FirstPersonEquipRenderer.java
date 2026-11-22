@@ -143,6 +143,8 @@ public final class FirstPersonEquipRenderer {
         }
 
         poseStack.translate(0.0f, 0.0f, -VISUAL_PIVOT_Z);
+        // Held in front the lenses face the camera; bringing them to the head turns the eye side toward you (lenses face the world)
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0f * p2));
         itemRenderCallback.render(player, stack, displayContext, leftHand, poseStack, buffer, combinedLight);
         poseStack.popPose();
     }
