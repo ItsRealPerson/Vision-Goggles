@@ -622,9 +622,12 @@ public class VisionShaderManager {
             net.minecraft.world.item.ItemStack myHelmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(mc.player);
             if (!myHelmet.isEmpty() && myHelmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.ModularGogglesItem myModular) {
                 if (myModular.getUtilityModules(myHelmet).contains(dev.itsrealperson.vision_goggles.util.ModuleType.FLASHLIGHT)) {
-                    float helmetBatt = myHelmet.getOrCreateTag().getFloat(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_BATTERY);
-                    if (myHelmet.getOrCreateTag().getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE) && helmetBatt > 0.0f) {
-                        int myModeId = myHelmet.getOrCreateTag().getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
+                    var myTag = myHelmet.getOrCreateTag();
+                    float helmetBatt = myTag.contains(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_BATTERY)
+                            ? myTag.getFloat(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_BATTERY)
+                            : (float) myModular.getBatteryCapacity(myHelmet);
+                    if (myTag.getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE) && helmetBatt > 0.0f) {
+                        int myModeId = myTag.getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
                         float flashIntensity = Math.max(1.25f, dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(myModeId).glareIntensity);
                         if (targetGlare < flashIntensity) targetGlare = flashIntensity;
                     }

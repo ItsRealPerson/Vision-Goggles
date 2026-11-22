@@ -70,10 +70,16 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
         matrixStack.translate(0.0f, -24.0f / 16.0f, 0.0f);
 
         boolean isActive = false;
-        if (stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE)) {
-            float batt = stack.getTag().contains(ModConstants.TAG_BATTERY) ? stack.getTag().getFloat(ModConstants.TAG_BATTERY) : 1.0f;
+        boolean isFlashlightOn = false;
+        if (stack.hasTag()) {
+            float batt = stack.getTag().contains(ModConstants.TAG_BATTERY)
+                    ? stack.getTag().getFloat(ModConstants.TAG_BATTERY)
+                    : (float) ((VisionGogglesItem) stack.getItem()).getBatteryCapacity(stack);
             if (batt > 0.0f) {
-                isActive = true;
+                isActive = stack.getTag().getBoolean(ModConstants.TAG_ACTIVE);
+                if (stack.getItem() instanceof ModularGogglesItem modular && modular.hasModule(stack, ModConstants.ID_FLASHLIGHT)) {
+                    isFlashlightOn = stack.getTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE);
+                }
             }
         }
 
@@ -84,7 +90,7 @@ public class GogglesRenderLayer<T extends LivingEntity, M extends EntityModel<T>
 
         dev.itsrealperson.vision_goggles.client.renderer.TriLensManualRenderer.render(
             stack, (VisionGogglesItem) stack.getItem(), matrixStack, buffer, progress, partialTicks, packedLight,
-            isActive && progress >= 0.98f, 1.0f);
+            isActive && progress >= 0.98f, 1.0f, isFlashlightOn);
 
         matrixStack.popPose();
     }

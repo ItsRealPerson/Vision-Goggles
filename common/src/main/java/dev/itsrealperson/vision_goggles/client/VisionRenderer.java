@@ -423,9 +423,12 @@ public class VisionRenderer {
             if (playerHelmet.getItem() instanceof ModularGogglesItem modular) {
                 List<ModuleType> utils = modular.getUtilityModules(playerHelmet);
                 boolean hasFlashlight = utils.contains(ModuleType.FLASHLIGHT);
-                float batteryLvl = playerHelmet.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
-                if (hasFlashlight && playerHelmet.getOrCreateTag().getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0) {
-                    int modeId = playerHelmet.getOrCreateTag().getInt(ModConstants.TAG_FLASHLIGHT_MODE);
+                CompoundTag helmetNbt = playerHelmet.getOrCreateTag();
+                float batteryLvl = helmetNbt.contains(ModConstants.TAG_BATTERY)
+                        ? helmetNbt.getFloat(ModConstants.TAG_BATTERY)
+                        : (float) modular.getBatteryCapacity(playerHelmet);
+                if (hasFlashlight && helmetNbt.getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE) && batteryLvl > 0) {
+                    int modeId = helmetNbt.getInt(ModConstants.TAG_FLASHLIGHT_MODE);
                     sources.add(new ActiveFlashlightSource(FlashlightSlot.HEAD_GOGGLES, modeId));
                 }
             }

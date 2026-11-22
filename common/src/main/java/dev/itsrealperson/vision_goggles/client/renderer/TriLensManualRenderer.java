@@ -43,7 +43,14 @@ public final class TriLensManualRenderer {
             ItemStack stack, VisionGogglesItem item, PoseStack poseStack, MultiBufferSource buffers,
             float progress, float partialTick, int packedLight, boolean glow, float glowIntensity
     ) {
-        render0(stack, item, poseStack, buffers, progress, partialTick, packedLight, glow, glowIntensity, false);
+        render0(stack, item, poseStack, buffers, progress, partialTick, packedLight, glow, glowIntensity, false, false);
+    }
+
+    public static void render(
+            ItemStack stack, VisionGogglesItem item, PoseStack poseStack, MultiBufferSource buffers,
+            float progress, float partialTick, int packedLight, boolean glow, float glowIntensity, boolean flashlightGlow
+    ) {
+        render0(stack, item, poseStack, buffers, progress, partialTick, packedLight, glow, glowIntensity, false, flashlightGlow);
     }
 
     /** First-person: renders only visor_pivot (+ mod children), neutral pose (no head straps, no pitch). */
@@ -51,7 +58,7 @@ public final class TriLensManualRenderer {
             ItemStack stack, VisionGogglesItem item, PoseStack poseStack, MultiBufferSource buffers,
             float partialTick, int packedLight, boolean glow, float glowIntensity
     ) {
-        render0(stack, item, poseStack, buffers, 1.0f, partialTick, packedLight, glow, glowIntensity, true);
+        render0(stack, item, poseStack, buffers, 1.0f, partialTick, packedLight, glow, glowIntensity, true, false);
     }
 
     private static void render0(
@@ -64,7 +71,8 @@ public final class TriLensManualRenderer {
             int packedLight,
             boolean glow,
             float glowIntensity,
-            boolean visorOnly
+            boolean visorOnly,
+            boolean flashlightGlow
     ) {
         VisionGogglesGeoRenderer r = renderer();
         VisionGogglesGeoModel geo = (VisionGogglesGeoModel) r.getGeoModel();
@@ -96,13 +104,24 @@ public final class TriLensManualRenderer {
         }
 
         ResourceLocation glowTex = TriLensVisualHelper.getGlowTexture(stack, item);
-        if (glow && glowTex != null && glowIntensity > 0.01f) {
-            RenderType glowType = RenderType.eyes(glowTex);
-            var glowBuf = buffers.getBuffer(glowType);
-            for (GeoBone bone : roots) {
-                r.renderRecursively(poseStack, item, bone, glowType, buffers, glowBuf, false, partialTick,
-                        LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-                        glowIntensity, glowIntensity, glowIntensity, 1.0f);
+        if (glowTex != null) {
+            if (glow && glowIntensity > 0.01f) {
+                RenderType glowType = RenderType.eyes(glowTex);
+                var glowBuf = buffers.getBuffer(glowType);
+                for (GeoBone bone : roots) {
+                    r.renderRecursively(poseStack, item, bone, glowType, buffers, glowBuf, false, partialTick,
+                            LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                            glowIntensity, glowIntensity, glowIntensity, 1.0f);
+                }
+            } else if (flashlightGlow && !visorOnly) {
+                GeoBone flashBone = baked.getBone(TriLensVisualHelper.BONE_FLASHLIGHT).orElse(null);
+                if (flashBone != null && !flashBone.isHidden()) {
+                    RenderType glowType = RenderType.eyes(glowTex);
+                    var glowBuf = buffers.getBuffer(glowType);
+                    r.renderRecursively(poseStack, item, flashBone, glowType, buffers, glowBuf, false, partialTick,
+                            LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                            1.0f, 1.0f, 1.0f, 1.0f);
+                }
             }
         }
 
