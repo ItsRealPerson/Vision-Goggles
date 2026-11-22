@@ -675,7 +675,7 @@ public class ThermalEntityPainter {
         }
 
         return raw.contains("textures/atlas/blocks.png")
-                || (raw.contains("textures/item/") && !raw.contains("/armor/"))
+                || (raw.contains("textures/item/") && !raw.contains("/armor/") && !raw.contains("hazmat") && !raw.contains("mekasuit") && !raw.contains("space_suit") && !raw.contains("diving"))
                 || raw.contains("textures/font/")
                 || raw.contains("font/")
                 || raw.contains("glyph")
@@ -690,7 +690,7 @@ public class ThermalEntityPainter {
         String raw = type.toString().toLowerCase(Locale.ROOT);
         int colonIdx = raw.indexOf(':');
         String rtName = (raw.startsWith("rendertype[") && colonIdx > 11) ? raw.substring(11, colonIdx) : raw;
-        return rtName.contains("armor") || raw.contains("textures/models/armor/") || raw.contains("/armor/");
+        return rtName.contains("armor") || raw.contains("textures/models/armor/") || raw.contains("/armor/") || rtName.contains("armor_") || raw.contains("hazmat") || raw.contains("mekasuit") || raw.contains("space_suit") || raw.contains("diving");
     }
 
     private static void compositeIntoMask(int rgbColor, int restoreProgram) {

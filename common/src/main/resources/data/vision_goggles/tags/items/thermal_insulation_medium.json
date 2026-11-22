@@ -1,97 +1,237 @@
 {
-    "replace":  false,
-    "values":  [
-                   "minecraft:iron_helmet",
-                   "minecraft:iron_chestplate",
-                   "minecraft:iron_leggings",
-                   "minecraft:iron_boots",
-                   {
-                       "id":  "lrarmor:atf_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_boots",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_vest_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_vest_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_vest_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:atf_vest_boots",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:dea_armed_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:dea_armed_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:dea_armed_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:dea_armed_boots",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:fbi_armed_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:fbi_armed_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:fbi_armed_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:fbi_armed_boots",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:joker_armed_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:joker_armed_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:sniper_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:sniper_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:sniper_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:sniper_boots",
-                       "required":  false
-                   }
-               ]
+  "replace": false,
+  "values": [
+    "minecraft:iron_helmet",
+    "minecraft:iron_chestplate",
+    "minecraft:iron_leggings",
+    "minecraft:iron_boots",
+    {
+      "id": "lrarmor:atf_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_boots",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_vest_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_vest_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_vest_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:atf_vest_boots",
+      "required": false
+    },
+    {
+      "id": "lrarmor:dea_armed_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:dea_armed_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:dea_armed_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:dea_armed_boots",
+      "required": false
+    },
+    {
+      "id": "lrarmor:fbi_armed_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:fbi_armed_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:fbi_armed_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:fbi_armed_boots",
+      "required": false
+    },
+    {
+      "id": "lrarmor:joker_armed_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:joker_armed_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:sniper_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:sniper_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:sniper_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:sniper_boots",
+      "required": false
+    },
+    {
+      "id": "create:copper_diving_helmet",
+      "required": false
+    },
+    {
+      "id": "create:copper_diving_boots",
+      "required": false
+    },
+    {
+      "id": "create:copper_backtank",
+      "required": false
+    },
+    {
+      "id": "thermal:diving_helmet",
+      "required": false
+    },
+    {
+      "id": "thermal:diving_chestplate",
+      "required": false
+    },
+    {
+      "id": "thermal:diving_leggings",
+      "required": false
+    },
+    {
+      "id": "thermal:diving_boots",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:bronze_helmet",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:bronze_chestplate",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:bronze_leggings",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:bronze_boots",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:lapis_lazuli_helmet",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:lapis_lazuli_chestplate",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:lapis_lazuli_leggings",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:lapis_lazuli_boots",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_steel_helmet",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_steel_chestplate",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_steel_leggings",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_steel_boots",
+      "required": false
+    },
+    {
+      "id": "botania:manasteel_helmet",
+      "required": false
+    },
+    {
+      "id": "botania:manasteel_chestplate",
+      "required": false
+    },
+    {
+      "id": "botania:manasteel_leggings",
+      "required": false
+    },
+    {
+      "id": "botania:manasteel_boots",
+      "required": false
+    },
+    {
+      "id": "twilightforest:ironwood_helmet",
+      "required": false
+    },
+    {
+      "id": "twilightforest:ironwood_chestplate",
+      "required": false
+    },
+    {
+      "id": "twilightforest:ironwood_leggings",
+      "required": false
+    },
+    {
+      "id": "twilightforest:ironwood_boots",
+      "required": false
+    },
+    {
+      "id": "twilightforest:steeleaf_helmet",
+      "required": false
+    },
+    {
+      "id": "twilightforest:steeleaf_chestplate",
+      "required": false
+    },
+    {
+      "id": "twilightforest:steeleaf_leggings",
+      "required": false
+    },
+    {
+      "id": "twilightforest:steeleaf_boots",
+      "required": false
+    },
+    {
+      "id": "twilightforest:yeti_helmet",
+      "required": false
+    },
+    {
+      "id": "twilightforest:yeti_chestplate",
+      "required": false
+    },
+    {
+      "id": "twilightforest:yeti_leggings",
+      "required": false
+    },
+    {
+      "id": "twilightforest:yeti_boots",
+      "required": false
+    }
+  ]
 }

@@ -1,41 +1,197 @@
 {
-    "replace":  false,
-    "values":  [
-                   "minecraft:netherite_helmet",
-                   "minecraft:netherite_chestplate",
-                   "minecraft:netherite_leggings",
-                   "minecraft:netherite_boots",
-                   {
-                       "id":  "lrarmor:chemical_protective_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:chemical_protective_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:chemical_protective_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:chemical_protective_boots",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:armored_chemical_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:armored_chemical_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:armored_chemical_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:armored_chemical_boots",
-                       "required":  false
-                   }
-               ]
+  "replace": false,
+  "values": [
+    "minecraft:netherite_helmet",
+    "minecraft:netherite_chestplate",
+    "minecraft:netherite_leggings",
+    "minecraft:netherite_boots",
+    {
+      "id": "lrarmor:chemical_protective_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:chemical_protective_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:chemical_protective_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:chemical_protective_boots",
+      "required": false
+    },
+    {
+      "id": "lrarmor:armored_chemical_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:armored_chemical_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:armored_chemical_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:armored_chemical_boots",
+      "required": false
+    },
+    {
+      "id": "mekanism:mekasuit_helmet",
+      "required": false
+    },
+    {
+      "id": "mekanism:mekasuit_bodyarmor",
+      "required": false
+    },
+    {
+      "id": "mekanism:mekasuit_pants",
+      "required": false
+    },
+    {
+      "id": "mekanism:mekasuit_boots",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_mask",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_gown",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_pants",
+      "required": false
+    },
+    {
+      "id": "mekanism:hazmat_boots",
+      "required": false
+    },
+    {
+      "id": "thermal:hazmat_helmet",
+      "required": false
+    },
+    {
+      "id": "thermal:hazmat_chestplate",
+      "required": false
+    },
+    {
+      "id": "thermal:hazmat_leggings",
+      "required": false
+    },
+    {
+      "id": "thermal:hazmat_boots",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_faraday_helmet",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_faraday_chestplate",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_faraday_leggings",
+      "required": false
+    },
+    {
+      "id": "immersiveengineering:armor_faraday_boots",
+      "required": false
+    },
+    {
+      "id": "create:netherite_diving_helmet",
+      "required": false
+    },
+    {
+      "id": "create:netherite_diving_boots",
+      "required": false
+    },
+    {
+      "id": "create:netherite_backtank",
+      "required": false
+    },
+    {
+      "id": "ad_astra:netherite_space_helmet",
+      "required": false
+    },
+    {
+      "id": "ad_astra:netherite_space_suit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:netherite_space_pants",
+      "required": false
+    },
+    {
+      "id": "ad_astra:netherite_space_boots",
+      "required": false
+    },
+    {
+      "id": "ad_astra:jet_suit_helmet",
+      "required": false
+    },
+    {
+      "id": "ad_astra:jet_suit_suit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:jet_suit_pants",
+      "required": false
+    },
+    {
+      "id": "ad_astra:jet_suit_boots",
+      "required": false
+    },
+    {
+      "id": "alexscaves:hazmat_mask",
+      "required": false
+    },
+    {
+      "id": "alexscaves:hazmat_chestplate",
+      "required": false
+    },
+    {
+      "id": "alexscaves:hazmat_leggings",
+      "required": false
+    },
+    {
+      "id": "alexscaves:hazmat_boots",
+      "required": false
+    },
+    {
+      "id": "cataclysm:ignitium_helmet",
+      "required": false
+    },
+    {
+      "id": "cataclysm:ignitium_chestplate",
+      "required": false
+    },
+    {
+      "id": "cataclysm:ignitium_leggings",
+      "required": false
+    },
+    {
+      "id": "cataclysm:ignitium_boots",
+      "required": false
+    },
+    {
+      "id": "cataclysm:cursium_helmet",
+      "required": false
+    },
+    {
+      "id": "cataclysm:cursium_chestplate",
+      "required": false
+    },
+    {
+      "id": "cataclysm:cursium_leggings",
+      "required": false
+    },
+    {
+      "id": "cataclysm:cursium_boots",
+      "required": false
+    }
+  ]
 }

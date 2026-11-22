@@ -1,41 +1,177 @@
 {
-    "replace":  false,
-    "values":  [
-                   "minecraft:diamond_helmet",
-                   "minecraft:diamond_chestplate",
-                   "minecraft:diamond_leggings",
-                   "minecraft:diamond_boots",
-                   {
-                       "id":  "lrarmor:attacker_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:attacker_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:attacker_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:attacker_boots",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:defender_helmet",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:defender_chestplate",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:defender_leggings",
-                       "required":  false
-                   },
-                   {
-                       "id":  "lrarmor:defender_boots",
-                       "required":  false
-                   }
-               ]
+  "replace": false,
+  "values": [
+    "minecraft:diamond_helmet",
+    "minecraft:diamond_chestplate",
+    "minecraft:diamond_leggings",
+    "minecraft:diamond_boots",
+    {
+      "id": "lrarmor:attacker_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:attacker_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:attacker_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:attacker_boots",
+      "required": false
+    },
+    {
+      "id": "lrarmor:defender_helmet",
+      "required": false
+    },
+    {
+      "id": "lrarmor:defender_chestplate",
+      "required": false
+    },
+    {
+      "id": "lrarmor:defender_leggings",
+      "required": false
+    },
+    {
+      "id": "lrarmor:defender_boots",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:osmium_helmet",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:osmium_chestplate",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:osmium_leggings",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:osmium_boots",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_glowstone_helmet",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_glowstone_chestplate",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_glowstone_leggings",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_glowstone_boots",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_obsidian_helmet",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_obsidian_chestplate",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_obsidian_leggings",
+      "required": false
+    },
+    {
+      "id": "mekanismtools:refined_obsidian_boots",
+      "required": false
+    },
+    {
+      "id": "botania:elementium_helmet",
+      "required": false
+    },
+    {
+      "id": "botania:elementium_chestplate",
+      "required": false
+    },
+    {
+      "id": "botania:elementium_leggings",
+      "required": false
+    },
+    {
+      "id": "botania:elementium_boots",
+      "required": false
+    },
+    {
+      "id": "botania:terrasteel_helmet",
+      "required": false
+    },
+    {
+      "id": "botania:terrasteel_chestplate",
+      "required": false
+    },
+    {
+      "id": "botania:terrasteel_leggings",
+      "required": false
+    },
+    {
+      "id": "botania:terrasteel_boots",
+      "required": false
+    },
+    {
+      "id": "twilightforest:knightmetal_helmet",
+      "required": false
+    },
+    {
+      "id": "twilightforest:knightmetal_chestplate",
+      "required": false
+    },
+    {
+      "id": "twilightforest:knightmetal_leggings",
+      "required": false
+    },
+    {
+      "id": "twilightforest:knightmetal_boots",
+      "required": false
+    },
+    {
+      "id": "twilightforest:phantom_helmet",
+      "required": false
+    },
+    {
+      "id": "twilightforest:phantom_chestplate",
+      "required": false
+    },
+    {
+      "id": "twilightforest:fiery_helmet",
+      "required": false
+    },
+    {
+      "id": "twilightforest:fiery_chestplate",
+      "required": false
+    },
+    {
+      "id": "twilightforest:fiery_leggings",
+      "required": false
+    },
+    {
+      "id": "twilightforest:fiery_boots",
+      "required": false
+    },
+    {
+      "id": "ad_astra:space_helmet",
+      "required": false
+    },
+    {
+      "id": "ad_astra:space_suit",
+      "required": false
+    },
+    {
+      "id": "ad_astra:space_pants",
+      "required": false
+    },
+    {
+      "id": "ad_astra:space_boots",
+      "required": false
+    }
+  ]
 }
