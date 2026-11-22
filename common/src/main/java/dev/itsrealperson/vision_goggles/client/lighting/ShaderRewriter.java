@@ -57,10 +57,6 @@ public class ShaderRewriter {
             "                if (depthAlongAxis > physRange || dist < 0.3) continue;\n" +
             "                float attenuation = 1.0 / (1.0 + 0.05 * dist + 0.02 * dist * dist);\n" +
             "                attenuation *= 1.0 - smoothstep(physRange * 0.8, physRange, dist);\n" +
-            "                float rC = VisionFlashlightsRange0[i];\n" +
-            "                float mD = (rC > 0.5 && rC < physRange) ? (rC + 1.0) : physRange;\n" +
-            "                if (depthAlongAxis > mD) continue;\n" +
-            "                if (mD < physRange) attenuation *= 1.0 - smoothstep(rC, mD, depthAlongAxis);\n" +
             "                float falloff = smoothstep(inner, outer, spotEffect);\n" +
             "                totalLight += col * attenuation * falloff * VisionFlashlightsIntensity[i];\n" +
             "                continue;\n" +
