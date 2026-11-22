@@ -5,7 +5,10 @@ import com.mojang.math.Axis;
 import dev.itsrealperson.vision_goggles.block.ModificationStationBlock;
 import dev.itsrealperson.vision_goggles.block.entity.ModificationStationBlockEntity;
 import dev.itsrealperson.vision_goggles.client.StationWorkAnimator;
+import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModConstants;
+import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -83,21 +86,23 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                 ItemStack slot2 = station.getItem(2);
 
                 if (!slot2.isEmpty() && slot2.getItem() instanceof VisionGogglesItem) {
-                    renderUprightGoggles(station, slot2, 0.0f, 1.01f, 0.02f, 0.44f, 0.0f, poseStack, buffer, light);
+                    renderUprightGoggles(station, slot2, 0.0f, getRestingMatY(slot2, 0.44f), 0.02f, 0.44f, 0.0f, poseStack, buffer, light);
                 } else {
                     boolean bothGoggles = !slot0.isEmpty() && !slot1.isEmpty()
                             && slot0.getItem() instanceof VisionGogglesItem
                             && slot1.getItem() instanceof VisionGogglesItem;
                     if (!slot0.isEmpty()) {
                         if (slot0.getItem() instanceof VisionGogglesItem) {
-                            renderUprightGoggles(station, slot0, bothGoggles ? -0.12f : -0.04f, 1.01f, 0.02f, bothGoggles ? 0.34f : 0.42f, 0.0f, poseStack, buffer, light);
+                            float sc0 = bothGoggles ? 0.34f : 0.42f;
+                            renderUprightGoggles(station, slot0, bothGoggles ? -0.12f : -0.04f, getRestingMatY(slot0, sc0), 0.02f, sc0, 0.0f, poseStack, buffer, light);
                         } else {
                             renderFlatItem(station, slot0, -0.12f, 0.952f, 0.00f, 0.24f, 90.0f, poseStack, buffer, light);
                         }
                     }
                     if (!slot1.isEmpty()) {
                         if (slot1.getItem() instanceof VisionGogglesItem) {
-                            renderUprightGoggles(station, slot1, bothGoggles ? 0.12f : 0.08f, 1.01f, 0.02f, bothGoggles ? 0.34f : 0.40f, 0.0f, poseStack, buffer, light);
+                            float sc1 = bothGoggles ? 0.34f : 0.40f;
+                            renderUprightGoggles(station, slot1, bothGoggles ? 0.12f : 0.08f, getRestingMatY(slot1, sc1), 0.02f, sc1, 0.0f, poseStack, buffer, light);
                         } else {
                             renderFlatItem(station, slot1, 0.14f, 0.952f, 0.00f, 0.22f, 90.0f, poseStack, buffer, light);
                         }
@@ -130,7 +135,7 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
 
         boolean hasGoggles = !uprightGoggles.isEmpty();
         if (hasGoggles) {
-            renderUprightGoggles(station, uprightGoggles, 0.0f, 1.00f, -0.07f, 0.36f, 0.0f, poseStack, buffer, light);
+            renderUprightGoggles(station, uprightGoggles, 0.0f, getRestingMatY(uprightGoggles, 0.36f), -0.07f, 0.36f, 0.0f, poseStack, buffer, light);
         }
 
         int groupCount = flatGroups.size();
@@ -176,7 +181,8 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
         if (parts.isEmpty()) {
             float hover = (float) Math.sin(p * Math.PI) * 0.045f;
             if (result.getItem() instanceof VisionGogglesItem) {
-                renderUprightGoggles(station, result, 0.0f, 1.02f + hover, 0.02f, 0.44f, (float) Math.sin(p * Math.PI * 2.0f) * 8.0f, poseStack, buffer, light);
+                float y = Math.max(1.02f + hover, getHoverMinY(result, 0.44f));
+                renderUprightGoggles(station, result, 0.0f, y, 0.02f, 0.44f, (float) Math.sin(p * Math.PI * 2.0f) * 8.0f, poseStack, buffer, light);
             } else {
                 renderFlatItem(station, result, 0.0f, 0.955f + hover, 0.02f, 0.42f, 90.0f, poseStack, buffer, light);
             }
@@ -270,9 +276,11 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
         if (p < 0.28f) {
             float t = smoothstep(p / 0.28f);
             if (hasGoggles) {
-                float y = Mth.lerp(t, 1.00f, 1.03f);
-                float z = Mth.lerp(t, -0.07f, 0.02f);
                 float sc = Mth.lerp(t, 0.36f, 0.38f);
+                float startY = getRestingMatY(baseGoggles, 0.36f);
+                float targetY = Math.max(1.03f, getHoverMinY(baseGoggles, 0.38f));
+                float y = Mth.lerp(t, startY, targetY);
+                float z = Mth.lerp(t, -0.07f, 0.02f);
                 renderUprightGoggles(station, baseGoggles, 0.0f, y, z, sc, 0.0f, poseStack, buffer, light);
             } else if (baseFlatIdx >= 0) {
                 float[] st = flatStarts.get(baseFlatIdx);
@@ -283,7 +291,8 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                     // Morph from flat tactical frame into upright neutral 3D goggles chassis
                     float chassisT = smoothstep((t - 0.55f) / 0.45f);
                     float sc = Mth.lerp(chassisT, 0.26f, 0.38f);
-                    renderUprightGoggles(station, neutralChassis, x, y, z, sc, (1.0f - chassisT) * -25.0f, poseStack, buffer, light);
+                    float safeY = Math.max(y, getHoverMinY(neutralChassis, sc));
+                    renderUprightGoggles(station, neutralChassis, x, safeY, z, sc, (1.0f - chassisT) * -25.0f, poseStack, buffer, light);
                 } else {
                     float pitch = Mth.lerp(t, 90.0f, 0.0f);
                     float sc = Mth.lerp(t, 0.21f, 0.30f);
@@ -348,7 +357,8 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
             if (lensColorBlend > 0.0f && lensColorBlend < 1.0f) {
                 sc += (float) Math.sin(lensColorBlend * Math.PI) * 0.025f;
             }
-            renderUprightGoggles(station, activeModel, 0.0f, centerY, 0.02f, sc, yawSettle, poseStack, buffer, light);
+            float y = Math.max(centerY, getHoverMinY(activeModel, sc));
+            renderUprightGoggles(station, activeModel, 0.0f, y, 0.02f, sc, yawSettle, poseStack, buffer, light);
         } else {
             float buildFrac = Mth.clamp((p - 0.28f) / 0.44f, 0.0f, 1.0f);
             float sc = Mth.lerp(buildFrac, 0.28f, 0.42f);
@@ -360,6 +370,45 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
     private static float smoothstep(float t) {
         float c = Mth.clamp(t, 0.0f, 1.0f);
         return c * c * (3.0f - 2.0f * c);
+    }
+
+    private static float getRestingMatY(ItemStack stack, float scale) {
+        return 0.939f + scale * getRestingBottomOffset(stack);
+    }
+
+    private static float getHoverMinY(ItemStack stack, float scale) {
+        return 0.955f + scale * getRestingBottomOffset(stack);
+    }
+
+    private static float getRestingBottomOffset(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || TriLensVisualHelper.isNeutralChassis(stack)) {
+            return 0.0994f;
+        }
+        if (!(stack.getItem() instanceof VisionGogglesItem goggles)) {
+            return 0.0994f;
+        }
+        boolean active = stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE);
+        if (goggles instanceof ModularGogglesItem modular) {
+            if (active) {
+                if (modular.hasModule(stack, ModConstants.ID_BIOMETRIC)) return 0.2931f;
+                if (modular.hasModule(stack, ModConstants.ID_ZOOM)) return 0.2556f;
+                return 0.2400f;
+            }
+            if (modular.hasModule(stack, ModConstants.ID_VITAL_INFO)
+                    || modular.hasModule(stack, ModConstants.ID_ENVIRONMENT)) {
+                return 0.1244f;
+            }
+            return 0.0994f;
+        }
+        VisionMode mode = goggles.getVisionMode();
+        if (active) {
+            if (mode == VisionMode.BIOMETRIC) return 0.2087f;
+            if (mode == VisionMode.THERMAL) return 0.2556f;
+            return 0.2244f;
+        }
+        if (mode == VisionMode.BIOMETRIC) return 0.2087f;
+        if (mode == VisionMode.NIGHT_VISION) return 0.1775f;
+        return 0.0994f;
     }
 
     private void renderUprightGoggles(
@@ -376,7 +425,7 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
     ) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0f + yawOffset));
+        poseStack.mulPose(Axis.YP.rotationDegrees(yawOffset));
         poseStack.scale(scale, scale, scale);
         itemRenderer.renderStatic(stack, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, poseStack, buffer, station.getLevel(), 0);
         poseStack.popPose();

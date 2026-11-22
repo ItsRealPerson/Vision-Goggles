@@ -1,76 +1,130 @@
 package dev.itsrealperson.vision_goggles.client.renderer;
 
-import dev.itsrealperson.vision_goggles.Vision_goggles;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.itsrealperson.vision_goggles.client.model.VisionGogglesGeoModel;
-import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
-import dev.itsrealperson.vision_goggles.util.ModConstants;
-import dev.itsrealperson.vision_goggles.util.VisionMode;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
-import java.util.List;
+import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 public class VisionGogglesGeoRenderer extends GeoItemRenderer<VisionGogglesItem> {
 
-    private static final ResourceLocation NVG_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/nvg_texture.png");
-    private static final ResourceLocation CHASSIS_NEUTRAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/chassis_neutral.png");
-    private static final ResourceLocation THERMAL_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/thermal_vision.png");
-    private static final ResourceLocation HYDRO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/hidro_vision.png");
-    private static final ResourceLocation BIO_TEXTURE = new ResourceLocation(Vision_goggles.MOD_ID, "textures/entities/bio_vision.png");
-
     public VisionGogglesGeoRenderer() {
         super(new VisionGogglesGeoModel());
+        addRenderLayer(new TriLensGlowGeoLayer(this));
     }
 
     @Override
     public ResourceLocation getTextureLocation(VisionGogglesItem animatable) {
-        ItemStack stack = getCurrentItemStack();
-        if (stack == null) return super.getTextureLocation(animatable);
-        if (stack.hasTag() && stack.getTag().getBoolean("vg_neutral_chassis")) {
-            return CHASSIS_NEUTRAL_TEXTURE;
-        }
-
-        VisionMode mode = animatable.getVisionMode();
-
-        if (animatable instanceof ModularGogglesItem modular) {
-            List<VisionMode> modes = modular.getModes(stack);
-            if (!modes.isEmpty()) {
-                // Prioridad
-                for (VisionMode m : modes) {
-                    if (m == VisionMode.THERMAL) { mode = m; break; }
-                    if (m == VisionMode.BIOMETRIC) { mode = m; break; }
-                    if (m == VisionMode.HYDRO) { mode = m; }
-                }
-                if (mode == null) mode = modes.get(0);
-            }
-        }
-
-        if (mode == VisionMode.THERMAL) return THERMAL_TEXTURE;
-        if (mode == VisionMode.HYDRO) return HYDRO_TEXTURE;
-        if (mode == VisionMode.BIOMETRIC) return BIO_TEXTURE;
-        
-        return NVG_TEXTURE;
+        return TriLensVisualHelper.getBaseTexture(getCurrentItemStack(), animatable);
     }
 
     @Override
-    public void renderByItem(ItemStack stack, ItemDisplayContext transformType, com.mojang.blaze3d.vertex.PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+    public RenderType getRenderType(
+            VisionGogglesItem animatable,
+            ResourceLocation texture,
+            @Nullable MultiBufferSource bufferSource,
+            float partialTick
+    ) {
+        return RenderType.entityCutoutNoCull(texture);
+    }
+
+    @Override
+    public void renderByItem(
+            ItemStack stack,
+            ItemDisplayContext transformType,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            int packedLight,
+            int packedOverlay
+    ) {
         if (this.model instanceof VisionGogglesGeoModel vgModel) {
             vgModel.setCurrentStack(stack);
         }
+        poseStack.pushPose();
+        poseStack.translate(
+                TriLensVisualHelper.CENTER_OFFSET_X,
+                TriLensVisualHelper.CENTER_OFFSET_Y,
+                TriLensVisualHelper.CENTER_OFFSET_Z
+        );
         super.renderByItem(stack, transformType, poseStack, bufferSource, packedLight, packedOverlay);
+        poseStack.popPose();
     }
 
     @Override
-    public void preRender(com.mojang.blaze3d.vertex.PoseStack poseStack, VisionGogglesItem animatable, software.bernie.geckolib.cache.object.BakedGeoModel model, MultiBufferSource bufferSource, com.mojang.blaze3d.vertex.VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
+    public void preRender(
+            PoseStack poseStack,
+            VisionGogglesItem animatable,
+            BakedGeoModel model,
+            MultiBufferSource bufferSource,
+            VertexConsumer buffer,
+            boolean isReRender,
+            float partialTick,
+            int packedLight,
+            int packedOverlay,
+            float red,
+            float green,
+            float blue,
+            float alpha
+    ) {
         ItemStack stack = getCurrentItemStack();
-        if (stack != null && getGeoModel() instanceof VisionGogglesGeoModel vgModel) {
+        if (getGeoModel() instanceof VisionGogglesGeoModel vgModel) {
             vgModel.setCurrentStack(stack);
         }
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
+        TriLensVisualHelper.applyModularBoneVisibility(model, stack, animatable);
+    }
+
+    private static final class TriLensGlowGeoLayer extends GeoRenderLayer<VisionGogglesItem> {
+        private final VisionGogglesGeoRenderer itemRenderer;
+
+        private TriLensGlowGeoLayer(VisionGogglesGeoRenderer renderer) {
+            super(renderer);
+            this.itemRenderer = renderer;
+        }
+
+        @Override
+        public void render(
+                PoseStack poseStack,
+                VisionGogglesItem animatable,
+                BakedGeoModel bakedModel,
+                RenderType renderType,
+                MultiBufferSource bufferSource,
+                VertexConsumer buffer,
+                float partialTick,
+                int packedLight,
+                int packedOverlay
+        ) {
+            ItemStack stack = this.itemRenderer.getCurrentItemStack();
+            ResourceLocation glowTexture = TriLensVisualHelper.getGlowTexture(stack, animatable);
+            if (glowTexture == null) {
+                return;
+            }
+            RenderType glowRenderType = RenderType.eyes(glowTexture);
+            getRenderer().reRender(
+                    bakedModel,
+                    poseStack,
+                    bufferSource,
+                    animatable,
+                    glowRenderType,
+                    bufferSource.getBuffer(glowRenderType),
+                    partialTick,
+                    LightTexture.FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY,
+                    1.0f,
+                    1.0f,
+                    1.0f,
+                    1.0f
+            );
+        }
     }
 }
