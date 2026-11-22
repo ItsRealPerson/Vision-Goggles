@@ -138,6 +138,13 @@ public class FlashlightUniforms {
         }
         if (currentCount == 0) return; // Fast path: skip uploading arrays when no flashlights are active
 
+        int locRot = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "IViewRotMat");
+        if (locRot != -1) {
+            float[] m = new float[9];
+            com.mojang.blaze3d.systems.RenderSystem.getInverseViewRotationMatrix().get(m);
+            org.lwjgl.opengl.GL20.glUniformMatrix3fv(locRot, false, m);
+        }
+
         int locPos       = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsPos");
         int locDir       = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsDir");
         int locUp        = org.lwjgl.opengl.GL20.glGetUniformLocation(prog, "VisionFlashlightsUp");

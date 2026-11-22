@@ -443,3 +443,4 @@
 
 ## 2026-11-22 - Thermal: armor emits no heat
 - ThermalEntityPainter: armor layers drawn at minimum alpha (26) instead of 72% heat; still occludes body by depth. Flashlight-armor bug (night: armor/body black under beam) still under investigation.
+- FlashlightUniforms.applyToVanilla now uploads IViewRotMat (was mat3(0) -> v_VisionPos=0 -> entities/armor unlit by flashlight).
