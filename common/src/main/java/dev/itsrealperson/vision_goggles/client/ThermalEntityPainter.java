@@ -614,6 +614,7 @@ public class ThermalEntityPainter {
         try {
             float lerpYaw = entry.entity.yRotO + (entry.entity.getYRot() - entry.entity.yRotO) * partialTick;
 
+            final float[] slotFactors = computeSlotFactors(entry.entity);
             MultiBufferSource wrappedSource = type -> {
                 if (shouldDiscardRenderType(type)) {
                     return DISCARD_VERTEX_CONSUMER;
@@ -621,14 +622,15 @@ public class ThermalEntityPainter {
 
                 // Organic body/fur/robe layers carry full heat; armor emits no heat: drawn at minimum alpha (cold) so it still occludes body by depth
                 boolean isArmor = isArmorRenderType(type);
-                int baseAlpha = isArmor ? 26 : Math.round(finalHeat * 255.0f);
+                int baseAlpha = Math.round(finalHeat * 255.0f);
                 return new AlphaOverrideVertexConsumer(
                         maskBufferSource.getBuffer(type),
                         baseAlpha,
                         footView.x, footView.y, footView.z,
                         worldUpView.x, worldUpView.y, worldUpView.z,
                         entityHeight,
-                        !isArmor
+                        !isArmor,
+                        isArmor ? slotFactors : null
                 );
             };
 
@@ -1040,6 +1042,40 @@ public class ThermalEntityPainter {
         return heat;
     }
 
+    public static final TagKey<net.minecraft.world.item.Item> INSULATION_LOW = TagKey.create(Registries.ITEM, new ResourceLocation("vision_goggles", "thermal_insulation_low"));
+    public static final TagKey<net.minecraft.world.item.Item> INSULATION_MEDIUM = TagKey.create(Registries.ITEM, new ResourceLocation("vision_goggles", "thermal_insulation_medium"));
+    public static final TagKey<net.minecraft.world.item.Item> INSULATION_HIGH = TagKey.create(Registries.ITEM, new ResourceLocation("vision_goggles", "thermal_insulation_high"));
+    public static final TagKey<net.minecraft.world.item.Item> INSULATION_FULL = TagKey.create(Registries.ITEM, new ResourceLocation("vision_goggles", "thermal_insulation_full"));
+
+    /** Heat factor: 1.0 = no armor/full heat, 0.75 low, 0.50 medium, 0.25 high, 0.0 full insulation. Tags first, then stat fallback for modded armor. */
+    public static float getArmorThermalFactor(net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.EquipmentSlot slot) {
+        if (stack == null || stack.isEmpty()) return 1.0f;
+        if (stack.is(INSULATION_FULL)) return 0.0f;
+        if (stack.is(INSULATION_HIGH)) return 0.25f;
+        if (stack.is(INSULATION_MEDIUM)) return 0.50f;
+        if (stack.is(INSULATION_LOW)) return 0.75f;
+        if (stack.getItem() instanceof net.minecraft.world.item.ArmorItem armor) {
+            int ironDef = switch (slot) { case CHEST -> 6; case LEGS -> 5; default -> 2; };
+            int diaDef = switch (slot) { case CHEST -> 8; case LEGS -> 6; default -> 3; };
+            float tough = armor.getToughness();
+            int def = armor.getDefense();
+            if (tough >= 3.0f && def >= diaDef) return 0.0f;
+            if (tough >= 2.0f && def >= diaDef) return 0.25f;
+            if (def >= ironDef) return 0.50f;
+            return 0.75f;
+        }
+        return slot == net.minecraft.world.entity.EquipmentSlot.HEAD ? 0.85f : 1.0f;
+    }
+
+    private static float[] computeSlotFactors(Entity e) {
+        float[] f = {1f, 1f, 1f, 1f};
+        if (e instanceof LivingEntity le) {
+            net.minecraft.world.entity.EquipmentSlot[] s = {net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET};
+            for (int i = 0; i < 4; i++) f[i] = getArmorThermalFactor(le.getItemBySlot(s[i]), s[i]);
+        }
+        return f;
+    }
+
     /**
      * Wraps vertex writes so alpha encodes true world-up height gradient and view-normal Fresnel
      * shading without any dependency on camera pitch, yaw, or distance.
@@ -1055,6 +1091,7 @@ public class ThermalEntityPainter {
         private final float upZ;
         private final float entityHeight;
         private final boolean isBody;
+        private final float[] slotFactors; // head, chest, legs, feet; null = not armor
 
         private double lastX = 0;
         private double lastY = 0;
@@ -1066,7 +1103,9 @@ public class ThermalEntityPainter {
                 float footX, float footY, float footZ,
                 float upX, float upY, float upZ,
                 float entityHeight,
-                boolean isBody) {
+                boolean isBody,
+                float[] slotFactors) {
+            this.slotFactors = slotFactors;
             this.delegate = delegate;
             this.baseAlpha = Math.max(0, Math.min(255, baseAlpha));
             this.footX = footX;
@@ -1086,7 +1125,11 @@ public class ThermalEntityPainter {
             float zoneLum = isBody ? (0.84f + 0.16f * smoothY) : 0.90f;
             float fresnel = isBody ? (0.88f + 0.12f * facing) : (0.90f + 0.10f * facing);
             // Keep alpha >= 26 (26/255 = 0.102 > 0.10) so heavily-attenuated/armored entities survive vanilla alpha cutout
-            return Math.min(255, Math.max(26, Math.round(this.baseAlpha * zoneLum * fresnel)));
+            float armorFactor = 1.0f;
+            if (slotFactors != null) {
+                armorFactor = slotFactors[relY >= 0.80f ? 0 : relY >= 0.52f ? 1 : relY >= 0.25f ? 2 : 3];
+            }
+            return Math.min(255, Math.max(26, Math.round(this.baseAlpha * zoneLum * fresnel * armorFactor)));
         }
 
         @Override
