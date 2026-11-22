@@ -1127,7 +1127,7 @@ public class ThermalEntityPainter {
             // Keep alpha >= 26 (26/255 = 0.102 > 0.10) so heavily-attenuated/armored entities survive vanilla alpha cutout
             float armorFactor = 1.0f;
             if (slotFactors != null) {
-                armorFactor = slotFactors[relY >= 0.80f ? 0 : relY >= 0.52f ? 1 : relY >= 0.25f ? 2 : 3];
+                armorFactor = slotFactors[relY >= 0.78f ? 0 : relY >= 0.42f ? 1 : relY >= 0.18f ? 2 : 3];
             }
             return Math.min(255, Math.max(26, Math.round(this.baseAlpha * zoneLum * fresnel * armorFactor)));
         }
