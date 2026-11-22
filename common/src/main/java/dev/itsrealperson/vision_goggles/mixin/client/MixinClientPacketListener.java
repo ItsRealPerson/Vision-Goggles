@@ -7,6 +7,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,6 +15,29 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public class MixinClientPacketListener {
+    private static long vision_goggles$lastGunFlash = 0L;
+
+    private static void vision_goggles$gunFlash(double x, double y, double z) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !VisionRenderer.isVisorActive() || !VisionShaderManager.isNvgOrThermalCustomShaderActive()) return;
+        long now = System.currentTimeMillis();
+        if (now - vision_goggles$lastGunFlash < 40) return;
+        double d = Math.sqrt(mc.player.distanceToSqr(x, y, z));
+        if (d > 24.0) return;
+        vision_goggles$lastGunFlash = now;
+        VisionShaderManager.triggerFlash(d <= 3.0 ? 0.65f : 0.65f * (float) (1 - d / 24.0));
+    }
+
+    @Inject(method = "handleSoundEvent", at = @At("HEAD"))
+    private void vision_goggles$onSound(ClientboundSoundPacket p, CallbackInfo ci) {
+        var key = p.getSound().unwrapKey().orElse(null);
+        if (key == null) return;
+        String ns = key.location().getNamespace(), path = key.location().getPath();
+        if (!java.util.Set.of("tacz", "pointblank", "vic", "cgm", "superbwarfare", "jeg").contains(ns)) return;
+        for (String b : new String[]{"silence", "suppres", "reload", "dry", "aim", "draw", "put_away", "bolt", "click", "inspect", "equip"}) if (path.contains(b)) return;
+        for (String g : new String[]{"shoot", "fire", "gun", "shot", "blast", "rifle", "pistol", "sniper"}) if (path.contains(g)) { vision_goggles$gunFlash(p.getX(), p.getY(), p.getZ()); return; }
+    }
+
 
     @Inject(method = "handleExplosion", at = @At("HEAD"))
     private void vision_goggles$onExplosion(ClientboundExplodePacket packet, CallbackInfo ci) {
@@ -31,6 +55,8 @@ public class MixinClientPacketListener {
 
     @Inject(method = "handleAddEntity", at = @At("HEAD"))
     private void vision_goggles$onAddEntity(ClientboundAddEntityPacket packet, CallbackInfo ci) {
+        String tk = String.valueOf(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(packet.getType()));
+        if (tk.contains("bullet") || tk.startsWith("tacz")) vision_goggles$gunFlash(packet.getX(), packet.getY(), packet.getZ());
         if (packet.getType() == EntityType.LIGHTNING_BOLT) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null && mc.level != null && VisionRenderer.isVisionModeActive()) {
