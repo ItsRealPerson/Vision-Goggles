@@ -425,7 +425,7 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
     ) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
-        poseStack.mulPose(Axis.YP.rotationDegrees(yawOffset));
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0f + yawOffset));
         poseStack.scale(scale, scale, scale);
         itemRenderer.renderStatic(stack, ItemDisplayContext.FIXED, light, OverlayTexture.NO_OVERLAY, poseStack, buffer, station.getLevel(), 0);
         poseStack.popPose();

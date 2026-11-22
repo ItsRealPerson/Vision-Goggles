@@ -7,9 +7,11 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
+import dev.itsrealperson.vision_goggles.item.ProModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.client.renderer.TriLensManualRenderer;
+import dev.itsrealperson.vision_goggles.client.renderer.TriLensVisualHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.PlayerModel;
@@ -106,14 +108,15 @@ public class FirstPersonVisorRenderer {
 
             poseStack.pushPose();
             poseStack.translate(width * 0.5f, height * 0.5f + yOffset, 1800.0f + zArc);
-            // Tactical 3/4 front view: tilt in screen space before the model flip
-            poseStack.mulPose(Axis.YP.rotationDegrees(14.0f * sideSign * (1.0f - visorProgress * 0.6f)));
-            poseStack.mulPose(Axis.XP.rotationDegrees(-6.0f + 14.0f * visorProgress - 35.0f * (1.0f - visorProgress)));
-            // Geo model is Y-up and faces -Z; GUI is Y-down with viewer at +Z: rotate 180deg about Z: the player looks from inside, tubes project forward (-Z, away) and the ocular +Z side faces the camera
-            poseStack.scale(-scale, -scale, scale);
+            poseStack.scale(scale, scale, scale);
+            // Rotate 180 deg Y + cancel GuiGraphics Y-down flip so front objective lenses (-Z) face the camera in a 3/4 tactical view
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0f + 14.0f * sideSign * (1.0f - visorProgress * 0.6f)));
+            poseStack.mulPose(Axis.XP.rotationDegrees(-6.0f + 14.0f * visorProgress));
+            poseStack.scale(1.0f, -1.0f, 1.0f);
             // Center visor_pivot on the origin
             poseStack.translate(0.0f, -TriLensManualRenderer.PIVOT_Y_PX / 16.0f, -TriLensManualRenderer.PIVOT_Z_PX / 16.0f);
 
+            VisionGogglesItem.getActiveVisionMode(stack);
             float glowIntensity = smoothstep01((visorProgress - 0.60f) / 0.28f);
             TriLensManualRenderer.renderVisorOnly(stack, goggles, poseStack, bufferSource, partialTicks,
                     packedLight, true, glowIntensity);
@@ -182,7 +185,7 @@ public class FirstPersonVisorRenderer {
         sleeve.visible = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
 
         // Anchor the fist directly onto the outer optical tube / side rim of the 3D goggles
-        float gripScale = visorScale;
+        float gripScale = height * Mth.lerp(ez, 0.95f, 2.0f);
         float visorEdgeX = width * 0.5f + sideSign * (gripScale * 0.17f);
         float visorEdgeY = height * 0.5f + yOffset + gripScale * 0.03f;
         float visorEdgeZ = 7200.0f + zArc;

@@ -194,9 +194,7 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "visor_controller", 0, state -> {
-            ItemStack stack = state.getData(DataTickets.ITEMSTACK);
-            boolean active = stack != null && stack.hasTag() && stack.getTag().getBoolean(ModConstants.TAG_ACTIVE);
-            return state.setAndContinue(active ? IDLE_DOWN : IDLE_UP);
+            return state.setAndContinue(IDLE_DOWN);
         }));
     }
 
