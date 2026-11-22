@@ -44,19 +44,26 @@ def bone(d, name):
     return next((b for b in d["minecraft:geometry"][0]["bones"] if b["name"] == name), None)
 
 
+def is_eyecup(c):
+    return -5.51 < c["origin"][2] < -5.45 and round(c["size"][2], 2) in (0.65, 0.25)
+
+
+STATIC_LENS_UV = {-2.1: [2, 41], 2.1: [13, 41]}
+
+
 def main():
     for f in sorted(GEO.glob("*.geo.json")):
         d = json.loads(f.read_text(encoding="utf-8"))
         visor = bone(d, "visor_pivot")
-        if any(c["size"] == MARK_SIZE and c["origin"][2] == Z0 for c in visor["cubes"]):
-            print("skip", f.name)
-            continue
+        for b in d["minecraft:geometry"][0]["bones"]:
+            if b["name"] == "visor_pivot" or b["name"].startswith("mod_optics_"):
+                b["cubes"] = [c for c in b.get("cubes", []) if not is_eyecup(c)]
         for cx in (-2.1, 2.1):
             visor["cubes"].extend(rim(cx))
         name = f.name.replace(".geo.json", "")
         if name in STATIC:
             for cx in (-2.1, 2.1):
-                visor["cubes"].append(lens(cx, GLOW[STATIC[name]]))
+                visor["cubes"].append(lens(cx, STATIC_LENS_UV[cx]))
         else:
             for i, (b, uv) in enumerate([("mod_optics_base", DARK_GLASS)] + [(f"mod_optics_{k}", v) for k, v in GLOW.items()]):
                 tb = bone(d, b)
