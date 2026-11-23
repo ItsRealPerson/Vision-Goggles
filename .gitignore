@@ -130,3 +130,9 @@ RELEASE_v2.0.0.md
 docs/
 
 build_output.txt
+
+models_src/
+scripts/
+.agent/
+SHADER_MIGRATION_PLAN*
+AGENTS.md
