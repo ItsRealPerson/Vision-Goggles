@@ -48,6 +48,7 @@ public class MixinGameRenderer {
                      shift = At.Shift.AFTER),
             require = 0)
     private void vision_goggles$processOurShader(float partialTick, long nanoTime, boolean renderLevel, CallbackInfo ci) {
+        dev.itsrealperson.vision_goggles.client.ThermalEntityPainter.occludeFirstPersonHand();
         VisionShaderManager.processShader(partialTick);
         VisionShaderManager.processFlashlight(partialTick);
     }

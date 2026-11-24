@@ -2,6 +2,9 @@
 
 ## [2.0.0] - 2026-11-24
 
+### Fixed (2026-11-24 — Oclusión de `ThermalMask` detrás de Armas/Mano en 1ª Persona)
+- **Oclusión Post-Mano en `ThermalEntityPainter.occludeFirstPersonHand()` + `MixinGameRenderer`:** Al capturar `ThermalMask` en `AFTER_BLOCK_ENTITIES` (antes de `renderItemInHand()`), las entidades cálidas se componían encima de armas en 1ª persona (ej. TaCZ Glock 17 al inspeccionar/apuntar). Ahora `occludeFirstPersonHand()` corre justo tras `renderLevel()` (cuando el depth buffer principal solo contiene la mano/arma con `depth < 1.0`) y borra los píxeles ocluidos de `ThermalMask` mediante `glBlitFramebuffer` + quad `GL_GREATER` antes de ejecutar `VisionShaderManager.processShader()`.
+
 ### Improved (2026-11-24 — Rediseño Óptico Sutil de `cracked_lens.png` y Opacidad HUD)
 - **Textura Óptica Sutil (`cracked_lens.png`):** Rediseñada a `1024×576` RGBA (supersampling `2×` con antialiasing Lanczos), sustituyendo las telarañas de esquinas por 2 impactos discretos sobre el aro curvo del lente (superior derecho e inferior izquierdo) con arcos de bisel, micro-reflejos cian/blanco y finas fracturas que se desvanecen antes del centro.
 - **Opacidad Progresiva Contenida (`VisionHUDOverlay`):** Ajustada la curva de alfa de `0.12f` (al `<30%` de durabilidad) hasta `0.52f` (al `<=5%`) con blend suave.
