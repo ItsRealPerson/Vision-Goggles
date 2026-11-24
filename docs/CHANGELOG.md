@@ -2,6 +2,10 @@
 
 ## [2.0.0] - 2026-11-24
 
+### Improved (2026-11-24 — Refinamiento Final de `cracked_lens.png` con Máscara Elíptica y Tinte Neutro)
+- **Vidrio Óptico Estrellado con Máscara Elíptica (`cracked_lens.png`):** Rehecha en `1024×576` RGBA (`2×` supersampling Lanczos) con 2 impactos estrellados (superior derecho e inferior izquierdo, anillos concéntricos y fracturas finas blanco/gris hielo), más máscara radial elíptica (`0.72..0.98`) para desvanecer suavemente antes del borde negro exterior y proteger el retículo central (`<0.24`).
+- **Tinte Neutro y Opacidad Contenida (`VisionHUDOverlay`):** Añadido `gui.flush()` antes/después del `blit` con `RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha)` (`0.14f` al `<30%` hasta `0.42f` al `<=5%`) evitando arrastres de color/estado HUD.
+
 ### Fixed & Improved (2026-11-24 — Fix Crash Oculus 1.8.0 + Photon v1.4 y Conversión Exacta de `cracked_lens.png`)
 - **Fix Crash `ExtendedShader` / `particles.json` en Oculus 1.8.0 (`ShaderInstanceMixin`, `ShaderRewriter`):** Evitado el parcheo GLSL de linterna cuando Iris/Oculus está activo o compilando un `ExtendedShader` (`IrisCompat.isShaderPackInUse()`, `ShaderRewriter.isIrisCallerOnStack()`, verificación de `ResourceProvider` y `sourcePackId` de Iris/Oculus) y restringido `patchVsh`/`patchFsh` únicamente a shaders vanilla `#version 150` con variables estándar, impidiendo errores de compilación GLSL en `Program.compileShaderInternal` (`m_166612_`) que disparaban `handler$iris$causeException (The call m_166612_ is not cancellable)`.
 - **Textura `cracked_lens.png` desde Imagen Base del Usuario (`cracked_lens.png`, `VisionHUDOverlay`):** Generada directamente desde la imagen de referencia del usuario a `1024×576` RGBA (16:9 pantalla completa `0..width, 0..height`), convirtiendo el fondo negro y ruido JPEG `< 18` a alfa `0` transparente y preservando las grietas blancas/grises con alfa proporcional a la luminancia.
