@@ -2,6 +2,10 @@
 
 ## [2.0.0] - 2026-11-24
 
+### Fixed & Improved (2026-11-24 — Fix Crash Oculus 1.8.0 + Photon v1.4 y Conversión Exacta de `cracked_lens.png`)
+- **Fix Crash `ExtendedShader` / `particles.json` en Oculus 1.8.0 (`ShaderInstanceMixin`, `ShaderRewriter`):** Evitado el parcheo GLSL de linterna cuando Iris/Oculus está activo o compilando un `ExtendedShader` (`IrisCompat.isShaderPackInUse()`, `ShaderRewriter.isIrisCallerOnStack()`, verificación de `ResourceProvider` y `sourcePackId` de Iris/Oculus) y restringido `patchVsh`/`patchFsh` únicamente a shaders vanilla `#version 150` con variables estándar, impidiendo errores de compilación GLSL en `Program.compileShaderInternal` (`m_166612_`) que disparaban `handler$iris$causeException (The call m_166612_ is not cancellable)`.
+- **Textura `cracked_lens.png` desde Imagen Base del Usuario (`cracked_lens.png`, `VisionHUDOverlay`):** Generada directamente desde la imagen de referencia del usuario a `1024×576` RGBA (16:9 pantalla completa `0..width, 0..height`), convirtiendo el fondo negro y ruido JPEG `< 18` a alfa `0` transparente y preservando las grietas blancas/grises con alfa proporcional a la luminancia.
+
 ### Fixed (2026-11-24 — Oclusión de `ThermalMask` detrás de Armas/Mano en 1ª Persona)
 - **Oclusión Post-Mano en `ThermalEntityPainter.occludeFirstPersonHand()` + `MixinGameRenderer`:** Al capturar `ThermalMask` en `AFTER_BLOCK_ENTITIES` (antes de `renderItemInHand()`), las entidades cálidas se componían encima de armas en 1ª persona (ej. TaCZ Glock 17 al inspeccionar/apuntar). Ahora `occludeFirstPersonHand()` corre justo tras `renderLevel()` (cuando el depth buffer principal solo contiene la mano/arma con `depth < 1.0`) y borra los píxeles ocluidos de `ThermalMask` mediante `glBlitFramebuffer` + quad `GL_GREATER` antes de ejecutar `VisionShaderManager.processShader()`.
 

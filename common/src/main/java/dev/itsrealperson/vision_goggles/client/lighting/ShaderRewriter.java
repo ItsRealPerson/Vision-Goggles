@@ -76,8 +76,27 @@ public class ShaderRewriter {
             "    return totalLight;\n" +
             "}";
 
+    public static boolean isIrisCallerOnStack() {
+        for (StackTraceElement el : Thread.currentThread().getStackTrace()) {
+            String cls = el.getClassName();
+            if (cls.startsWith("net.irisshaders.") || cls.startsWith("net.coderbot.iris.")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static ResourceProvider wrap(ResourceProvider provider) {
+        if (provider != null) {
+            String pName = provider.getClass().getName();
+            if (pName.startsWith("net.irisshaders.") || pName.startsWith("net.coderbot.iris.")) {
+                return provider;
+            }
+        }
         return location -> {
+            if (dev.itsrealperson.vision_goggles.client.IrisCompat.isShaderPackInUse() || isIrisCallerOnStack()) {
+                return provider.getResource(location);
+            }
             Optional<Resource> resourceOpt = provider.getResource(location);
             if (resourceOpt.isEmpty()) return resourceOpt;
 
@@ -88,14 +107,21 @@ public class ShaderRewriter {
             if ((isFsh || isVsh) && (path.contains("rendertype_solid") || path.contains("rendertype_cutout") || path.contains("rendertype_translucent") || path.contains("rendertype_entity") || path.contains("rendertype_armor") || path.contains("rendertype_water") || path.contains("particle"))) {
                 try {
                     Resource res = resourceOpt.get();
+                    String srcPackId = res.sourcePackId();
+                    if (srcPackId != null && (srcPackId.toLowerCase().contains("iris") || srcPackId.toLowerCase().contains("oculus"))) {
+                        return resourceOpt;
+                    }
                     InputStream is = res.open();
                     BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                     String source = reader.lines().collect(Collectors.joining("\n"));
 
                     String patched = isFsh ? patchFsh(source) : patchVsh(source);
+                    if (patched.equals(source)) {
+                        return resourceOpt;
+                    }
 
-                    InputStream newIs = new ByteArrayInputStream(patched.getBytes(StandardCharsets.UTF_8));
-                    return Optional.of(new Resource(res.source(), () -> newIs, () -> res.metadata()));
+                    byte[] patchedBytes = patched.getBytes(StandardCharsets.UTF_8);
+                    return Optional.of(new Resource(res.source(), () -> new ByteArrayInputStream(patchedBytes), () -> res.metadata()));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -106,6 +132,8 @@ public class ShaderRewriter {
 
     public static String patchFsh(String source) {
         if (source.contains("VisionFlashlightCount")) return source;
+        if (!source.contains("#version 150") || source.contains("iris_") || source.contains("IRIS_")) return source;
+        if (!source.contains("lightMapColor") && !source.contains("vertexColor") && !source.contains("ColorModulator")) return source;
         source = source.replaceFirst("#version 150", "#version 150\n" + "in vec3 v_VisionPos;\n" + FLASHLIGHT_GLSL);
 
         int mainIdx = source.indexOf("void main()");
@@ -127,6 +155,7 @@ public class ShaderRewriter {
 
     public static String patchVsh(String source) {
         if (source.contains("v_VisionPos")) return source;
+        if (!source.contains("#version 150") || !source.contains("Position") || source.contains("iris_") || source.contains("IRIS_")) return source;
 
         String declaration = "#version 150\nout vec3 v_VisionPos;\n";
         if (!source.contains("ChunkOffset") && source.contains("ModelViewMat") && !source.contains("IViewRotMat")) {
