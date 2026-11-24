@@ -275,6 +275,12 @@ public class VisionRenderer {
                 flashlightModeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(heldFlashlight);
             }
 
+            boolean shouldUpdateFlashlightBattery = !isOpticsActiveAndPowered;
+            if (isFlashlightActive && shouldUpdateFlashlightBattery && !heldFlashlight.isEmpty() && !nbt.getBoolean(ModConstants.TAG_FLASHLIGHT_ACTIVE)) {
+                currentBatteryPct = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getBattery(heldFlashlight)
+                        / dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.MAX_BATTERY;
+            }
+
             if (isFlashlightActive != lastFlashlightActive || (isFlashlightActive && flashlightModeId != lastFlashlightModeId)) {
                 if (isFlashlightActive) {
                     VisionShaderManager.enableFlashlight(mc, flashlightModeId);
@@ -283,6 +289,9 @@ public class VisionRenderer {
                 }
                 lastFlashlightActive = isFlashlightActive;
                 lastFlashlightModeId = flashlightModeId;
+            }
+            if (isFlashlightActive && shouldUpdateFlashlightBattery) {
+                VisionShaderManager.updateFlashlightState(currentBatteryPct, damageFlickerTimer > 0);
             }
 
             // Update Grayscale state for tick updates
@@ -387,6 +396,7 @@ public class VisionRenderer {
 
             if (isHandheldActive) {
                 currentBatteryPct = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getBattery(heldFlashlight) / dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.MAX_BATTERY;
+                VisionShaderManager.updateFlashlightState(currentBatteryPct, damageFlickerTimer > 0);
             }
 
             if (grayscaleEnabled || lastServerActive || VisionShaderManager.isShaderActive()) {

@@ -6,6 +6,9 @@ uniform float battery;
 uniform float AspectRatio;
 uniform float FlashlightMode;
 uniform float u_DSPActive;
+uniform float IrisActive;
+uniform float BeamDistance;
+uniform float StrobeFactor;
 
 in vec2 texCoord;
 out vec4 fragColor;
@@ -40,17 +43,12 @@ void main() {
     float spillPower = 0.08;
     
     if (FlashlightMode > 2.5) {
-        // 3: STROBE MODE (Ergonomic Tactical CQB Strobe — 9.5 Hz with ambient base fill)
+        // 3: STROBE MODE (10 Hz crisp tactical strobe driven by real-time StrobeFactor)
         hotspotRadius = 0.14;
         spillRadius = 0.48;
         cutoffRadius = 0.64;
         
-        // Base fill (35% continuous illumination) avoids total blackout / eye strain
-        // Over-voltage burst pulse (65% at ~9.5 Hz) for authentic tactical deterrence
-        float cycle = fract(time * 0.48);
-        float pulse = smoothstep(0.0, 0.12, cycle) * (1.0 - smoothstep(0.35, 0.75, cycle));
-        float strobeMultiplier = 0.35 + 0.65 * pulse;
-        
+        float strobeMultiplier = (StrobeFactor > 0.001) ? StrobeFactor : 1.0;
         hotspotPower = 0.60 * strobeMultiplier;
         spillPower = 0.16 * strobeMultiplier;
     } else if (FlashlightMode > 1.5) {
@@ -106,6 +104,30 @@ void main() {
     
     vec3 finalLight = ledColor * fringeColor * (totalBeam * battery) + (ledColor * ambientBounce * battery);
     
-    vec3 finalColor = min(baseColor.rgb + finalLight, vec3(1.0));
+    vec3 finalColor;
+    if (IrisActive > 0.5) {
+        // When an Iris/Oculus shaderpack is active, world-space ShaderRewriter/SodiumShaderPatcher
+        // is bypassed so terrain inside the cone has near-zero darkness RGB.
+        // Combine multiplicative shadow-detail lifting (so block textures/edges are revealed in the dark)
+        // with distance-attenuated additive beam luminance and soft shoulder compression.
+        float maxRange = (FlashlightMode > 2.5) ? 30.0 : ((FlashlightMode > 1.5) ? 18.0 : ((FlashlightMode > 0.5) ? 32.0 : 52.0));
+        float distNorm = clamp(BeamDistance / maxRange, 0.0, 1.0);
+        float rangeAtten = 1.0 / (1.0 + 0.03 * BeamDistance + 0.004 * BeamDistance * BeamDistance);
+        rangeAtten *= 1.0 - smoothstep(0.82, 1.0, distNorm);
+        // Minimum 0.28 beam presence so sky/distant air still shows a subtle volumetric cone while nearby surfaces illuminate strongly
+        float effectiveAtten = mix(0.28, 1.0, clamp(rangeAtten * 1.35, 0.0, 1.0));
+
+        float beamMask = clamp((totalBeam + ambientBounce) * battery * effectiveAtten, 0.0, 1.0);
+        // Shadow gamma lift & exposure boost inside the illuminated cone to reveal dark shaderpack textures
+        vec3 liftedBase = pow(max(baseColor.rgb, vec3(0.0)), vec3(mix(1.0, 0.52, clamp(beamMask * 1.4, 0.0, 1.0))));
+        vec3 litSurface = liftedBase * (1.0 + beamMask * 5.5) * mix(vec3(1.0), ledColor * fringeColor, clamp(beamMask * 1.2, 0.0, 1.0));
+        // Soft volumetric fill so pitch-black shadow pixels still show the beam's optical falloff
+        vec3 volumetricFill = finalLight * effectiveAtten * 0.42;
+        vec3 combined = max(baseColor.rgb, litSurface) + volumetricFill;
+        finalColor = combined / (1.0 + max(vec3(0.0), combined - vec3(0.65)) * 0.55);
+        finalColor = clamp(finalColor, 0.0, 1.0);
+    } else {
+        finalColor = min(baseColor.rgb + finalLight, vec3(1.0));
+    }
     fragColor = vec4(finalColor, 1.0);
 }

@@ -85,6 +85,11 @@ public class VisionShaderManager {
         // Uniforms are updated inside processShader() every render frame.
     }
 
+    public static void updateFlashlightState(float batteryPct, boolean flicker) {
+        currentBatteryPct = batteryPct;
+        damageFlicker = flicker;
+    }
+
     /**
      * Pre-compiles built-in goggle and flashlight PostChains while resources are freshly loaded,
      * so subsequent mode switches are instantaneous and immune to JAR file replacement.
@@ -299,8 +304,19 @@ public class VisionShaderManager {
             float time = ((mc.level.getGameTime() % 100000L) + partialTick) / 20.0f;
             int screenHeight = Math.max(1, mc.getWindow().getScreenHeight());
             float aspectRatio = (float) mc.getWindow().getScreenWidth() / (float) screenHeight;
+            boolean irisActive = IrisCompat.isShaderPackInUse();
+            float beamDist = 16.0f;
+            for (int i = 0; i < dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.currentCount; i++) {
+                if (dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.isLocalArray[i] > 0.5f) {
+                    beamDist = Math.max(0.5f, dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.range0Array[i]);
+                    break;
+                }
+            }
 
             List<PostPass> passes = ((PostChainAccessor) savedFlashlightChain).vision_goggles$getPasses();
+            float strobeFactor = (currentFlashlightMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE.id)
+                    ? dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime())
+                    : 1.0f;
             for (PostPass pass : passes) {
                 var shader = pass.getEffect();
                 if (shader.getUniform("battery") != null) {
@@ -312,7 +328,9 @@ public class VisionShaderManager {
                 if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
                 if (shader.getUniform("FlashlightMode") != null) shader.getUniform("FlashlightMode").set((float)currentFlashlightMode);
                 if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);
-            if (shader.getUniform("IrisActive") != null) shader.getUniform("IrisActive").set(IrisCompat.isShaderPackInUse() ? 1.0f : 0.0f);
+                if (shader.getUniform("IrisActive") != null) shader.getUniform("IrisActive").set(irisActive ? 1.0f : 0.0f);
+                if (shader.getUniform("BeamDistance") != null) shader.getUniform("BeamDistance").set(beamDist);
+                if (shader.getUniform("StrobeFactor") != null) shader.getUniform("StrobeFactor").set(strobeFactor);
             }
 
             RenderSystem.enableBlend();
