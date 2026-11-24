@@ -1,5 +1,11 @@
 # Changelog - Vision Goggles
 
+## [2.0.0] - 2026-11-24
+
+### Added & Improved (2026-11-24 — FLIR Thermal Realism: Flashlight Suppression & Progressive Gun Muzzle Heat)
+- **Suppress Visible Flashlight Beams in Thermal Vision (`VisionRenderer`, `VisionShaderManager`):** `updateFlashlightEveryFrame` now resets `FlashlightUniforms.beginUpdate(camera.rotation())` (`currentCount = 0`) and returns early when `VisionShaderManager.isThermalShaderActive()`, and `processFlashlight` returns immediately in Thermal mode, preventing visible flashlight beams from lighting blocks/entities or running screen-space post-processing in LWIR.
+- **Progressive Gun Muzzle / Barrel Heat (`GunHeatTracker`, `MixinClientLevel`, `MixinSoundEngine`, `ThermalEntityPainter`):** Added `GunHeatTracker` (`+0.20` heat per shot with `40ms` per-player dedupe, `-0.10/s` normal decay, `-0.35/s` in water/rain), hooked to bullet spawns (`tacz:` / `bullet`) and gunfire sounds (including suppressed shots, while keeping NVG glare untouched), and rendered 3rd-person world-depth-occluded muzzle cubes and 1st-person view-space barrel heat into `ThermalMask` (`0x00FFFF` Ironbow gradient).
+
 ## [2.0.0] - 2026-11-21
 
 ### Added & Improved (2026-11-21 — Cierre M1/M2 + Animaciones 1P/3P Vinculadas al Jugador para Prototipo Tri-Lente)
