@@ -1,0 +1,33 @@
+{
+  "parent": "vision_goggles:root",
+  "display": {
+    "icon": {
+      "item": "vision_goggles:night_vision_goggles"
+    },
+    "title": {
+      "translate": "advancements.vision_goggles.night_vision.title"
+    },
+    "description": {
+      "translate": "advancements.vision_goggles.night_vision.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_nvg": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "vision_goggles:night_vision_goggles",
+              "vision_goggles:nvg_module"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

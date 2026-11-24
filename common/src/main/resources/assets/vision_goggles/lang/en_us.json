@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Maximum number of modules installable in standard Modular Goggles.",
   "config.vision_goggles.pro_modular_max_modules": "Pro Modular Goggles Max Modules",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Maximum number of modules installable in Pro Modular Goggles.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7Left-click: Place 1  §8|  §7Right-click: Remove 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7Left-click: Place 1  §8|  §7Right-click: Remove 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] An Iris/Oculus shaderpack is active; custom post-processing shaders may be overridden or behave unexpectedly.",
+  "advancements.vision_goggles.root.title": "Tactical Optics",
+  "advancements.vision_goggles.root.description": "Craft a Modification Station or acquire your first Vision Goggles.",
+  "advancements.vision_goggles.craft_station.title": "Field Workshop",
+  "advancements.vision_goggles.craft_station.description": "Craft a Modification Station to assemble and customize tactical optics.",
+  "advancements.vision_goggles.modular_goggles.title": "Apex Modularity",
+  "advancements.vision_goggles.modular_goggles.description": "Assemble Modular or Pro Modular Goggles in the Modification Station.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Blinding Light",
+  "advancements.vision_goggles.tactical_flashlight.description": "Assemble a Tactical Flashlight with Focused, Wide, Close, and Strobe modes.",
+  "advancements.vision_goggles.thermal_vision.title": "Heat Signature",
+  "advancements.vision_goggles.thermal_vision.description": "Acquire Thermal Goggles or a Thermal Vision Module.",
+  "advancements.vision_goggles.night_vision.title": "Own the Night",
+  "advancements.vision_goggles.night_vision.description": "Acquire Night Vision Goggles or an NVG Module."
 }

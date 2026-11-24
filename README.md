@@ -1,31 +1,49 @@
-# Vision Goggles - Minecraft 1.20.1 (Stable)
+# Vision Goggles — Minecraft 1.20.1 (v2.0.0)
 
-**Branch Status: Complete / Maintenance**
+**Platform:** Minecraft `1.20.1` (`Forge` & `Fabric` via Architectury) | **Java:** `17`
 
-The legacy stable version of Vision Goggles for Minecraft 1.20.1. This branch uses the Architectury API to provide support for both Forge and Fabric.
+Vision Goggles 2.0.0 is a tactical optics and lighting mod featuring custom GLSL post-processing shaders, 3D GeckoLib 4 Tri-Lens goggles with first- and third-person visor animations, an interactive 3D Modification Station, a dynamic Tactical Flashlight with real-time shadows (Vanilla, Sodium & Embeddium), and a sandboxed LuaJ 3.0.1 HUD/AR scripting engine.
 
-## 🌟 Key Features
-- **Four Integrated Vision Modes**: Night Vision, Thermal (Entity Highlighting), Hydro (Underwater Clarity), and Biometric (Health Scanner).
-- **Modification Station**: A specialized block to customize and upgrade your modular goggles.
-- **Advanced Battery Mechanics**: Includes a low-energy flicker effect and a variety of recharge methods (batteries, solar).
-- **Tactical HUD**: Minimalist and informative interface for energy management.
-- **High Performance**: Designed to work flawlessly with Sodium, Iris, and Oculus.
+---
 
-## 🛠️ Requirements
-- **Java**: 17
-- **Fabric**: Fabric Loader & Fabric API
-- **Forge**: Standard Minecraft Forge
-- **Dependencies**: 
+## Key Features
+
+- **4 Core Vision Modes + Modular Variants**:
+  - **Night Vision (`NVG`)**: Pure client-side phosphor amplification (no vanilla potion icons/particles), P43 persistence, solar/explosion/muzzle-flash glare, and optional DSP auto-gating.
+  - **Thermal Vision (`FLIR`)**: Isolated `ThermalMask` depth-occluded FBO with Ironbow heat palette, world-up 3D gradients, cryogenic/combustion block signatures, and **tiered armor thermal insulation** (`thermal_insulation_{low,medium,high,full}` tags + modded armor stat fallback).
+  - **Biometric Vision**: Organic health/status signature scanning.
+  - **Hydro Vision**: Underwater clarity & depth-tuned optical filter.
+  - **Modular & Pro Modular Goggles**: Customize optics, zoom, solar charging, battery expansion, sonar radar, vital/environment HUDs, flashlight pod, and Lua programmable chips.
+- **Interactive 3D Modification Station**: Left-docked 2-tab tactical UI (*Assemble* piece-by-piece on a 3D cutting mat with player hand animations, and *Modify / Repair* for module installation, extraction, Lua flashing, and durability repair).
+- **Tactical Flashlight & Strobe**: Handheld or `body`-slot flashlight (plus modular goggle pod) with 4 modes (*Focused*, *Wide*, *Close*, and *10 Hz Tactical Strobe* with mob deterrence and calibrated NVG glare).
+- **Sandboxed LuaJ 3.0.1 Engine**: 6 bundled tactical HUD/AR/Shader scripts (`01_radar_tactico_360.lua` – `06_suite_termica_flir.lua`), world-to-screen AR projection, and `/vg` commands.
+- **16 Languages**: Full localization across 16 languages (`180+` keys).
+
+---
+
+## Requirements & Compatibility
+
+- **Java:** `17`
+- **Loaders:** Minecraft Forge `1.20.1` or Fabric Loader + Fabric API `1.20.1`
+- **Required Dependencies:**
   - Architectury API
   - Cloth Config
-  - Accessories (Fabric) / Curios (Forge)
+  - GeckoLib 4
+  - Curios (`Forge`) / Accessories (`Fabric`)
+- **Optional Integrations:**
+  - **JEI** (Just Enough Items) — *Assemble* & *Modify* recipe categories
+  - **Sodium / Embeddium** — Dynamic flashlight chunk & entity shader support
+  - **Iris / Oculus** — Automatic shaderpack detection with compatibility notice
 
-## 📦 Compatibility
-- **Curios API**: Fully supported for the `Eyes` slot.
-- **Accessories API**: Fully supported for the `Face` slot.
+---
 
-## 🎮 How to use
-1. **Toggle**: Press `N` to activate/deactivate your goggles.
-2. **Switch Mode**: Press `M` to cycle through installed vision modules.
-3. **Zoom**: Hold `V` to zoom in (requires zoom module).
-4. **Recharge**: Right-click with a battery while wearing the goggles.
+## Controls
+
+| Key / Input | Action |
+|---|---|
+| `N` (Quick Tap) | Flip goggles visor up/down (toggle active vision) |
+| `N` (Hold) | Open **Tactical Radial Wheel** (switch modes, toggle zoom lock, flashlight, sonar, smart battery recharge) |
+| `V` + Mouse Wheel | Continuous optical zoom (`1.0x – 8.0x`, requires Zoom Module) |
+| `L` | Toggle Tactical / Modular Flashlight |
+| `K` | Cycle Flashlight Beam Mode (*Focused / Wide / Close / Strobe*) |
+| `Right-Click` (Hold) | Equip goggles from hand with 3D animation |

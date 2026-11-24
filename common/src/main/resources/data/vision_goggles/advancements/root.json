@@ -1,0 +1,38 @@
+{
+  "display": {
+    "icon": {
+      "item": "vision_goggles:night_vision_goggles"
+    },
+    "title": {
+      "translate": "advancements.vision_goggles.root.title"
+    },
+    "description": {
+      "translate": "advancements.vision_goggles.root.description"
+    },
+    "background": "minecraft:textures/block/tinted_glass.png",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_goggles_or_station": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "vision_goggles:modification_station",
+              "vision_goggles:night_vision_goggles",
+              "vision_goggles:thermal_goggles",
+              "vision_goggles:hydro_goggles",
+              "vision_goggles:biometric_goggles",
+              "vision_goggles:modular_goggles",
+              "vision_goggles:pro_modular_goggles"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

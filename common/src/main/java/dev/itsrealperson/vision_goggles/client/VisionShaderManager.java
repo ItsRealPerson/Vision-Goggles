@@ -179,6 +179,7 @@ public class VisionShaderManager {
         if (savedPostChain != null && loc.equals(activeShaderLocation)) {
             return;
         }
+        IrisCompat.warnIfShaderPackActiveOnce(mc.player);
         PostChain chain = getOrCreateChain(mc, loc, false);
         if (chain != null) {
             boolean wasInactive = (savedPostChain == null);

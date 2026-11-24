@@ -1,0 +1,33 @@
+{
+  "parent": "vision_goggles:root",
+  "display": {
+    "icon": {
+      "item": "vision_goggles:thermal_goggles"
+    },
+    "title": {
+      "translate": "advancements.vision_goggles.thermal_vision.title"
+    },
+    "description": {
+      "translate": "advancements.vision_goggles.thermal_vision.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_thermal": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "vision_goggles:thermal_goggles",
+              "vision_goggles:thermal_module"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
