@@ -413,6 +413,7 @@ public class VisionRenderer {
         if (mc.player == null || mc.level == null) return;
 
         dev.itsrealperson.vision_goggles.client.lighting.FlashlightUniforms.beginUpdate(camera.rotation());
+        if (VisionShaderManager.isThermalShaderActive()) return;
         net.minecraft.world.phys.Vec3 camPos = camera.getPosition();
 
         for (Player player : mc.level.players()) {

@@ -4,12 +4,16 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.itsrealperson.vision_goggles.Vision_goggles;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
@@ -19,8 +23,10 @@ import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.animal.SnowGolem;
 import net.minecraft.world.entity.animal.Squid;
@@ -37,6 +43,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL11C;
@@ -205,6 +212,18 @@ public class ThermalEntityPainter {
         }
     }
 
+    private static class GunHeatEntry {
+        final Player player;
+        final float heat;
+        final boolean firstPerson;
+
+        GunHeatEntry(Player player, float heat, boolean firstPerson) {
+            this.player = player;
+            this.heat = heat;
+            this.firstPerson = firstPerson;
+        }
+    }
+
     public static boolean emitsThermalHeat(LivingEntity living) {
         if (living == null) return false;
         // Undead: no body heat
@@ -365,6 +384,22 @@ public class ThermalEntityPainter {
 
             hasPerEntityCustomColor = false;
 
+            List<GunHeatEntry> gunHeatEntries = new ArrayList<>();
+            for (Player player : mc.level.players()) {
+                if (player == null || !player.isAlive()) continue;
+                boolean isFirstPerson = (player == mc.player && mc.options.getCameraType() == CameraType.FIRST_PERSON);
+                if (!isFirstPerson) {
+                    double dx = player.getX() - camPos.x;
+                    double dy = player.getY() - camPos.y;
+                    double dz = player.getZ() - camPos.z;
+                    if (dx * dx + dy * dy + dz * dz > 4096.0) continue;
+                }
+                float gunHeat = GunHeatTracker.getHeat(player);
+                if (gunHeat > 0.02f) {
+                    gunHeatEntries.add(new GunHeatEntry(player, gunHeat, isFirstPerson));
+                }
+            }
+
             // Pre-compute camera world-up direction in view space once per frame
             Vector3f worldUpView = new Vector3f(0.0f, 1.0f, 0.0f);
             poseStack.last().pose().transformDirection(0.0f, 1.0f, 0.0f, worldUpView);
@@ -382,7 +417,7 @@ public class ThermalEntityPainter {
             RenderSystem.clearColor(0f, 0f, 0f, 0f);
             RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
 
-            if (throughWallBuckets.isEmpty() && directBuckets.isEmpty()) {
+            if (throughWallBuckets.isEmpty() && directBuckets.isEmpty() && gunHeatEntries.isEmpty()) {
                 maskValidThisFrame = false;
                 return;
             }
@@ -516,6 +551,10 @@ public class ThermalEntityPainter {
                 }
             }
 
+            if (!gunHeatEntries.isEmpty()) {
+                renderGunHeatMuzzles(mc, poseStack, camPos, partialTick, gunHeatEntries, prevDrawFbo, mainW, mainH, prevProgram);
+            }
+
             maskValidThisFrame = true;
         } finally {
             RenderSystem.disablePolygonOffset();
@@ -539,6 +578,147 @@ public class ThermalEntityPainter {
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
             GlStateManager._viewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         }
+    }
+
+    private static void renderGunHeatMuzzles(
+            Minecraft mc,
+            PoseStack poseStack,
+            Vec3 camPos,
+            float partialTick,
+            List<GunHeatEntry> entries,
+            int prevDrawFbo,
+            int mainW,
+            int mainH,
+            int prevProgram
+    ) {
+        int srcDepthFbo = (prevDrawFbo > 0) ? prevDrawFbo : mc.getMainRenderTarget().frameBufferId;
+        boolean hasThirdPerson = false;
+        boolean hasFirstPerson = false;
+        for (GunHeatEntry entry : entries) {
+            if (entry.firstPerson) hasFirstPerson = true;
+            else hasThirdPerson = true;
+        }
+
+        boolean useWorldDepth = hasThirdPerson && depthBlitSupported
+                && blitWorldDepthToCapture(mc, srcDepthFbo, mainW, mainH);
+
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
+        GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.disableBlend();
+        RenderSystem.disableCull();
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+        if (useWorldDepth) {
+            RenderSystem.clearColor(0f, 0f, 0f, 0f);
+            RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
+        } else {
+            RenderSystem.depthMask(true);
+            RenderSystem.clearColor(0f, 0f, 0f, 0f);
+            RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT | GL30.GL_DEPTH_BUFFER_BIT, false);
+        }
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder builder = tesselator.getBuilder();
+
+        if (hasThirdPerson) {
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.depthMask(true);
+            RenderSystem.polygonOffset(-1.0f, -2.0f);
+            RenderSystem.enablePolygonOffset();
+            try {
+                builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+                Matrix4f baseMat = poseStack.last().pose();
+                for (GunHeatEntry entry : entries) {
+                    if (entry.firstPerson) continue;
+                    Player p = entry.player;
+                    Vec3 eyePos = p.getEyePosition(partialTick);
+                    Vec3 lookDir = p.getViewVector(partialTick).normalize();
+                    Vec3 right = lookDir.cross(new Vec3(0.0, 1.0, 0.0));
+                    if (right.lengthSqr() < 1.0e-6) {
+                        right = new Vec3(1.0, 0.0, 0.0);
+                    } else {
+                        right = right.normalize();
+                    }
+                    Vec3 up = right.cross(lookDir).normalize();
+                    float handSign = (p.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
+                    Vec3 muzzleWorld = eyePos
+                            .add(lookDir.scale(0.85))
+                            .add(right.scale(0.22 * handSign))
+                            .subtract(up.scale(0.16));
+
+                    float mx = (float) (muzzleWorld.x - camPos.x);
+                    float my = (float) (muzzleWorld.y - camPos.y);
+                    float mz = (float) (muzzleWorld.z - camPos.z);
+                    int alpha = Math.max(26, Math.min(255, Math.round(entry.heat * 255.0f)));
+                    emitHeatCube(builder, baseMat, mx, my, mz, 0.08f, alpha);
+                }
+                tesselator.end();
+            } finally {
+                RenderSystem.disablePolygonOffset();
+                RenderSystem.polygonOffset(0.0f, 0.0f);
+            }
+        }
+
+        if (hasFirstPerson) {
+            RenderSystem.disableDepthTest();
+            RenderSystem.depthMask(false);
+            Matrix4f identity = new Matrix4f().identity();
+            builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+            for (GunHeatEntry entry : entries) {
+                if (!entry.firstPerson) continue;
+                float handSign = (entry.player.getMainArm() == HumanoidArm.RIGHT) ? 1.0f : -1.0f;
+                float vx = 0.22f * handSign;
+                float vy = -0.17f;
+                float vz = -0.62f;
+                int alpha = Math.max(26, Math.min(255, Math.round(entry.heat * 255.0f)));
+                emitHeatCube(builder, identity, vx, vy, vz, 0.08f, alpha);
+            }
+            tesselator.end();
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+        }
+
+        compositeIntoMask(0x00FFFF, prevProgram);
+    }
+
+    private static void emitHeatCube(BufferBuilder builder, Matrix4f mat, float cx, float cy, float cz, float half, int alpha) {
+        float x0 = cx - half, x1 = cx + half;
+        float y0 = cy - half, y1 = cy + half;
+        float z0 = cz - half, z1 = cz + half;
+
+        // -Z face
+        builder.vertex(mat, x0, y0, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y1, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y1, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y0, z0).color(255, 255, 255, alpha).endVertex();
+        // +Z face
+        builder.vertex(mat, x0, y0, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y0, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y1, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y1, z1).color(255, 255, 255, alpha).endVertex();
+        // -Y face
+        builder.vertex(mat, x0, y0, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y0, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y0, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y0, z1).color(255, 255, 255, alpha).endVertex();
+        // +Y face
+        builder.vertex(mat, x0, y1, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y1, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y1, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y1, z0).color(255, 255, 255, alpha).endVertex();
+        // -X face
+        builder.vertex(mat, x0, y0, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y0, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y1, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x0, y1, z0).color(255, 255, 255, alpha).endVertex();
+        // +X face
+        builder.vertex(mat, x1, y0, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y1, z0).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y1, z1).color(255, 255, 255, alpha).endVertex();
+        builder.vertex(mat, x1, y0, z1).color(255, 255, 255, alpha).endVertex();
     }
 
     private static void forceActiveTexture(int unit) {

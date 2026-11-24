@@ -287,6 +287,7 @@ public class VisionShaderManager {
     }
 
     public static void processFlashlight(float partialTick) {
+        if (isThermalShaderActive()) return;
         if (savedFlashlightChain == null) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
