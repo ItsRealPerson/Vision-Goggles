@@ -1,0 +1,32 @@
+{
+  "parent": "vision_goggles:root",
+  "display": {
+    "icon": {
+      "item": "vision_goggles:modification_station"
+    },
+    "title": {
+      "translate": "advancements.vision_goggles.craft_station.title"
+    },
+    "description": {
+      "translate": "advancements.vision_goggles.craft_station.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_station": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "vision_goggles:modification_station"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

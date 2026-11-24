@@ -44,7 +44,6 @@ public final class Vision_gogglesForge {
                 try {
                     net.minecraft.client.renderer.entity.EntityRenderer<?> renderer = event.getRenderer((net.minecraft.world.entity.EntityType)entityType);
                     if (renderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer livingRenderer) {
-                        livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.HeatSilhouetteLayer(livingRenderer));
                         livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
                     }
                 } catch (ClassCastException e) {
@@ -55,7 +54,6 @@ public final class Vision_gogglesForge {
             for (String skin : event.getSkins()) {
                 net.minecraft.client.renderer.entity.EntityRenderer<?> rawRenderer = event.getSkin(skin);
                 if (rawRenderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer livingRenderer) {
-                    livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.HeatSilhouetteLayer(livingRenderer));
                     livingRenderer.addLayer(new dev.itsrealperson.vision_goggles.client.GogglesRenderLayer(livingRenderer));
                 }
             }

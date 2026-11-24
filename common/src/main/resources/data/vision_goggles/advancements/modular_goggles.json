@@ -1,0 +1,33 @@
+{
+  "parent": "vision_goggles:craft_station",
+  "display": {
+    "icon": {
+      "item": "vision_goggles:modular_goggles"
+    },
+    "title": {
+      "translate": "advancements.vision_goggles.modular_goggles.title"
+    },
+    "description": {
+      "translate": "advancements.vision_goggles.modular_goggles.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_modular": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "vision_goggles:modular_goggles",
+              "vision_goggles:pro_modular_goggles"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

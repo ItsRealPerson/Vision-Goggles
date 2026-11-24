@@ -1,0 +1,32 @@
+{
+  "parent": "vision_goggles:craft_station",
+  "display": {
+    "icon": {
+      "item": "vision_goggles:tactical_flashlight"
+    },
+    "title": {
+      "translate": "advancements.vision_goggles.tactical_flashlight.title"
+    },
+    "description": {
+      "translate": "advancements.vision_goggles.tactical_flashlight.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_flashlight": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "vision_goggles:tactical_flashlight"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

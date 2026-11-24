@@ -517,6 +517,9 @@ public class ThermalEntityPainter {
             }
 
             maskValidThisFrame = true;
+        } catch (Throwable t) {
+            maskValidThisFrame = false;
+            Vision_goggles.LOGGER.debug("[ThermalEntityPainter] Suppressed frame render error: {}", t.getMessage());
         } finally {
             RenderSystem.disablePolygonOffset();
             RenderSystem.polygonOffset(0.0f, 0.0f);
