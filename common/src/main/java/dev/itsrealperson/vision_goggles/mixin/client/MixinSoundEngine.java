@@ -1,6 +1,5 @@
 package dev.itsrealperson.vision_goggles.mixin.client;
 
-import dev.itsrealperson.vision_goggles.client.GunHeatTracker;
 import dev.itsrealperson.vision_goggles.client.VisionShaderManager;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEngine;
@@ -17,16 +16,7 @@ public class MixinSoundEngine {
         ResourceLocation loc = sound.getLocation();
         String ns = loc.getNamespace(), path = loc.getPath();
         if (!java.util.Set.of("tacz", "pointblank", "vic", "cgm", "superbwarfare", "jeg").contains(ns)) return;
-        for (String b : new String[]{"reload", "dry", "aim", "draw", "put_away", "bolt", "click", "inspect", "equip"}) if (path.contains(b)) return;
-        boolean suppressed = path.contains("silence") || path.contains("suppres");
-        for (String g : new String[]{"shoot", "fire", "gun", "shot", "blast", "rifle", "pistol", "sniper"}) {
-            if (path.contains(g)) {
-                if (!suppressed) {
-                    VisionShaderManager.gunFlash(sound.getX(), sound.getY(), sound.getZ(), true);
-                }
-                GunHeatTracker.onGunshot(sound.getX(), sound.getY(), sound.getZ());
-                return;
-            }
-        }
+        for (String b : new String[]{"silence", "suppres", "reload", "dry", "aim", "draw", "put_away", "bolt", "click", "inspect", "equip"}) if (path.contains(b)) return;
+        for (String g : new String[]{"shoot", "fire", "gun", "shot", "blast", "rifle", "pistol", "sniper"}) if (path.contains(g)) { VisionShaderManager.gunFlash(sound.getX(), sound.getY(), sound.getZ(), true); return; }
     }
 }

@@ -462,3 +462,5 @@
 - MixinClientLevel + MixinSoundEngine: TaCZ client-side bullets/sounds trigger VisionShaderManager.gunFlash (0.90f, suppressor-aware, NVG only); cap 1.35.
 
 - v46 fix: Tuned TaCZ/gun muzzle-flash NVG glare (`VisionShaderManager.triggerMuzzleFlash`, `0.18f` per shot capped at `0.36f`, `0.04f` suppressed, `0.76f` fast decay) so automatic fire flashes crisply without blinding the screen white.
+
+- v46 revert: Removed `GunHeatTracker` and weapon muzzle heat rendering from `ThermalEntityPainter`, `MixinClientLevel`, and `MixinSoundEngine` (kept visible flashlight suppression in Thermal Vision).
