@@ -27,12 +27,12 @@ public enum FlashlightMode {
             3.0f,         // brighter but short
             0.45, 0.6f),  // very wide glare, low intensity at distance
 
-    // Tactical Strobe mode — 13 Hz disorienting rapid flash, high deterrence against hostiles
+    // Tactical Strobe mode — 10 Hz crisp rapid flash, moderate NVG glare without full whiteout
     STROBE(3, "strobe",
             0.78f, 0.90f, // coneInner, coneOuter (medium-tight focused burst)
             30.0f,        // range (blocks)
-            3.6f,         // high peak lum
-            0.75, 2.8f);  // disorienting glare pulse
+            2.8f,         // crisp peak lum without overblowing surfaces
+            0.75, 0.85f); // disorienting glare pulse without solid whiteout
 
     public final int id;
     public final String name;
@@ -71,22 +71,22 @@ public enum FlashlightMode {
     }
 
     /**
-     * Computes the real-time tactical strobe pulse factor (~11.5 Hz).
-     * High pulse (1.0) for ~40% of the cycle with a short 0.04 ramp down to a 0.10 floor.
+     * Computes the real-time tactical strobe pulse factor (~10.0 Hz).
+     * Crisp high pulse (1.0) for ~24% of the cycle with a short 0.025 ramp down to a 0.04 floor.
      */
     public static float getStrobeFactor(long nanoTime) {
-        double cycle = ((nanoTime * 1e-9) * 11.5) % 1.0;
+        double cycle = ((nanoTime * 1e-9) * 10.0) % 1.0;
         if (cycle < 0.0) cycle += 1.0;
-        final float low = 0.10f;
+        final float low = 0.04f;
         final float high = 1.0f;
-        final double ramp = 0.04;
+        final double ramp = 0.025;
         if (cycle < ramp) {
             float t = (float) (cycle / ramp);
             return low + (high - low) * t;
-        } else if (cycle < 0.40) {
+        } else if (cycle < 0.24) {
             return high;
-        } else if (cycle < 0.40 + ramp) {
-            float t = (float) ((cycle - 0.40) / ramp);
+        } else if (cycle < 0.24 + ramp) {
+            float t = (float) ((cycle - 0.24) / ramp);
             return high - (high - low) * t;
         } else {
             return low;

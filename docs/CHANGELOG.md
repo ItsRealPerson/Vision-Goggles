@@ -2,6 +2,10 @@
 
 ## [2.0.0] - 2026-11-24
 
+### Fixed & Tuned (2026-11-24 — Calibración de Potencia, Duty Cycle y Glare del Modo Estroboscópico `STROBE`)
+- **Pulso Estroboscópico Nítido sin Saturación (`FlashlightMode`):** Ajustado `STROBE` a `intensity = 2.8f` (antes `3.6f`), `glareIntensity = 0.85f` (antes `2.8f`) y curva `getStrobeFactor` a `10.0 Hz`, duty cycle `~24%` (`0.24`), rampa `0.025` y piso `0.04f` (antes `11.5 Hz`, `40%`, `0.10f`) para lograr destellos breves y definidos con recuperación limpia entre pulsos.
+- **Separación de Glare Propio vs Externo (`VisionShaderManager`):** Reducido el `residual` de estrobo externo (`0.06f * glareFromPlayer`) y separado el auto-glare de linterna propia (`STROBE` en casco o linterna táctica) a `residual = 0.04f` + pulso `0.38f * getStrobeFactor(...)` (eliminando el suelo `Math.max(1.25f, ...)` y `0.25f` que sumaban `Glare >= 0.98..3.50` y cegaban por completo el tubo NVG en blanco sólido).
+
 ### Added & Improved (2026-11-24 — Modo Estroboscópico Real + Flashazos NVG)
 - **Pulso Estroboscópico Compartido (`FlashlightMode.getStrobeFactor`):** Añadida onda táctica de ~11.5 Hz (`1.0f` durante ~40% del ciclo, rampa `0.04` y piso `0.10f`) reutilizable en tiempo real.
 - **Parpadeo World-Space (`FlashlightUniforms`):** Multiplicado `mode.intensity` por `FlashlightMode.getStrobeFactor(System.nanoTime())` cuando `mode == FlashlightMode.STROBE`, cubriendo Vanilla y Sodium/Embeddium para linterna local y de otros jugadores sin tocar GLSL.

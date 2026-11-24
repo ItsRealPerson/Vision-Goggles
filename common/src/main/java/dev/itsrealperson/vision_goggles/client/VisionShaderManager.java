@@ -637,7 +637,7 @@ public class VisionShaderManager {
                     float intensity = hasModFlashlight ? flashMode.glareIntensity : ModConfig.getNvgGenericLightIntensity();
                     float glareFromPlayer = distanceFactor * aimFactor * intensity * facingFactor;
                     if (hasModFlashlight && flashMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE) {
-                        float residual = glareFromPlayer * 0.25f;
+                        float residual = glareFromPlayer * 0.06f;
                         if (residual > targetGlare) targetGlare = residual;
                         float pulse = glareFromPlayer * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
                         if (pulse > strobeGlarePulse) strobeGlarePulse = pulse;
@@ -662,14 +662,14 @@ public class VisionShaderManager {
                     if (myTag.getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE) && helmetBatt > 0.0f) {
                         int myModeId = myTag.getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
                         dev.itsrealperson.vision_goggles.util.FlashlightMode myFlashMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(myModeId);
-                        float flashIntensity = Math.max(1.25f, myFlashMode.glareIntensity);
                         if (myFlashMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE) {
-                            float residual = flashIntensity * 0.25f;
+                            float residual = 0.04f;
                             if (targetGlare < residual) targetGlare = residual;
-                            float pulse = flashIntensity * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
+                            float pulse = 0.38f * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
                             if (strobeGlarePulse < pulse) strobeGlarePulse = pulse;
-                        } else if (targetGlare < flashIntensity) {
-                            targetGlare = flashIntensity;
+                        } else {
+                            float flashIntensity = Math.max(1.25f, myFlashMode.glareIntensity);
+                            if (targetGlare < flashIntensity) targetGlare = flashIntensity;
                         }
 
                     }
@@ -682,14 +682,14 @@ public class VisionShaderManager {
             if (!myTacticalFlashlight.isEmpty()) {
                 int tacticalModeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(myTacticalFlashlight);
                 dev.itsrealperson.vision_goggles.util.FlashlightMode tacticalMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(tacticalModeId);
-                float tacticalFlashGlare = Math.max(1.25f, tacticalMode.glareIntensity);
                 if (tacticalMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE) {
-                    float residual = tacticalFlashGlare * 0.25f;
+                    float residual = 0.04f;
                     if (targetGlare < residual) targetGlare = residual;
-                    float pulse = tacticalFlashGlare * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
+                    float pulse = 0.38f * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
                     if (strobeGlarePulse < pulse) strobeGlarePulse = pulse;
-                } else if (targetGlare < tacticalFlashGlare) {
-                    targetGlare = tacticalFlashGlare;
+                } else {
+                    float tacticalFlashGlare = Math.max(1.25f, tacticalMode.glareIntensity);
+                    if (targetGlare < tacticalFlashGlare) targetGlare = tacticalFlashGlare;
                 }
 
             }
