@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Heat Signature",
   "advancements.vision_goggles.thermal_vision.description": "Acquire Thermal Goggles or a Thermal Vision Module.",
   "advancements.vision_goggles.night_vision.title": "Own the Night",
-  "advancements.vision_goggles.night_vision.description": "Acquire Night Vision Goggles or an NVG Module."
+  "advancements.vision_goggles.night_vision.description": "Acquire Night Vision Goggles or an NVG Module.",
+  "message.vision_goggles.water_short_circuit": "Water interference — optics offline!"
 }

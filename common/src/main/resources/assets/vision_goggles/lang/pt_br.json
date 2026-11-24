@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Assinatura Térmica",
   "advancements.vision_goggles.thermal_vision.description": "Obtenha óculos termais ou um módulo de visão termal.",
   "advancements.vision_goggles.night_vision.title": "Dono da Noite",
-  "advancements.vision_goggles.night_vision.description": "Obtenha óculos de visão noturna ou um módulo NVG."
+  "advancements.vision_goggles.night_vision.description": "Obtenha óculos de visão noturna ou um módulo NVG.",
+  "message.vision_goggles.water_short_circuit": "Interferência de água — óptica fora de serviço!"
 }

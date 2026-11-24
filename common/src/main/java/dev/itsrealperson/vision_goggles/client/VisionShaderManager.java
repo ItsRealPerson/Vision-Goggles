@@ -53,6 +53,24 @@ public class VisionShaderManager {
     private static float flashGlare = 0.0f;
 
     private static long lastGunFlash = 0L;
+    private static long underwaterStartMs = 0L;
+    private static VisionMode lastUnderwaterMode = null;
+
+    public static float getUnderwaterShortProgress(Minecraft mc) {
+        if (mc == null || mc.player == null || !VisionRenderer.isVisorActive()
+                || (activeMode != VisionMode.NIGHT_VISION && activeMode != VisionMode.THERMAL)
+                || !mc.player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)) {
+            underwaterStartMs = 0L;
+            lastUnderwaterMode = null;
+            return 0.0f;
+        }
+        long now = System.currentTimeMillis();
+        if (underwaterStartMs == 0L || lastUnderwaterMode != activeMode) {
+            underwaterStartMs = now;
+            lastUnderwaterMode = activeMode;
+        }
+        return Math.min(1.0f, Math.max(0.0f, (now - underwaterStartMs) / 2000.0f));
+    }
 
     public static void gunFlash(double x, double y, double z, boolean checkHeld) {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
@@ -209,6 +227,8 @@ public class VisionShaderManager {
         flashGlare = 0.0f;
         currentInterference = 0.0f;
         startupTimestamp = 0L;
+        underwaterStartMs = 0L;
+        lastUnderwaterMode = null;
     }
 
     public static void enableFlashlight(Minecraft mc, int modeId) {
@@ -741,6 +761,24 @@ public class VisionShaderManager {
             }
         }
 
+        float waterShort = getUnderwaterShortProgress(mc);
+        boolean waterBlackout = false;
+        float waterGlareSpike = 0.0f;
+        if (waterShort > 0.0f) {
+            // Erratic high-frequency electronic short-circuit pulses ramping up over 2.0s
+            double tSec = System.nanoTime() * 1e-9;
+            float n1 = (float) Math.abs(Math.sin(tSec * 47.0 + Math.cos(tSec * 19.0) * 3.1));
+            float n2 = (float) Math.abs(Math.cos(tSec * 73.0 + Math.sin(tSec * 29.0) * 2.3));
+            float blackoutChance = 0.14f + waterShort * 0.52f;
+            waterBlackout = (n1 < blackoutChance);
+            if (n2 > (0.82f - waterShort * 0.35f)) {
+                waterGlareSpike = (0.18f + 0.32f * waterShort) * n2;
+            }
+            if (isThermalShader) {
+                interference = Math.max(interference, 0.20f + 0.65f * waterShort);
+            }
+        }
+
         for (PostPass pass : passes) {
             var shader = pass.getEffect();
             if (isThermalShader && shader.getName() != null
@@ -750,12 +788,13 @@ public class VisionShaderManager {
             if (shader.getUniform("battery") != null) {
                 float finalBatt = battery * startupMultiplier;
                 if (damageFlicker && mc.level.random.nextFloat() > 0.5f) finalBatt = 0.0f;
+                if (waterBlackout) finalBatt = Math.min(finalBatt, 0.04f);
                 shader.getUniform("battery").set(finalBatt);
             }
             if (shader.getUniform("time") != null) shader.getUniform("time").set(time);
             if (shader.getUniform("colorFilter") != null) shader.getUniform("colorFilter").set(rf, gf, bf);
             if (shader.getUniform("Interference") != null) shader.getUniform("Interference").set(interference);
-            if (shader.getUniform("Glare") != null) shader.getUniform("Glare").set(currentGlare + strobeGlarePulse);
+            if (shader.getUniform("Glare") != null) shader.getUniform("Glare").set(currentGlare + strobeGlarePulse + waterGlareSpike);
             if (shader.getUniform("focus") != null) shader.getUniform("focus").set(focus);
             if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
             if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);

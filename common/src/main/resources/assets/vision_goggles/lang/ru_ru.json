@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Тепловой след",
   "advancements.vision_goggles.thermal_vision.description": "Получите тепловизионные очки или модуль тепловизора.",
   "advancements.vision_goggles.night_vision.title": "Властелин ночи",
-  "advancements.vision_goggles.night_vision.description": "Получите очки ночного видения или модуль ПНВ."
+  "advancements.vision_goggles.night_vision.description": "Получите очки ночного видения или модуль ПНВ.",
+  "message.vision_goggles.water_short_circuit": "Попадание воды — оптика отключена!"
 }

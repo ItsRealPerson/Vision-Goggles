@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Signature Thermique",
   "advancements.vision_goggles.thermal_vision.description": "Obtenez des lunettes thermiques ou un module de vision thermique.",
   "advancements.vision_goggles.night_vision.title": "Maître de la Nuit",
-  "advancements.vision_goggles.night_vision.description": "Obtenez des lunettes de vision nocturne ou un module NVG."
+  "advancements.vision_goggles.night_vision.description": "Obtenez des lunettes de vision nocturne ou un module NVG.",
+  "message.vision_goggles.water_short_circuit": "Interférence d’eau — optiques hors ligne !"
 }

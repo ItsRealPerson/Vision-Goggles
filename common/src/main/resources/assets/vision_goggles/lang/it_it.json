@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Traccia Termica",
   "advancements.vision_goggles.thermal_vision.description": "Ottieni visori termici o un modulo di visione termica.",
   "advancements.vision_goggles.night_vision.title": "Padrone della Notte",
-  "advancements.vision_goggles.night_vision.description": "Ottieni visori notturni o un modulo NVG."
+  "advancements.vision_goggles.night_vision.description": "Ottieni visori notturni o un modulo NVG.",
+  "message.vision_goggles.water_short_circuit": "Interferenza da acqua — ottiche offline!"
 }

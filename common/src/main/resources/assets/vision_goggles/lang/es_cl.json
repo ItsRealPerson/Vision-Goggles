@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Firma Térmica",
   "advancements.vision_goggles.thermal_vision.description": "Obtén unas Gafas Térmicas o un Módulo de Visión Térmica.",
   "advancements.vision_goggles.night_vision.title": "Dueño de la Noche",
-  "advancements.vision_goggles.night_vision.description": "Obtén unas Gafas de Visión Nocturna o un Módulo NVG."
+  "advancements.vision_goggles.night_vision.description": "Obtén unas Gafas de Visión Nocturna o un Módulo NVG.",
+  "message.vision_goggles.water_short_circuit": "¡Interferencia por agua — óptica fuera de línea!"
 }

@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Wärmesignatur",
   "advancements.vision_goggles.thermal_vision.description": "Erhalte eine Wärmebildbrille oder ein Wärmebildmodul.",
   "advancements.vision_goggles.night_vision.title": "Herr der Nacht",
-  "advancements.vision_goggles.night_vision.description": "Erhalte eine Nachtsichtbrille oder ein NVG-Modul."
+  "advancements.vision_goggles.night_vision.description": "Erhalte eine Nachtsichtbrille oder ein NVG-Modul.",
+  "message.vision_goggles.water_short_circuit": "Wassereintritt — Optik ausgefallen!"
 }

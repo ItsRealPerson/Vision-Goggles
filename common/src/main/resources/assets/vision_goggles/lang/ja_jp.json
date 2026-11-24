@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "熱源反応",
   "advancements.vision_goggles.thermal_vision.description": "サーマルゴーグルまたはサーマルビジョンモジュールを入手する。",
   "advancements.vision_goggles.night_vision.title": "夜の支配者",
-  "advancements.vision_goggles.night_vision.description": "暗視ゴーグルまたはNVGモジュールを入手する。"
+  "advancements.vision_goggles.night_vision.description": "暗視ゴーグルまたはNVGモジュールを入手する。",
+  "message.vision_goggles.water_short_circuit": "浸水による干渉 — 光学系オフライン！"
 }

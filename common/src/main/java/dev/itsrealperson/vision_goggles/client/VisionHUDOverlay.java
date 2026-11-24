@@ -36,6 +36,7 @@ public class VisionHUDOverlay {
         int height = mc.getWindow().getGuiScaledHeight();
 
         renderCrackedLensOverlay(gui, goggles, width, height);
+        renderWaterShortCircuitOverlay(gui, mc, width, height);
 
         for (IHudModule module : MODULES) {
             if (module.shouldRender(mc.player, goggles)) {
@@ -63,5 +64,31 @@ public class VisionHUDOverlay {
         gui.flush();
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.disableBlend();
+    }
+
+    private static void renderWaterShortCircuitOverlay(GuiGraphics gui, Minecraft mc, int width, int height) {
+        float progress = VisionShaderManager.getUnderwaterShortProgress(mc);
+        if (progress <= 0.0f) return;
+
+        long seed = System.nanoTime() / 25_000_000L; // ~40 Hz erratic electronic jitter
+        java.util.Random rng = new java.util.Random(seed);
+
+        // Brief dark blackout flashes ramping in frequency & opacity
+        if (rng.nextFloat() < (0.18f + progress * 0.52f)) {
+            int darkAlpha = Math.min(210, Math.round((0.28f + 0.50f * progress) * 255.0f * (0.5f + 0.5f * rng.nextFloat())));
+            gui.fill(0, 0, width, height, (darkAlpha << 24));
+        }
+
+        // Erratic horizontal static/short-circuit glitch bars
+        int bars = 3 + Math.round(progress * 9.0f);
+        for (int i = 0; i < bars; i++) {
+            int y = rng.nextInt(Math.max(1, height));
+            int h = 1 + rng.nextInt(3 + Math.round(progress * 5.0f));
+            int x = rng.nextInt(Math.max(1, width / 3));
+            int w = width - x - rng.nextInt(Math.max(1, width / 4));
+            int alpha = Math.min(200, Math.round((0.20f + 0.55f * progress) * 255.0f * rng.nextFloat()));
+            int rgb = rng.nextBoolean() ? 0x99EEFF : 0x101820;
+            gui.fill(x, y, Math.min(width, x + w), Math.min(height, y + h), (alpha << 24) | rgb);
+        }
     }
 }

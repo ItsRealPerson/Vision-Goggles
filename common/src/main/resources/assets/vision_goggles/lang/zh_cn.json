@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "热源信号",
   "advancements.vision_goggles.thermal_vision.description": "获得热成像护目镜或热成像视觉模块。",
   "advancements.vision_goggles.night_vision.title": "主宰黑夜",
-  "advancements.vision_goggles.night_vision.description": "获得夜视护目镜或 NVG 夜视模块。"
+  "advancements.vision_goggles.night_vision.description": "获得夜视护目镜或 NVG 夜视模块。",
+  "message.vision_goggles.water_short_circuit": "进水干扰 — 光学系统已离线！"
 }

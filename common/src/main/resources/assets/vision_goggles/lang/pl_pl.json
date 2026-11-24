@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "Sygnatura Cieplna",
   "advancements.vision_goggles.thermal_vision.description": "Zdobądź Gogle Termowizyjne lub Moduł Termowizji.",
   "advancements.vision_goggles.night_vision.title": "Władca Nocy",
-  "advancements.vision_goggles.night_vision.description": "Zdobądź Gogle Noktowizyjne lub Moduł NVG."
+  "advancements.vision_goggles.night_vision.description": "Zdobądź Gogle Noktowizyjne lub Moduł NVG.",
+  "message.vision_goggles.water_short_circuit": "Zakłócenia wodne — optyka wyłączona!"
 }

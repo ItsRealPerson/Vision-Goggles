@@ -193,5 +193,6 @@
   "advancements.vision_goggles.thermal_vision.title": "열 감지 신호",
   "advancements.vision_goggles.thermal_vision.description": "열화상 고글 또는 열화상 비전 모듈을 획득하세요.",
   "advancements.vision_goggles.night_vision.title": "밤의 지배자",
-  "advancements.vision_goggles.night_vision.description": "야간 투시경 또는 NVG 모듈을 획득하세요."
+  "advancements.vision_goggles.night_vision.description": "야간 투시경 또는 NVG 모듈을 획득하세요.",
+  "message.vision_goggles.water_short_circuit": "침수 간섭 — 광학 장치 오프라인!"
 }

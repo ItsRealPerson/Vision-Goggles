@@ -30,6 +30,7 @@ import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.RawAnimation;
 
 public class VisionGogglesItem extends Item implements GeoItem, CustomReequipItem {
+    private static final java.util.Map<java.util.UUID, Integer> UNDERWATER_TICKS = new java.util.concurrent.ConcurrentHashMap<>();
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final List<VisionMode> supportedModes;
     private final IntSupplier batteryCapacity;
@@ -107,6 +108,28 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
 
         if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
             if (currentBattery > 0) {
+                if ((mode == VisionMode.NIGHT_VISION || mode == VisionMode.THERMAL)
+                        && player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)) {
+                    int underwaterTicks = UNDERWATER_TICKS.getOrDefault(player.getUUID(), 0) + 1;
+                    if (underwaterTicks >= 40) {
+                        UNDERWATER_TICKS.remove(player.getUUID());
+                        nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                        cleanUpEffect(player);
+                        player.level().playSound(null, player.blockPosition(),
+                                dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_SWITCH.get(),
+                                net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 0.65f);
+                        player.displayClientMessage(
+                                net.minecraft.network.chat.Component.translatable("message.vision_goggles.water_short_circuit")
+                                        .withStyle(net.minecraft.ChatFormatting.AQUA),
+                                true
+                        );
+                        return;
+                    }
+                    UNDERWATER_TICKS.put(player.getUUID(), underwaterTicks);
+                } else {
+                    UNDERWATER_TICKS.remove(player.getUUID());
+                }
+
                 float baseDrain = (mode != null) ? ((mode == VisionMode.THERMAL) ? 2.0f : 1.0f) : 0.0f;
                 if (this instanceof ModularGogglesItem modular) {
                     for (String modId : modular.getModules(stack)) {
@@ -134,11 +157,15 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                 if (currentBattery <= 0) {
                     nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
                     cleanUpEffect(player);
+                    UNDERWATER_TICKS.remove(player.getUUID());
                 }
             } else {
                 nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
                 cleanUpEffect(player);
+                UNDERWATER_TICKS.remove(player.getUUID());
             }
+        } else {
+            UNDERWATER_TICKS.remove(player.getUUID());
         }
 
         // Optimization: Sync only if battery changed significantly or reached zero
