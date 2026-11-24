@@ -112,19 +112,19 @@ void main() {
         // with distance-attenuated additive beam luminance and soft shoulder compression.
         float maxRange = (FlashlightMode > 2.5) ? 30.0 : ((FlashlightMode > 1.5) ? 18.0 : ((FlashlightMode > 0.5) ? 32.0 : 52.0));
         float distNorm = clamp(BeamDistance / maxRange, 0.0, 1.0);
-        float rangeAtten = 1.0 / (1.0 + 0.03 * BeamDistance + 0.004 * BeamDistance * BeamDistance);
-        rangeAtten *= 1.0 - smoothstep(0.82, 1.0, distNorm);
-        // Minimum 0.28 beam presence so sky/distant air still shows a subtle volumetric cone while nearby surfaces illuminate strongly
-        float effectiveAtten = mix(0.28, 1.0, clamp(rangeAtten * 1.35, 0.0, 1.0));
+        float rangeAtten = 1.0 / (1.0 + 0.015 * BeamDistance + 0.0018 * BeamDistance * BeamDistance);
+        rangeAtten *= 1.0 - smoothstep(0.78, 1.0, distNorm);
+        // Strong beam on nearby surfaces (up to 1.0), with 0.35 volumetric cone in open air
+        float effectiveAtten = mix(0.35, 1.0, clamp(rangeAtten * 1.45, 0.0, 1.0));
 
-        float beamMask = clamp((totalBeam + ambientBounce) * battery * effectiveAtten, 0.0, 1.0);
-        // Shadow gamma lift & exposure boost inside the illuminated cone to reveal dark shaderpack textures
-        vec3 liftedBase = pow(max(baseColor.rgb, vec3(0.0)), vec3(mix(1.0, 0.52, clamp(beamMask * 1.4, 0.0, 1.0))));
-        vec3 litSurface = liftedBase * (1.0 + beamMask * 5.5) * mix(vec3(1.0), ledColor * fringeColor, clamp(beamMask * 1.2, 0.0, 1.0));
-        // Soft volumetric fill so pitch-black shadow pixels still show the beam's optical falloff
-        vec3 volumetricFill = finalLight * effectiveAtten * 0.42;
-        vec3 combined = max(baseColor.rgb, litSurface) + volumetricFill;
-        finalColor = combined / (1.0 + max(vec3(0.0), combined - vec3(0.65)) * 0.55);
+        float beamMask = clamp((totalBeam + ambientBounce) * battery * effectiveAtten * 1.65, 0.0, 1.0);
+        // Aggressive shadow gamma lift + small floor so dark shaderpack textures/edges become clearly visible
+        vec3 liftedBase = pow(max(baseColor.rgb, vec3(0.003)), vec3(mix(1.0, 0.42, clamp(beamMask * 1.5, 0.0, 1.0))));
+        vec3 litSurface = liftedBase * (1.0 + beamMask * 8.0) * mix(vec3(1.0), ledColor * fringeColor, clamp(beamMask * 1.2, 0.0, 1.0));
+        // Strong direct beam illumination so even pitch-black 0.000 night surfaces light up clearly
+        vec3 beamFill = finalLight * mix(0.55, 1.55, clamp(rangeAtten * 1.4, 0.0, 1.0));
+        vec3 combined = max(baseColor.rgb, litSurface) + beamFill;
+        finalColor = combined / (1.0 + max(vec3(0.0), combined - vec3(0.75)) * 0.45);
         finalColor = clamp(finalColor, 0.0, 1.0);
     } else {
         finalColor = min(baseColor.rgb + finalLight, vec3(1.0));
