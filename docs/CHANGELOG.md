@@ -2,6 +2,10 @@
 
 ## [2.0.0] - 2026-11-24
 
+### Improved (2026-11-24 — Rediseño Óptico Sutil de `cracked_lens.png` y Opacidad HUD)
+- **Textura Óptica Sutil (`cracked_lens.png`):** Rediseñada a `1024×576` RGBA (supersampling `2×` con antialiasing Lanczos), sustituyendo las telarañas de esquinas por 2 impactos discretos sobre el aro curvo del lente (superior derecho e inferior izquierdo) con arcos de bisel, micro-reflejos cian/blanco y finas fracturas que se desvanecen antes del centro.
+- **Opacidad Progresiva Contenida (`VisionHUDOverlay`):** Ajustada la curva de alfa de `0.12f` (al `<30%` de durabilidad) hasta `0.52f` (al `<=5%`) con blend suave.
+
 ### Added & Improved (2026-11-24 — Top 4 Pre-Release: README 2.0.0, Lente Agrietada, Detección Iris/Oculus, Advancements y Limpieza)
 - **`README.md` Actualizado a 2.0.0:** Reemplazada la documentación obsoleta de 1.0.0 por la guía completa de 2.0.0 (modos NVG/Térmico/Biométrico/Hydro, Gafas Modulares y Pro Modulares, Rueda Radial, controles actuales `N`/`V`+rueda/`L`/`K`, Linterna Táctica y Estrobo, Estación de Modificación, scripting LuaJ 3.0.1, aislamiento térmico de armaduras, dependencias e integraciones).
 - **Lente Agrietada por Durabilidad Baja (`cracked_lens.png`, `VisionHUDOverlay`):** Generada nueva textura `512×288` RGBA con grietas radiales periféricas sin obstruir el centro de mira y conectada en `VisionHUDOverlay.renderCrackedLensOverlay(...)` con opacidad progresiva (`0.22` al `<30%` hasta `0.85` al `<=10%`, segura ante ítems irrompibles).
