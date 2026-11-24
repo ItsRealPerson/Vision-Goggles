@@ -594,6 +594,99 @@ public class ThermalEntityPainter {
         return true;
     }
 
+    /**
+     * Erases ThermalMask pixels occluded by the first-person hand / held weapon.
+     * GameRenderer.renderItemInHand() clears the main depth buffer before drawing the hand/gun,
+     * so any pixel with main depth < 1.0 right after renderLevel() belongs to the first-person item.
+     */
+    public static void occludeFirstPersonHand() {
+        if (!initialized || !maskValidThisFrame || !depthBlitSupported
+                || !VisionShaderManager.isThermalShaderActive()) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getMainRenderTarget() == null || mc.options.getCameraType() != CameraType.FIRST_PERSON) {
+            return;
+        }
+        int mainFbo = mc.getMainRenderTarget().frameBufferId;
+        int mainW = Math.max(1, mc.getMainRenderTarget().width);
+        int mainH = Math.max(1, mc.getMainRenderTarget().height);
+        if (mainFbo <= 0 || captureFbo <= 0 || maskFbo <= 0 || mainW != fboWidth || mainH != fboHeight) {
+            return;
+        }
+
+        int prevDrawFbo = GL11C.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int[] prevViewport = new int[4];
+        GL11C.glGetIntegerv(GL11C.GL_VIEWPORT, prevViewport);
+
+        try {
+            if (!blitWorldDepthToCapture(mc, mainFbo, mainW, mainH)) {
+                return;
+            }
+
+            // Copy current ThermalMask into captureFbo's color attachment
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, maskFbo);
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, captureFbo);
+            GL30.glBlitFramebuffer(
+                    0, 0, fboWidth, fboHeight,
+                    0, 0, fboWidth, fboHeight,
+                    GL11.GL_COLOR_BUFFER_BIT,
+                    GL11.GL_NEAREST
+            );
+
+            // Draw transparent (0,0,0,0) quad at NDC z=0.9999 with GL_GREATER depth test:
+            // passes ONLY where first-person hand/gun wrote depth < 0.99995, leaving world/sky (depth=1.0) untouched.
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
+            GlStateManager._viewport(0, 0, fboWidth, fboHeight);
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_GREATER);
+            RenderSystem.depthMask(false);
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.disableBlend();
+            RenderSystem.disableCull();
+
+            org.joml.Matrix4f prevProj = new org.joml.Matrix4f(RenderSystem.getProjectionMatrix());
+            var mvStack = RenderSystem.getModelViewStack();
+            mvStack.pushPose();
+            mvStack.setIdentity();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(new org.joml.Matrix4f().identity(), com.mojang.blaze3d.vertex.VertexSorting.ORTHOGRAPHIC_Z);
+
+            RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            BufferBuilder bb = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
+            bb.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);
+            bb.vertex(-1.0f, -1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
+            bb.vertex( 1.0f, -1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
+            bb.vertex( 1.0f,  1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
+            bb.vertex(-1.0f,  1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
+            com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(bb.end());
+
+            RenderSystem.setProjectionMatrix(prevProj, com.mojang.blaze3d.vertex.VertexSorting.ORTHOGRAPHIC_Z);
+            mvStack.popPose();
+            RenderSystem.applyModelViewMatrix();
+
+            // Copy occluded mask back into maskFbo
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, captureFbo);
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, maskFbo);
+            GL30.glBlitFramebuffer(
+                    0, 0, fboWidth, fboHeight,
+                    0, 0, fboWidth, fboHeight,
+                    GL11.GL_COLOR_BUFFER_BIT,
+                    GL11.GL_NEAREST
+            );
+        } catch (Throwable ignored) {
+        } finally {
+            RenderSystem.depthFunc(GL11.GL_LEQUAL);
+            RenderSystem.depthMask(true);
+            RenderSystem.enableCull();
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDrawFbo);
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevReadFbo);
+            GlStateManager._viewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+        }
+    }
+
     private static void renderEntityMask(EntityRenderDispatcher dispatcher, PoseStack poseStack, ThermalRenderEntry entry, float partialTick, Vector3f worldUpView) {
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
         GlStateManager._viewport(0, 0, fboWidth, fboHeight);
