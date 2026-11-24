@@ -197,6 +197,7 @@ public class VisionShaderManager {
         // Keep compiled PostChain instances alive in SHADER_CACHE; only deactivate active pointers.
         savedPostChain = null;
         activeShaderLocation = null;
+        activeMode = null;
         ThermalEntityPainter.invalidateFrameMask();
         currentGlare = 0.0f;
         flashGlare = 0.0f;
@@ -342,7 +343,7 @@ public class VisionShaderManager {
         return path.contains("nvg") || path.contains("thermal");
     }
 
-    public static boolean isThermalShaderActive() {
+    public static boolean isThermalShaderActive() { if (savedPostChain == null) return false;
         return activeMode == VisionMode.THERMAL
                 || (activeMode == null && activeShaderLocation != null
                     && activeShaderLocation.getPath().toLowerCase(java.util.Locale.ROOT).contains("thermal"));
@@ -360,6 +361,7 @@ public class VisionShaderManager {
         savedPostChain = null;
         savedFlashlightChain = null;
         activeShaderLocation = null;
+        activeMode = null;
         ThermalEntityPainter.invalidateFrameMask();
         FAILED_SHADER_TIMESTAMPS.clear();
         prewarmed = false;
