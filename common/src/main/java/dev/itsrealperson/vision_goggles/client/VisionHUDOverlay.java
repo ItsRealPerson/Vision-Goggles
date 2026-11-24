@@ -51,9 +51,9 @@ public class VisionHUDOverlay {
         float durabilityRatio = 1.0f - ((float) goggles.getDamageValue() / (float) goggles.getMaxDamage());
         if (durabilityRatio >= 0.30f) return;
 
-        // Progressive opacity: 0.22 at 30% durability up to 0.85 at <= 10%
-        float severity = Math.max(0.0f, Math.min(1.0f, (0.30f - durabilityRatio) / 0.20f));
-        float alpha = 0.22f + severity * 0.63f;
+        // Subtle progressive opacity: ~0.12 whisper at 30% durability up to ~0.52 at <= 5%
+        float severity = Math.max(0.0f, Math.min(1.0f, (0.30f - durabilityRatio) / 0.25f));
+        float alpha = 0.12f + severity * 0.40f;
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
