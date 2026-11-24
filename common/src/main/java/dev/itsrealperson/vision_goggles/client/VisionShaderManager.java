@@ -312,6 +312,7 @@ public class VisionShaderManager {
                 if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
                 if (shader.getUniform("FlashlightMode") != null) shader.getUniform("FlashlightMode").set((float)currentFlashlightMode);
                 if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);
+            if (shader.getUniform("IrisActive") != null) shader.getUniform("IrisActive").set(IrisCompat.isShaderPackInUse() ? 1.0f : 0.0f);
             }
 
             RenderSystem.enableBlend();
@@ -740,6 +741,7 @@ public class VisionShaderManager {
             if (shader.getUniform("focus") != null) shader.getUniform("focus").set(focus);
             if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
             if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);
+            if (shader.getUniform("IrisActive") != null) shader.getUniform("IrisActive").set(IrisCompat.isShaderPackInUse() ? 1.0f : 0.0f);
         }
 
         // Call Lua uniforms hook for active modules using cached LuaTable bridge

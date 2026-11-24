@@ -11,6 +11,8 @@ uniform float focus;
 uniform float Interference;
 uniform float u_DSPActive;
 uniform float AspectRatio;
+uniform float IrisActive;
+uniform vec2 OutSize;
 
 float hashNoise(vec2 p, float t) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -99,9 +101,29 @@ void main() {
     }
 
     vec4 baseColor = texture(DiffuseSampler, uv);
+    if (IrisActive > 0.5) {
+        // 3x3 smooth kernel on DiffuseSampler only to eliminate Iris/Photon TAA & dither grids without blurring ThermalMask
+        vec2 tx = 1.0 / max(OutSize, vec2(1.0));
+        vec3 c00 = texture(DiffuseSampler, uv + vec2(-tx.x, -tx.y)).rgb;
+        vec3 c10 = texture(DiffuseSampler, uv + vec2(  0.0, -tx.y)).rgb;
+        vec3 c20 = texture(DiffuseSampler, uv + vec2( tx.x, -tx.y)).rgb;
+        vec3 c01 = texture(DiffuseSampler, uv + vec2(-tx.x,   0.0)).rgb;
+        vec3 c21 = texture(DiffuseSampler, uv + vec2( tx.x,   0.0)).rgb;
+        vec3 c02 = texture(DiffuseSampler, uv + vec2(-tx.x,  tx.y)).rgb;
+        vec3 c12 = texture(DiffuseSampler, uv + vec2(  0.0,  tx.y)).rgb;
+        vec3 c22 = texture(DiffuseSampler, uv + vec2( tx.x,  tx.y)).rgb;
+        baseColor.rgb = baseColor.rgb * 0.25
+                      + (c10 + c01 + c21 + c12) * 0.125
+                      + (c00 + c20 + c02 + c22) * 0.0625;
+    }
     vec4 entityMask = texture(ThermalMask, uv);
 
     float lum = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
+    if (IrisActive > 0.5) {
+        // Soft HDR compression & shadow-lift gamma for shaderpack lighting
+        float compressed = lum / (1.0 + lum * 0.45);
+        lum = pow(clamp(compressed * 1.15, 0.0, 1.0), 0.78);
+    }
     float heatSignal = 0.0;
     float coldSignal = 0.0;
     float cyanBias = min(baseColor.g, baseColor.b) - baseColor.r;
