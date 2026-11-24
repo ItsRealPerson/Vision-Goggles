@@ -33,7 +33,7 @@ Vision Goggles 2.0.0 is a tactical optics and lighting mod featuring custom GLSL
 - **Optional Integrations:**
   - **JEI** (Just Enough Items) — *Assemble* & *Modify* recipe categories
   - **Sodium / Embeddium** — Dynamic flashlight chunk & entity shader support
-  - **Iris / Oculus** — Automatic shaderpack detection with compatibility notice
+  - **Iris / Oculus** — Automatic shaderpack detection with crash-safe bypass for vision modes. **Note:** Dynamic flashlight (Tactical Flashlight & Flashlight Module) does **not** work when an Iris/Oculus shaderpack is active.
 
 ---
 
