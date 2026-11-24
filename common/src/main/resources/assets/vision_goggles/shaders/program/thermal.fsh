@@ -143,6 +143,16 @@ void main() {
         coldSignal = clamp((baseColor.b - baseColor.r * 1.45) * 1.6, 0.0, 0.85);
     }
 
+    // Suppress chromatic texture contrast on ambient non-thermal surfaces (e.g. zombie teal shirt vs green skin)
+    // so cold/undead entities and blocks maintain a uniform ambient thermal signature while preserving 3D form
+    if (heatSignal <= 0.01 && coldSignal <= 0.01) {
+        float maxC = max(baseColor.r, max(baseColor.g, baseColor.b));
+        float minC = min(baseColor.r, min(baseColor.g, baseColor.b));
+        float sat = (maxC > 0.01) ? ((maxC - minC) / maxC) : 0.0;
+        float structuralLum = mix(lum, maxC * 0.72, sat * 0.55);
+        lum = mix(0.24, clamp(structuralLum, 0.0, 1.0), 0.32);
+    }
+
     // World Thermal Ironbow calculation
     float baseTemp = lum * 0.35;
     float finalTemp = clamp(baseTemp + clamp(heatSignal, 0.0, 1.0) * 0.75 - coldSignal * 0.50, 0.0, 1.0);

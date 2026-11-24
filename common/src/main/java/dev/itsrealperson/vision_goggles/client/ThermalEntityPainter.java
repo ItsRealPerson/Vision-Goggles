@@ -619,53 +619,52 @@ public class ThermalEntityPainter {
         int prevReadFbo = GL11C.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         int[] prevViewport = new int[4];
         GL11C.glGetIntegerv(GL11C.GL_VIEWPORT, prevViewport);
+        int prevProgram = GL11C.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int prevActiveTex = GL11C.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        forceActiveTexture(GL13.GL_TEXTURE0);
+        int prevTex0 = GL11C.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
 
         try {
-            if (!blitWorldDepthToCapture(mc, mainFbo, mainW, mainH)) {
+            // Flush any deferred first-person item/weapon buffers before blitting depth
+            try {
+                mc.renderBuffers().bufferSource().endBatch();
+            } catch (Throwable ignored) {}
+
+            int srcDepthFbo = (prevDrawFbo > 0) ? prevDrawFbo : mainFbo;
+            if (!blitWorldDepthToCapture(mc, srcDepthFbo, mainW, mainH)) {
                 return;
             }
 
-            // Copy current ThermalMask into captureFbo's color attachment
-            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, maskFbo);
-            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, captureFbo);
-            GL30.glBlitFramebuffer(
-                    0, 0, fboWidth, fboHeight,
-                    0, 0, fboWidth, fboHeight,
-                    GL11.GL_COLOR_BUFFER_BIT,
-                    GL11.GL_NEAREST
-            );
-
-            // Draw transparent (0,0,0,0) quad at NDC z=0.9999 with GL_GREATER depth test:
-            // passes ONLY where first-person hand/gun wrote depth < 0.99995, leaving world/sky (depth=1.0) untouched.
+            // Clear captureFbo's color attachment to transparent (0,0,0,0) while preserving the blitted 1P depth buffer
             GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, captureFbo);
             GlStateManager._viewport(0, 0, fboWidth, fboHeight);
-            RenderSystem.enableDepthTest();
-            RenderSystem.depthFunc(GL11.GL_GREATER);
-            RenderSystem.depthMask(false);
             RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.clearColor(0f, 0f, 0f, 0f);
+            RenderSystem.clear(GL30.GL_COLOR_BUFFER_BIT, false);
+
+            // Draw current maskTexture at NDC z = 1.0 (window depth 1.0) with GL_EQUAL depth test:
+            // passes ONLY where depth == 1.0 (background untouched by 1P hand/gun),
+            // leaving 1P hand/gun pixels (depth < 1.0) at transparent (0,0,0,0).
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(GL11.GL_EQUAL);
+            RenderSystem.depthMask(false);
             RenderSystem.disableBlend();
             RenderSystem.disableCull();
 
-            org.joml.Matrix4f prevProj = new org.joml.Matrix4f(RenderSystem.getProjectionMatrix());
-            var mvStack = RenderSystem.getModelViewStack();
-            mvStack.pushPose();
-            mvStack.setIdentity();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(new org.joml.Matrix4f().identity(), com.mojang.blaze3d.vertex.VertexSorting.ORTHOGRAPHIC_Z);
+            GlStateManager._glUseProgram(programId);
+            forceActiveTexture(GL13.GL_TEXTURE0);
+            forceBindTexture2D(maskTexture);
+            GL20.glUniform1i(GL20.glGetUniformLocation(programId, "EntityMask"), 0);
+            GL20.glUniform4f(GL20.glGetUniformLocation(programId, "TintColor"), 1.0f, 1.0f, 1.0f, 1.0f);
+            int useVertexColorLoc = GL20.glGetUniformLocation(programId, "UseVertexColor");
+            if (useVertexColorLoc != -1) {
+                GL20.glUniform1f(useVertexColorLoc, 1.0f);
+            }
 
-            RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            BufferBuilder bb = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
-            bb.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);
-            bb.vertex(-1.0f, -1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
-            bb.vertex( 1.0f, -1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
-            bb.vertex( 1.0f,  1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
-            bb.vertex(-1.0f,  1.0f, 0.9999f).color(0, 0, 0, 0).endVertex();
-            com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(bb.end());
-
-            RenderSystem.setProjectionMatrix(prevProj, com.mojang.blaze3d.vertex.VertexSorting.ORTHOGRAPHIC_Z);
-            mvStack.popPose();
-            RenderSystem.applyModelViewMatrix();
+            GL30.glBindVertexArray(quadVAO);
+            GL30.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
+            GL30.glBindVertexArray(0);
+            BufferUploader.invalidate();
 
             // Copy occluded mask back into maskFbo
             GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, captureFbo);
@@ -678,6 +677,10 @@ public class ThermalEntityPainter {
             );
         } catch (Throwable ignored) {
         } finally {
+            GlStateManager._glUseProgram(prevProgram);
+            forceActiveTexture(GL13.GL_TEXTURE0);
+            forceBindTexture2D(prevTex0);
+            forceActiveTexture(prevActiveTex);
             RenderSystem.depthFunc(GL11.GL_LEQUAL);
             RenderSystem.depthMask(true);
             RenderSystem.enableCull();
