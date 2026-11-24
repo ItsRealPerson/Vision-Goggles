@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "標準模組化護目鏡可安裝的最大模組數量。",
   "config.vision_goggles.pro_modular_max_modules": "專業模組化護目鏡最大模組數",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "專業模組化護目鏡可安裝的最大模組數量。",
-  "gui.vision_goggles.tooltip.stage_controls": "§7左鍵：放置1個  §8|  §7右鍵：取回1個"
+  "gui.vision_goggles.tooltip.stage_controls": "§7左鍵：放置1個  §8|  §7右鍵：取回1個",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] 偵測到 Iris/Oculus 光影包已啟用；自訂後處理著色器可能會被覆蓋或表現異常。",
+  "advancements.vision_goggles.root.title": "戰術光學",
+  "advancements.vision_goggles.root.description": "製作一個改裝工作台或獲得你的第一副視覺護目鏡。",
+  "advancements.vision_goggles.craft_station.title": "戰地工坊",
+  "advancements.vision_goggles.craft_station.description": "製作改裝工作台來組裝和客製化戰術光學護目鏡。",
+  "advancements.vision_goggles.modular_goggles.title": "極致模組化",
+  "advancements.vision_goggles.modular_goggles.description": "在改裝工作台中組裝模組化護目鏡或專業模組化護目鏡。",
+  "advancements.vision_goggles.tactical_flashlight.title": "致盲強光",
+  "advancements.vision_goggles.tactical_flashlight.description": "組裝一把具備聚光、廣角、近距與爆閃模式的戰術手電筒。",
+  "advancements.vision_goggles.thermal_vision.title": "熱源訊號",
+  "advancements.vision_goggles.thermal_vision.description": "獲得熱成像護目鏡或熱成像視覺模組。",
+  "advancements.vision_goggles.night_vision.title": "主宰黑夜",
+  "advancements.vision_goggles.night_vision.description": "獲得夜視護目鏡或 NVG 夜視模組。"
 }

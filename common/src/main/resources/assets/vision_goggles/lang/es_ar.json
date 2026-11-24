@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Cantidad máxima de módulos instalables en las Gafas Modulares estándar.",
   "config.vision_goggles.pro_modular_max_modules": "Máximo de Módulos (Gafas Modulares Pro)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Cantidad máxima de módulos instalables en las Gafas Modulares Pro.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7Click izq.: Colocar 1  §8|  §7Click der.: Quitar 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7Click izq.: Colocar 1  §8|  §7Click der.: Quitar 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Hay un shaderpack de Iris/Oculus activo; los shaders del mod pueden verse interferidos.",
+  "advancements.vision_goggles.root.title": "Óptica Táctica",
+  "advancements.vision_goggles.root.description": "Fabricá una Estación de Modificación u obtené tus primeras Gafas de Visión.",
+  "advancements.vision_goggles.craft_station.title": "Taller de Campo",
+  "advancements.vision_goggles.craft_station.description": "Fabricá una Estación de Modificación para ensamblar y personalizar tus gafas.",
+  "advancements.vision_goggles.modular_goggles.title": "Modularidad Total",
+  "advancements.vision_goggles.modular_goggles.description": "Ensamblá unas Gafas Modulares o Pro Modulares en la Estación de Modificación.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Luz Cegadora",
+  "advancements.vision_goggles.tactical_flashlight.description": "Ensamblá una Linterna Táctica con modos Enfocado, Amplio, Cercano y Estrobo.",
+  "advancements.vision_goggles.thermal_vision.title": "Firma Térmica",
+  "advancements.vision_goggles.thermal_vision.description": "Obtené unas Gafas Térmicas o un Módulo de Visión Térmica.",
+  "advancements.vision_goggles.night_vision.title": "Dueño de la Noche",
+  "advancements.vision_goggles.night_vision.description": "Obtené unas Gafas de Visión Nocturna o un Módulo NVG."
 }

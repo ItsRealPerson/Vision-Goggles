@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Maksymalna liczba modułów w standardowych Goglach Modułowych.",
   "config.vision_goggles.pro_modular_max_modules": "Maks. modułów (Gogle Modułowe Pro)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Maksymalna liczba modułów w Goglach Modułowych Pro.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7LPM: Połóż 1  §8|  §7PPM: Zabierz 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7LPM: Połóż 1  §8|  §7PPM: Zabierz 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Pakiet shaderów Iris/Oculus jest aktywny; niestandardowe shadery mogą zostać nadpisane.",
+  "advancements.vision_goggles.root.title": "Optyka Taktyczna",
+  "advancements.vision_goggles.root.description": "Stwórz Stację Modyfikacji lub zdobądź swoje pierwsze gogle wizyjne.",
+  "advancements.vision_goggles.craft_station.title": "Warsztat Polowy",
+  "advancements.vision_goggles.craft_station.description": "Stwórz Stację Modyfikacji, aby składać i ulepszać optykę taktyczną.",
+  "advancements.vision_goggles.modular_goggles.title": "Pełna Modularność",
+  "advancements.vision_goggles.modular_goggles.description": "Złóż gogle modularne lub Pro modularne w Stacji Modyfikacji.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Oślepiające Światło",
+  "advancements.vision_goggles.tactical_flashlight.description": "Złóż Latarkę Taktyczną z trybami Skupionym, Szerokim, Bliskim i Stroboskopowym.",
+  "advancements.vision_goggles.thermal_vision.title": "Sygnatura Cieplna",
+  "advancements.vision_goggles.thermal_vision.description": "Zdobądź Gogle Termowizyjne lub Moduł Termowizji.",
+  "advancements.vision_goggles.night_vision.title": "Władca Nocy",
+  "advancements.vision_goggles.night_vision.description": "Zdobądź Gogle Noktowizyjne lub Moduł NVG."
 }

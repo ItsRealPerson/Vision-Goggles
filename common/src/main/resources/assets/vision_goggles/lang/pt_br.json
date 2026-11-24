@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Número máximo de módulos instaláveis nos Óculos Modulares padrão.",
   "config.vision_goggles.pro_modular_max_modules": "Máx. de Módulos (Óculos Modulares Pro)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Número máximo de módulos instaláveis nos Óculos Modulares Pro.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7Clique esq.: Colocar 1  §8|  §7Clique dir.: Remover 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7Clique esq.: Colocar 1  §8|  §7Clique dir.: Remover 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Um shaderpack Iris/Oculus está ativo; shaders personalizados podem ser sobrescritos.",
+  "advancements.vision_goggles.root.title": "Óptica Tática",
+  "advancements.vision_goggles.root.description": "Crie uma Estação de Modificação ou obtenha seus primeiros óculos de visão.",
+  "advancements.vision_goggles.craft_station.title": "Oficina de Campo",
+  "advancements.vision_goggles.craft_station.description": "Crie uma Estação de Modificação para montar e personalizar ópticas táticas.",
+  "advancements.vision_goggles.modular_goggles.title": "Modularidade Máxima",
+  "advancements.vision_goggles.modular_goggles.description": "Monte óculos modulares ou Pro modulares na Estação de Modificação.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Luz Cegante",
+  "advancements.vision_goggles.tactical_flashlight.description": "Monte uma Lanterna Tática com modos Focado, Amplo, Curto e Estrobo.",
+  "advancements.vision_goggles.thermal_vision.title": "Assinatura Térmica",
+  "advancements.vision_goggles.thermal_vision.description": "Obtenha óculos termais ou um módulo de visão termal.",
+  "advancements.vision_goggles.night_vision.title": "Dono da Noite",
+  "advancements.vision_goggles.night_vision.description": "Obtenha óculos de visão noturna ou um módulo NVG."
 }

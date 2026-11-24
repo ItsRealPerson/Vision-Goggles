@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Maximale Anzahl installierbarer Module in der Standard-Modularbrille.",
   "config.vision_goggles.pro_modular_max_modules": "Max. Module (Pro-Modularbrille)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Maximale Anzahl installierbarer Module in der Pro-Modularbrille.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7Linksklick: 1 ablegen  §8|  §7Rechtsklick: 1 entfernen"
+  "gui.vision_goggles.tooltip.stage_controls": "§7Linksklick: 1 ablegen  §8|  §7Rechtsklick: 1 entfernen",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Ein Iris/Oculus-Shaderpack ist aktiv; benutzerdefinierte Nachbearbeitungs-Shader können überschrieben werden.",
+  "advancements.vision_goggles.root.title": "Taktische Optik",
+  "advancements.vision_goggles.root.description": "Stelle eine Modifikationsstation her oder erhalte deine erste Sichtbrille.",
+  "advancements.vision_goggles.craft_station.title": "Feldwerkstatt",
+  "advancements.vision_goggles.craft_station.description": "Stelle eine Modifikationsstation her, um taktische Optiken zusammenzubauen.",
+  "advancements.vision_goggles.modular_goggles.title": "Maximale Modularität",
+  "advancements.vision_goggles.modular_goggles.description": "Baue eine Modulare oder Pro-Modulare Brille in der Modifikationsstation zusammen.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Blendendes Licht",
+  "advancements.vision_goggles.tactical_flashlight.description": "Baue eine Taktische Taschenlampe mit Fokus-, Breit-, Nah- und Stroboskop-Modus.",
+  "advancements.vision_goggles.thermal_vision.title": "Wärmesignatur",
+  "advancements.vision_goggles.thermal_vision.description": "Erhalte eine Wärmebildbrille oder ein Wärmebildmodul.",
+  "advancements.vision_goggles.night_vision.title": "Herr der Nacht",
+  "advancements.vision_goggles.night_vision.description": "Erhalte eine Nachtsichtbrille oder ein NVG-Modul."
 }

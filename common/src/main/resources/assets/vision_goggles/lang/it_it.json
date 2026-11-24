@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Numero massimo di moduli installabili nel Visore Modulare standard.",
   "config.vision_goggles.pro_modular_max_modules": "Moduli Max (Visore Modulare Pro)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Numero massimo di moduli installabili nel Visore Modulare Pro.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7Clic sx: Posiziona 1  §8|  §7Clic dx: Rimuovi 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7Clic sx: Posiziona 1  §8|  §7Clic dx: Rimuovi 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Uno shaderpack Iris/Oculus è attivo; gli shader personalizzati potrebbero essere sovrascritti.",
+  "advancements.vision_goggles.root.title": "Ottica Tattica",
+  "advancements.vision_goggles.root.description": "Costruisci una Stazione di Modifica o ottieni i tuoi primi visori.",
+  "advancements.vision_goggles.craft_station.title": "Officina da Campo",
+  "advancements.vision_goggles.craft_station.description": "Costruisci una Stazione di Modifica per assemblare e personalizzare i visori.",
+  "advancements.vision_goggles.modular_goggles.title": "Modularità Totale",
+  "advancements.vision_goggles.modular_goggles.description": "Assembla visori modulari o Pro modulari nella Stazione di Modifica.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Luce Accecante",
+  "advancements.vision_goggles.tactical_flashlight.description": "Assembla una Torcia Tattica con modalità Concentrata, Ampia, Vicina e Strobo.",
+  "advancements.vision_goggles.thermal_vision.title": "Traccia Termica",
+  "advancements.vision_goggles.thermal_vision.description": "Ottieni visori termici o un modulo di visione termica.",
+  "advancements.vision_goggles.night_vision.title": "Padrone della Notte",
+  "advancements.vision_goggles.night_vision.description": "Ottieni visori notturni o un modulo NVG."
 }

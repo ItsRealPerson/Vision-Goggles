@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "標準モジュラーゴーグルに装着可能な最大モジュール数。",
   "config.vision_goggles.pro_modular_max_modules": "Proモジュラーゴーグル最大モジュール数",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Proモジュラーゴーグルに装着可能な最大モジュール数。",
-  "gui.vision_goggles.tooltip.stage_controls": "§7左クリック: 1個配置  §8|  §7右クリック: 1個回収"
+  "gui.vision_goggles.tooltip.stage_controls": "§7左クリック: 1個配置  §8|  §7右クリック: 1個回収",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Iris/Oculus のシェーダーパックが有効です。カスタムポストプロセスシェーダーが上書きされる場合があります。",
+  "advancements.vision_goggles.root.title": "タクティカル光学機器",
+  "advancements.vision_goggles.root.description": "改造ステーションを作成するか、最初の暗視ゴーグルを入手する。",
+  "advancements.vision_goggles.craft_station.title": "野戦ワークショップ",
+  "advancements.vision_goggles.craft_station.description": "改造ステーションを作成してタクティカル光学機器を組み立て・改造する。",
+  "advancements.vision_goggles.modular_goggles.title": "究極のモジュール性",
+  "advancements.vision_goggles.modular_goggles.description": "改造ステーションでモジュラーゴーグルまたはプロモジュラーゴーグルを組み立てる。",
+  "advancements.vision_goggles.tactical_flashlight.title": "閃光",
+  "advancements.vision_goggles.tactical_flashlight.description": "集束・広角・近距離・ストロボモードを備えたタクティカルフラッシュライトを組み立てる。",
+  "advancements.vision_goggles.thermal_vision.title": "熱源反応",
+  "advancements.vision_goggles.thermal_vision.description": "サーマルゴーグルまたはサーマルビジョンモジュールを入手する。",
+  "advancements.vision_goggles.night_vision.title": "夜の支配者",
+  "advancements.vision_goggles.night_vision.description": "暗視ゴーグルまたはNVGモジュールを入手する。"
 }

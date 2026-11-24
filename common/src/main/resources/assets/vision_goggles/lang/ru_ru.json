@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Максимальное число модулей в стандартных модульных очках.",
   "config.vision_goggles.pro_modular_max_modules": "Макс. модулей (Pro-модульные очки)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Максимальное число модулей в Pro-модульных очках.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7ЛКМ: Положить 1  §8|  §7ПКМ: Убрать 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7ЛКМ: Положить 1  §8|  §7ПКМ: Убрать 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Активен шейдерпак Iris/Oculus; пользовательские шейдеры мода могут быть перекрыты.",
+  "advancements.vision_goggles.root.title": "Тактическая оптика",
+  "advancements.vision_goggles.root.description": "Создайте станцию модификации или получите свои первые очки зрения.",
+  "advancements.vision_goggles.craft_station.title": "Полевая мастерская",
+  "advancements.vision_goggles.craft_station.description": "Создайте станцию модификации для сборки и настройки тактической оптики.",
+  "advancements.vision_goggles.modular_goggles.title": "Абсолютная модульность",
+  "advancements.vision_goggles.modular_goggles.description": "Соберите модульные или Pro-модульные очки на станции модификации.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Ослепляющий свет",
+  "advancements.vision_goggles.tactical_flashlight.description": "Соберите тактический фонарь с узким, широким, ближним и стробоскопическим режимами.",
+  "advancements.vision_goggles.thermal_vision.title": "Тепловой след",
+  "advancements.vision_goggles.thermal_vision.description": "Получите тепловизионные очки или модуль тепловизора.",
+  "advancements.vision_goggles.night_vision.title": "Властелин ночи",
+  "advancements.vision_goggles.night_vision.description": "Получите очки ночного видения или модуль ПНВ."
 }

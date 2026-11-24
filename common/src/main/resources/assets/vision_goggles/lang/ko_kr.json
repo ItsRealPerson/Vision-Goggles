@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "일반 모듈형 고글에 장착할 수 있는 최대 모듈 수입니다.",
   "config.vision_goggles.pro_modular_max_modules": "프로 모듈형 고글 최대 모듈 수",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "프로 모듈형 고글에 장착할 수 있는 최대 모듈 수입니다.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7좌클릭: 1개 배치  §8|  §7우클릭: 1개 제거"
+  "gui.vision_goggles.tooltip.stage_controls": "§7좌클릭: 1개 배치  §8|  §7우클릭: 1개 제거",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Iris/Oculus 셰이더팩이 활성화되어 있어 모드의 후처리 셰이더가 덮어씌워질 수 있습니다.",
+  "advancements.vision_goggles.root.title": "전술 광학 장비",
+  "advancements.vision_goggles.root.description": "개조 작업대를 제작하거나 첫 번째 비전 고글을 획득하세요.",
+  "advancements.vision_goggles.craft_station.title": "야전 작업장",
+  "advancements.vision_goggles.craft_station.description": "전술 광학 장비를 조립하고 개조할 수 있는 개조 작업대를 제작하세요.",
+  "advancements.vision_goggles.modular_goggles.title": "완벽한 모듈성",
+  "advancements.vision_goggles.modular_goggles.description": "개조 작업대에서 모듈형 또는 프로 모듈형 고글을 조립하세요.",
+  "advancements.vision_goggles.tactical_flashlight.title": "눈부신 섬광",
+  "advancements.vision_goggles.tactical_flashlight.description": "집중, 광각, 근거리, 스트로브 모드가 있는 전술 손전등을 조립하세요.",
+  "advancements.vision_goggles.thermal_vision.title": "열 감지 신호",
+  "advancements.vision_goggles.thermal_vision.description": "열화상 고글 또는 열화상 비전 모듈을 획득하세요.",
+  "advancements.vision_goggles.night_vision.title": "밤의 지배자",
+  "advancements.vision_goggles.night_vision.description": "야간 투시경 또는 NVG 모듈을 획득하세요."
 }

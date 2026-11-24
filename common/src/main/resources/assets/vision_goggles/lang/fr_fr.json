@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "Nombre maximal de modules installables dans les Lunettes Modulaires standard.",
   "config.vision_goggles.pro_modular_max_modules": "Modules Max (Lunettes Modulaires Pro)",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "Nombre maximal de modules installables dans les Lunettes Modulaires Pro.",
-  "gui.vision_goggles.tooltip.stage_controls": "§7Clic gauche : Poser 1  §8|  §7Clic droit : Retirer 1"
+  "gui.vision_goggles.tooltip.stage_controls": "§7Clic gauche : Poser 1  §8|  §7Clic droit : Retirer 1",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] Un shaderpack Iris/Oculus est actif ; les shaders personnalisés peuvent être remplacés ou se comporter de façon inattendue.",
+  "advancements.vision_goggles.root.title": "Optique Tactique",
+  "advancements.vision_goggles.root.description": "Fabriquez une Station de Modification ou obtenez vos premières lunettes de vision.",
+  "advancements.vision_goggles.craft_station.title": "Atelier de Terrain",
+  "advancements.vision_goggles.craft_station.description": "Fabriquez une Station de Modification pour assembler et personnaliser vos optiques.",
+  "advancements.vision_goggles.modular_goggles.title": "Modularité Ultime",
+  "advancements.vision_goggles.modular_goggles.description": "Assemblez des lunettes modulaires ou Pro modulaires dans la Station de Modification.",
+  "advancements.vision_goggles.tactical_flashlight.title": "Lumière Aveuglante",
+  "advancements.vision_goggles.tactical_flashlight.description": "Assemblez une Lampe Tactique avec modes Concentré, Large, Proche et Stroboscopique.",
+  "advancements.vision_goggles.thermal_vision.title": "Signature Thermique",
+  "advancements.vision_goggles.thermal_vision.description": "Obtenez des lunettes thermiques ou un module de vision thermique.",
+  "advancements.vision_goggles.night_vision.title": "Maître de la Nuit",
+  "advancements.vision_goggles.night_vision.description": "Obtenez des lunettes de vision nocturne ou un module NVG."
 }

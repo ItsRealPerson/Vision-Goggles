@@ -180,5 +180,18 @@
   "config.vision_goggles.modular_max_modules.tooltip": "标准模块化护目镜可安装的最大模块数量。",
   "config.vision_goggles.pro_modular_max_modules": "专业模块化护目镜最大模块数",
   "config.vision_goggles.pro_modular_max_modules.tooltip": "专业模块化护目镜可安装的最大模块数量。",
-  "gui.vision_goggles.tooltip.stage_controls": "§7左键：放置1个  §8|  §7右键：取回1个"
+  "gui.vision_goggles.tooltip.stage_controls": "§7左键：放置1个  §8|  §7右键：取回1个",
+  "message.vision_goggles.iris_shaderpack_warning": "[Vision Goggles] 检测到 Iris/Oculus 光影包已启用；自定义后处理着色器可能会被覆盖或表现异常。",
+  "advancements.vision_goggles.root.title": "战术光学",
+  "advancements.vision_goggles.root.description": "制作一个改装工作台或获得你的第一副视觉护目镜。",
+  "advancements.vision_goggles.craft_station.title": "战地工坊",
+  "advancements.vision_goggles.craft_station.description": "制作改装工作台来组装和定制战术光学护目镜。",
+  "advancements.vision_goggles.modular_goggles.title": "极致模块化",
+  "advancements.vision_goggles.modular_goggles.description": "在改装工作台中组装模块化护目镜或专业模块化护目镜。",
+  "advancements.vision_goggles.tactical_flashlight.title": "致盲强光",
+  "advancements.vision_goggles.tactical_flashlight.description": "组装一把具备聚光、广角、近距和爆闪模式的战术手电筒。",
+  "advancements.vision_goggles.thermal_vision.title": "热源信号",
+  "advancements.vision_goggles.thermal_vision.description": "获得热成像护目镜或热成像视觉模块。",
+  "advancements.vision_goggles.night_vision.title": "主宰黑夜",
+  "advancements.vision_goggles.night_vision.description": "获得夜视护目镜或 NVG 夜视模块。"
 }
