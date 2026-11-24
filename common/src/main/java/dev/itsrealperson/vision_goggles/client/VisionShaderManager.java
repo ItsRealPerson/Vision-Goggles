@@ -499,6 +499,7 @@ public class VisionShaderManager {
 
 
         float targetGlare = 0.0f;
+        float strobeGlarePulse = 0.0f;
         if (isNvgShader && mc.player != null) {
             net.minecraft.core.BlockPos pos = mc.player.blockPosition().above();
             
@@ -635,7 +636,14 @@ public class VisionShaderManager {
                     float aimFactor = (float) ((dot - threshold) / (1.0 - threshold));
                     float intensity = hasModFlashlight ? flashMode.glareIntensity : ModConfig.getNvgGenericLightIntensity();
                     float glareFromPlayer = distanceFactor * aimFactor * intensity * facingFactor;
-                    if (glareFromPlayer > targetGlare) targetGlare = glareFromPlayer;
+                    if (hasModFlashlight && flashMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE) {
+                        float residual = glareFromPlayer * 0.25f;
+                        if (residual > targetGlare) targetGlare = residual;
+                        float pulse = glareFromPlayer * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
+                        if (pulse > strobeGlarePulse) strobeGlarePulse = pulse;
+                    } else if (glareFromPlayer > targetGlare) {
+                        targetGlare = glareFromPlayer;
+                    }
                 }
             }
 
@@ -653,8 +661,17 @@ public class VisionShaderManager {
                             : (float) myModular.getBatteryCapacity(myHelmet);
                     if (myTag.getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_ACTIVE) && helmetBatt > 0.0f) {
                         int myModeId = myTag.getInt(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_FLASHLIGHT_MODE);
-                        float flashIntensity = Math.max(1.25f, dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(myModeId).glareIntensity);
-                        if (targetGlare < flashIntensity) targetGlare = flashIntensity;
+                        dev.itsrealperson.vision_goggles.util.FlashlightMode myFlashMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(myModeId);
+                        float flashIntensity = Math.max(1.25f, myFlashMode.glareIntensity);
+                        if (myFlashMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE) {
+                            float residual = flashIntensity * 0.25f;
+                            if (targetGlare < residual) targetGlare = residual;
+                            float pulse = flashIntensity * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
+                            if (strobeGlarePulse < pulse) strobeGlarePulse = pulse;
+                        } else if (targetGlare < flashIntensity) {
+                            targetGlare = flashIntensity;
+                        }
+
                     }
                 }
             }
@@ -664,8 +681,17 @@ public class VisionShaderManager {
                     dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getHeldActiveFlashlight(mc.player);
             if (!myTacticalFlashlight.isEmpty()) {
                 int tacticalModeId = dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem.getMode(myTacticalFlashlight);
-                float tacticalFlashGlare = Math.max(1.25f, dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(tacticalModeId).glareIntensity);
-                if (targetGlare < tacticalFlashGlare) targetGlare = tacticalFlashGlare;
+                dev.itsrealperson.vision_goggles.util.FlashlightMode tacticalMode = dev.itsrealperson.vision_goggles.util.FlashlightMode.byId(tacticalModeId);
+                float tacticalFlashGlare = Math.max(1.25f, tacticalMode.glareIntensity);
+                if (tacticalMode == dev.itsrealperson.vision_goggles.util.FlashlightMode.STROBE) {
+                    float residual = tacticalFlashGlare * 0.25f;
+                    if (targetGlare < residual) targetGlare = residual;
+                    float pulse = tacticalFlashGlare * dev.itsrealperson.vision_goggles.util.FlashlightMode.getStrobeFactor(System.nanoTime());
+                    if (strobeGlarePulse < pulse) strobeGlarePulse = pulse;
+                } else if (targetGlare < tacticalFlashGlare) {
+                    targetGlare = tacticalFlashGlare;
+                }
+
             }
         }
 
@@ -709,7 +735,7 @@ public class VisionShaderManager {
             if (shader.getUniform("time") != null) shader.getUniform("time").set(time);
             if (shader.getUniform("colorFilter") != null) shader.getUniform("colorFilter").set(rf, gf, bf);
             if (shader.getUniform("Interference") != null) shader.getUniform("Interference").set(interference);
-            if (shader.getUniform("Glare") != null) shader.getUniform("Glare").set(currentGlare);
+            if (shader.getUniform("Glare") != null) shader.getUniform("Glare").set(currentGlare + strobeGlarePulse);
             if (shader.getUniform("focus") != null) shader.getUniform("focus").set(focus);
             if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
             if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);

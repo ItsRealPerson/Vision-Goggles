@@ -2,6 +2,11 @@
 
 ## [2.0.0] - 2026-11-24
 
+### Added & Improved (2026-11-24 — Modo Estroboscópico Real + Flashazos NVG)
+- **Pulso Estroboscópico Compartido (`FlashlightMode.getStrobeFactor`):** Añadida onda táctica de ~11.5 Hz (`1.0f` durante ~40% del ciclo, rampa `0.04` y piso `0.10f`) reutilizable en tiempo real.
+- **Parpadeo World-Space (`FlashlightUniforms`):** Multiplicado `mode.intensity` por `FlashlightMode.getStrobeFactor(System.nanoTime())` cuando `mode == FlashlightMode.STROBE`, cubriendo Vanilla y Sodium/Embeddium para linterna local y de otros jugadores sin tocar GLSL.
+- **Flashazos Sincronizados contra NVG (`VisionShaderManager`):** Añadido `strobeGlarePulse` para fuentes estroboscópicas en `NIGHT_VISION` (otros jugadores, linterna de casco y linterna táctica propia), manteniendo base residual (`0.25f * glareIntensity`) en `targetGlare` y sumando el pulso directamente al uniform `Glare` para evitar que el suavizado de `currentGlare` aplane los flashazos.
+
 ### Added & Improved (2026-11-24 — FLIR Thermal Realism: Flashlight Suppression & Progressive Gun Muzzle Heat)
 - **Suppress Visible Flashlight Beams in Thermal Vision (`VisionRenderer`, `VisionShaderManager`):** `updateFlashlightEveryFrame` now resets `FlashlightUniforms.beginUpdate(camera.rotation())` (`currentCount = 0`) and returns early when `VisionShaderManager.isThermalShaderActive()`, and `processFlashlight` returns immediately in Thermal mode, preventing visible flashlight beams from lighting blocks/entities or running screen-space post-processing in LWIR.
 - **Progressive Gun Muzzle / Barrel Heat (`GunHeatTracker`, `MixinClientLevel`, `MixinSoundEngine`, `ThermalEntityPainter`):** Added `GunHeatTracker` (`+0.20` heat per shot with `40ms` per-player dedupe, `-0.10/s` normal decay, `-0.35/s` in water/rain), hooked to bullet spawns (`tacz:` / `bullet`) and gunfire sounds (including suppressed shots, while keeping NVG glare untouched), and rendered 3rd-person world-depth-occluded muzzle cubes and 1st-person view-space barrel heat into `ThermalMask` (`0x00FFFF` Ironbow gradient).

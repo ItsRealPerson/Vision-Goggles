@@ -69,4 +69,27 @@ public enum FlashlightMode {
         }
         return FOCUSED;
     }
+
+    /**
+     * Computes the real-time tactical strobe pulse factor (~11.5 Hz).
+     * High pulse (1.0) for ~40% of the cycle with a short 0.04 ramp down to a 0.10 floor.
+     */
+    public static float getStrobeFactor(long nanoTime) {
+        double cycle = ((nanoTime * 1e-9) * 11.5) % 1.0;
+        if (cycle < 0.0) cycle += 1.0;
+        final float low = 0.10f;
+        final float high = 1.0f;
+        final double ramp = 0.04;
+        if (cycle < ramp) {
+            float t = (float) (cycle / ramp);
+            return low + (high - low) * t;
+        } else if (cycle < 0.40) {
+            return high;
+        } else if (cycle < 0.40 + ramp) {
+            float t = (float) ((cycle - 0.40) / ramp);
+            return high - (high - low) * t;
+        } else {
+            return low;
+        }
+    }
 }

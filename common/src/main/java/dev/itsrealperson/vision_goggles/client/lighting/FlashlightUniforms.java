@@ -110,7 +110,11 @@ public class FlashlightUniforms {
         coneInnerArray[currentCount] = mode.coneInner;
         coneOuterArray[currentCount] = mode.coneOuter;
         rangeArray[currentCount]     = ranges[0];
-        intensityArray[currentCount] = mode.intensity;
+        float intensity = mode.intensity;
+        if (mode == FlashlightMode.STROBE) {
+            intensity *= FlashlightMode.getStrobeFactor(System.nanoTime());
+        }
+        intensityArray[currentCount] = intensity;
         isLocalArray[currentCount]   = isLocal ? 1.0f : 0.0f;
         isWallArray[currentCount]   = isWall ? 1.0f : 0.0f;
 
