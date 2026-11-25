@@ -140,6 +140,10 @@ public class ThermalEntityPainter {
     }
 
     public static Integer resolveEntityThermalColor(LivingEntity entity) {
+        Integer apiOverride = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.resolveThermalEntityColorOverride(entity);
+        if (apiOverride != null) {
+            return apiOverride;
+        }
         String entityTypeId = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         boolean isHostile = entity instanceof net.minecraft.world.entity.monster.Enemy || !entity.getType().getCategory().isFriendly();
         return dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.hookThermalColor(entityTypeId, isHostile);

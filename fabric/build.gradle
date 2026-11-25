@@ -67,3 +67,9 @@ processResources {
         expand "version": project.version
     }
 }
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}

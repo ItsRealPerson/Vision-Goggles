@@ -131,6 +131,50 @@ public class FlashlightUniforms {
         currentCount++;
     }
 
+    public static void addCustomSpot(Vector3f pos, Vector3f dir, Vector3f color, float coneInner, float coneOuter, float range, float intensity) {
+        if (currentCount >= GLSL_MAX) return;
+
+        int offset = currentCount * 3;
+        posArray[offset]     = pos.x();
+        posArray[offset + 1] = pos.y();
+        posArray[offset + 2] = pos.z();
+
+        dirArray[offset]     = dir.x();
+        dirArray[offset + 1] = dir.y();
+        dirArray[offset + 2] = dir.z();
+
+        upArray[offset]      = 0.0f;
+        upArray[offset + 1]  = 1.0f;
+        upArray[offset + 2]  = 0.0f;
+
+        rightArray[offset]     = 1.0f;
+        rightArray[offset + 1] = 0.0f;
+        rightArray[offset + 2] = 0.0f;
+
+        colArray[offset]     = color.x();
+        colArray[offset + 1] = color.y();
+        colArray[offset + 2] = color.z();
+
+        coneInnerArray[currentCount] = coneInner;
+        coneOuterArray[currentCount] = coneOuter;
+        rangeArray[currentCount]     = range;
+        intensityArray[currentCount] = intensity;
+        isLocalArray[currentCount]   = 0.0f;
+        isWallArray[currentCount]    = 0.0f;
+
+        range0Array[currentCount] = range;
+        range1Array[currentCount] = 0.0f;
+        range2Array[currentCount] = 0.0f;
+        range3Array[currentCount] = 0.0f;
+        range4Array[currentCount] = 0.0f;
+        range5Array[currentCount] = 0.0f;
+        range6Array[currentCount] = 0.0f;
+        range7Array[currentCount] = 0.0f;
+        range8Array[currentCount] = 0.0f;
+
+        currentCount++;
+    }
+
     /** Aplica todos los uniforms a un shader Vanilla */
     public static void applyToVanilla(ShaderInstance shader) {
         if (shader == null) return;

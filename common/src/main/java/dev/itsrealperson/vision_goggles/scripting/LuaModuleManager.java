@@ -44,9 +44,33 @@ public class LuaModuleManager {
             "12_visor_abissal_hydro.lua"
     );
 
+    private static volatile boolean initialized = false;
+
     public static void init() {
         LuaScriptEngine.init();
+        initialized = true;
         loadAllModules();
+    }
+
+    public static synchronized void syncExternalScriptIfInitialized(String fileName, String luaSource) {
+        if (!initialized) {
+            return;
+        }
+        try {
+            Path modulesDir = Platform.getConfigFolder().resolve("vision_goggles").resolve("modules");
+            Path scriptsDir = Platform.getConfigFolder().resolve("vision_goggles").resolve("scripts");
+            Files.createDirectories(modulesDir);
+            Files.createDirectories(scriptsDir);
+
+            Path moduleTarget = modulesDir.resolve(fileName);
+            Files.writeString(moduleTarget, luaSource, java.nio.charset.StandardCharsets.UTF_8);
+            Path scriptTarget = scriptsDir.resolve(fileName);
+            Files.writeString(scriptTarget, luaSource, java.nio.charset.StandardCharsets.UTF_8);
+
+            loadModuleFile(moduleTarget.toFile());
+        } catch (Exception e) {
+            Vision_goggles.LOGGER.warn("[Vision Goggles] Failed to sync external Lua script " + fileName + ": " + e.getMessage());
+        }
     }
 
     public static synchronized void loadAllModules() {
@@ -188,6 +212,12 @@ public class LuaModuleManager {
         }
     }
 
+    public static void generateExampleScripts(Path dirPath) {
+        if (dirPath != null) {
+            generateExampleScripts(dirPath.toFile());
+        }
+    }
+
     private static void generateExampleScripts(File dir) {
         try {
             for (String fileName : DEFAULT_RESOURCE_FILES) {
@@ -206,6 +236,22 @@ public class LuaModuleManager {
                     Files.copy(in, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     if (isUpgrading) {
                         Vision_goggles.LOGGER.info("[Vision Goggles] Upgraded bundled Lua example to v37: " + fileName);
+                    }
+                }
+            }
+
+            Map<String, String> externalScripts = dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.getRegisteredExternalLuaScripts();
+            if (!externalScripts.isEmpty()) {
+                Path scriptsDir = Platform.getConfigFolder().resolve("vision_goggles").resolve("scripts");
+                Files.createDirectories(scriptsDir);
+                for (Map.Entry<String, String> entry : externalScripts.entrySet()) {
+                    File moduleTarget = new File(dir, entry.getKey());
+                    if (!moduleTarget.exists() || shouldUpgradeBundledScript(moduleTarget)) {
+                        Files.writeString(moduleTarget.toPath(), entry.getValue(), java.nio.charset.StandardCharsets.UTF_8);
+                    }
+                    Path scriptTarget = scriptsDir.resolve(entry.getKey());
+                    if (!Files.exists(scriptTarget)) {
+                        Files.writeString(scriptTarget, entry.getValue(), java.nio.charset.StandardCharsets.UTF_8);
                     }
                 }
             }
