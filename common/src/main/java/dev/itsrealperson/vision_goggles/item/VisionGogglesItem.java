@@ -30,7 +30,10 @@ import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.RawAnimation;
 
 public class VisionGogglesItem extends Item implements GeoItem, CustomReequipItem {
+    public static final int FLIP_DOWN_WARMUP_TICKS = 16; // 0.80s (matches GogglesFlipAnimator 0.78s flip-down)
     private static final java.util.Map<java.util.UUID, Integer> UNDERWATER_TICKS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<java.util.UUID, Boolean> LAST_ACTIVE_STATE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<java.util.UUID, Integer> WARMUP_TICKS = new java.util.concurrent.ConcurrentHashMap<>();
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final List<VisionMode> supportedModes;
     private final IntSupplier batteryCapacity;
@@ -97,6 +100,38 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
         }
     }
 
+    public static void triggerActivationWarmup(Player player) {
+        if (player == null) return;
+        java.util.UUID uuid = player.getUUID();
+        WARMUP_TICKS.put(uuid, FLIP_DOWN_WARMUP_TICKS);
+        LAST_ACTIVE_STATE.put(uuid, true);
+    }
+
+    public static void clearActivationState(Player player) {
+        if (player == null) return;
+        java.util.UUID uuid = player.getUUID();
+        WARMUP_TICKS.remove(uuid);
+        LAST_ACTIVE_STATE.remove(uuid);
+        UNDERWATER_TICKS.remove(uuid);
+    }
+
+    public static boolean isEquippingGoggles(Player player) {
+        return player != null && player.isUsingItem() && player.getUseItem().getItem() instanceof VisionGogglesItem;
+    }
+
+    public static boolean isWarmingUpOrEquipping(ServerPlayer player, ItemStack stack) {
+        if (player == null || stack == null || stack.isEmpty()) return false;
+        if (isEquippingGoggles(player)) return true;
+        CompoundTag nbt = stack.getTag();
+        boolean active = nbt != null && nbt.getBoolean(ModConstants.TAG_ACTIVE);
+        if (!active) return false;
+        java.util.UUID uuid = player.getUUID();
+        if (!LAST_ACTIVE_STATE.getOrDefault(uuid, false)) {
+            return true;
+        }
+        return WARMUP_TICKS.getOrDefault(uuid, 0) > 0;
+    }
+
     public void serverTick(ItemStack stack, ServerPlayer player) {
         CompoundTag nbt = stack.getOrCreateTag();
         float maxBattery = (float) getBatteryCapacity(stack);
@@ -105,15 +140,44 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
         float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
         
         VisionMode mode = getActiveVisionMode(stack);
+        java.util.UUID uuid = player.getUUID();
+        boolean isActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
+        boolean wasActive = LAST_ACTIVE_STATE.getOrDefault(uuid, false);
 
-        if (nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
+        if (isActive && !wasActive) {
+            WARMUP_TICKS.put(uuid, Math.max(WARMUP_TICKS.getOrDefault(uuid, 0), FLIP_DOWN_WARMUP_TICKS));
+        } else if (!isActive) {
+            WARMUP_TICKS.remove(uuid);
+        }
+        LAST_ACTIVE_STATE.put(uuid, isActive);
+
+        if (isEquippingGoggles(player)) {
+            if (isActive) {
+                WARMUP_TICKS.put(uuid, FLIP_DOWN_WARMUP_TICKS);
+            }
+            return;
+        }
+
+        int warmup = WARMUP_TICKS.getOrDefault(uuid, 0);
+        if (isActive && warmup > 0) {
+            if (warmup <= 1) {
+                WARMUP_TICKS.remove(uuid);
+            } else {
+                WARMUP_TICKS.put(uuid, warmup - 1);
+            }
+            return;
+        }
+
+        if (isActive) {
             if (currentBattery > 0) {
                 if ((mode == VisionMode.NIGHT_VISION || mode == VisionMode.THERMAL)
                         && player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)) {
-                    int underwaterTicks = UNDERWATER_TICKS.getOrDefault(player.getUUID(), 0) + 1;
+                    int underwaterTicks = UNDERWATER_TICKS.getOrDefault(uuid, 0) + 1;
                     if (underwaterTicks >= 40) {
-                        UNDERWATER_TICKS.remove(player.getUUID());
+                        UNDERWATER_TICKS.remove(uuid);
                         nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                        LAST_ACTIVE_STATE.put(uuid, false);
+                        WARMUP_TICKS.remove(uuid);
                         cleanUpEffect(player);
                         player.level().playSound(null, player.blockPosition(),
                                 dev.itsrealperson.vision_goggles.registry.ModSounds.FLASHLIGHT_SWITCH.get(),
@@ -125,9 +189,9 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                         );
                         return;
                     }
-                    UNDERWATER_TICKS.put(player.getUUID(), underwaterTicks);
+                    UNDERWATER_TICKS.put(uuid, underwaterTicks);
                 } else {
-                    UNDERWATER_TICKS.remove(player.getUUID());
+                    UNDERWATER_TICKS.remove(uuid);
                 }
 
                 float baseDrain = (mode != null) ? ((mode == VisionMode.THERMAL) ? 2.0f : 1.0f) : 0.0f;
@@ -156,16 +220,20 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                 
                 if (currentBattery <= 0) {
                     nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                    LAST_ACTIVE_STATE.put(uuid, false);
+                    WARMUP_TICKS.remove(uuid);
                     cleanUpEffect(player);
-                    UNDERWATER_TICKS.remove(player.getUUID());
+                    UNDERWATER_TICKS.remove(uuid);
                 }
             } else {
                 nbt.putBoolean(ModConstants.TAG_ACTIVE, false);
+                LAST_ACTIVE_STATE.put(uuid, false);
+                WARMUP_TICKS.remove(uuid);
                 cleanUpEffect(player);
-                UNDERWATER_TICKS.remove(player.getUUID());
+                UNDERWATER_TICKS.remove(uuid);
             }
         } else {
-            UNDERWATER_TICKS.remove(player.getUUID());
+            UNDERWATER_TICKS.remove(uuid);
         }
 
         // Optimization: Sync only if battery changed significantly or reached zero

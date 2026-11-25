@@ -95,7 +95,7 @@ public class ModEvents {
 
         PlayerEvent.PLAYER_QUIT.register(player -> {
             if (player instanceof ServerPlayer) {
-                // Cleanup removed
+                VisionGogglesItem.clearActivationState(player);
             }
         });
     }
@@ -107,6 +107,7 @@ public class ModEvents {
         if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem gogglesItem) {
             gogglesItem.serverTick(helmet, player);
         } else {
+            VisionGogglesItem.clearActivationState(player);
             VisionGogglesItem.cleanUpEffect(player);
         }
 

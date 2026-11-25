@@ -7,6 +7,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Supplier;
 
@@ -42,6 +43,13 @@ public class EquipPacket {
                         || PlatformMethods.equipInSlot(player, player.getItemInHand(oppositeHand));
 
                 if (equipped && !player.level().isClientSide()) {
+                    ItemStack equippedHelmet = PlatformMethods.getEquippedHelmet(player);
+                    if (!equippedHelmet.isEmpty() && equippedHelmet.hasTag()
+                            && equippedHelmet.getTag().getBoolean(dev.itsrealperson.vision_goggles.util.ModConstants.TAG_ACTIVE)) {
+                        dev.itsrealperson.vision_goggles.item.VisionGogglesItem.triggerActivationWarmup(player);
+                    } else {
+                        dev.itsrealperson.vision_goggles.item.VisionGogglesItem.clearActivationState(player);
+                    }
                     player.level().playSound(null, player.getX(), player.getEyeY(), player.getZ(),
                             SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.70F, 1.18F);
                     player.level().playSound(null, player.getX(), player.getEyeY(), player.getZ(),

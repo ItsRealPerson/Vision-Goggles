@@ -41,13 +41,17 @@ public class ModularGogglesItem extends VisionGogglesItem {
         }
 
         List<ModuleType> utils = getUtilityModules(stack);
+        boolean warmingUpOrEquipping = isWarmingUpOrEquipping(player, stack);
         // Apply power-related effects from modules
         for (ModuleType util : utils) {
+            if (warmingUpOrEquipping && util == ModuleType.SONAR) {
+                continue;
+            }
             util.tickPower(stack, player);
         }
 
-        // Standby drain if any module is installed and active mode is OFF
-        if (!nbt.getBoolean(ModConstants.TAG_ACTIVE)) {
+        // Standby drain if any module is installed and active mode is OFF (skip while equipping goggles in hand)
+        if (!nbt.getBoolean(ModConstants.TAG_ACTIVE) && !isEquippingGoggles(player)) {
             if (!getModes(stack).isEmpty() || !utils.isEmpty()) {
                 float currentBattery = nbt.getFloat(ModConstants.TAG_BATTERY);
                 if (currentBattery > 0) {

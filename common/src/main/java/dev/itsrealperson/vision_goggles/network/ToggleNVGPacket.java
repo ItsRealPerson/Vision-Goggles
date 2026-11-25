@@ -109,8 +109,11 @@ public class ToggleNVGPacket {
                         if (nbt.getFloat(ModConstants.TAG_BATTERY) <= 0) newState = false;
                     }
                 }
+                boolean wasActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
                 nbt.putBoolean(ModConstants.TAG_ACTIVE, newState);
-                if (!newState) {
+                if (newState && !wasActive) {
+                    VisionGogglesItem.triggerActivationWarmup(player);
+                } else if (!newState) {
                     VisionGogglesItem.cleanUpEffect(player);
                 }
             }

@@ -67,7 +67,11 @@ public class SelectVisionModePacket {
                     if (!nbt.contains(ModConstants.TAG_BATTERY)) nbt.putFloat(ModConstants.TAG_BATTERY, max);
 
                     if (nbt.getFloat(ModConstants.TAG_BATTERY) > 0) {
+                        boolean wasActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);
                         nbt.putBoolean(ModConstants.TAG_ACTIVE, true);
+                        if (!wasActive) {
+                            VisionGogglesItem.triggerActivationWarmup(player);
+                        }
                     }
                 }
             }
