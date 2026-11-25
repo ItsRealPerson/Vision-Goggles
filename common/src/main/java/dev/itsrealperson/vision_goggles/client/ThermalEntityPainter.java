@@ -719,7 +719,8 @@ public class ThermalEntityPainter {
                     return DISCARD_VERTEX_CONSUMER;
                 }
 
-                // Organic body/fur/robe layers carry full heat; armor emits no heat: drawn at minimum alpha (cold) so it still occludes body by depth
+                // Apply per-slot thermal insulation factors to BOTH armor and underlying body zones
+                // so 3D/GeckoLib/tactical armor cutouts, joints, or blended layers never leak 255-alpha hot skin.
                 boolean isArmor = isArmorRenderType(type);
                 int baseAlpha = Math.round(finalHeat * 255.0f);
                 return new AlphaOverrideVertexConsumer(
@@ -729,7 +730,7 @@ public class ThermalEntityPainter {
                         worldUpView.x, worldUpView.y, worldUpView.z,
                         entityHeight,
                         !isArmor,
-                        isArmor ? slotFactors : null
+                        slotFactors
                 );
             };
 
@@ -789,7 +790,7 @@ public class ThermalEntityPainter {
         String raw = type.toString().toLowerCase(Locale.ROOT);
         int colonIdx = raw.indexOf(':');
         String rtName = (raw.startsWith("rendertype[") && colonIdx > 11) ? raw.substring(11, colonIdx) : raw;
-        return rtName.contains("armor") || raw.contains("textures/models/armor/") || raw.contains("/armor/") || rtName.contains("armor_") || raw.contains("hazmat") || raw.contains("mekasuit") || raw.contains("space_suit") || raw.contains("diving");
+        return rtName.contains("armor") || raw.contains("armor") || raw.contains("hazmat") || raw.contains("mekasuit") || raw.contains("space_suit") || raw.contains("diving");
     }
 
     private static void compositeIntoMask(int rgbColor, int restoreProgram) {
