@@ -10,7 +10,7 @@ Vision Goggles 2.0.0 is a tactical optics and lighting mod featuring custom GLSL
 
 - **4 Core Vision Modes + Modular Variants**:
   - **Night Vision (`NVG`)**: Pure client-side phosphor amplification (no vanilla potion icons/particles), P43 persistence, solar/explosion/muzzle-flash glare, and optional DSP auto-gating.
-  - **Thermal Vision (`FLIR`)**: Isolated `ThermalMask` depth-occluded FBO with Ironbow heat palette, world-up 3D gradients, cryogenic/combustion block signatures, and **tiered armor thermal insulation** (`thermal_insulation_{low,medium,high,full}` tags + modded armor stat fallback).
+  - **Thermal Vision (`FLIR`)**: Isolated `ThermalMask` depth-occluded FBO with Ironbow heat palette, world-up 3D gradients, cryogenic/combustion block signatures, and **tiered Vanilla armor thermal insulation** (`thermal_insulation_{low,medium,high,full}` tags).
   - **Biometric Vision**: Organic health/status signature scanning.
   - **Hydro Vision**: Underwater clarity & depth-tuned optical filter.
   - **Modular & Pro Modular Goggles**: Customize optics, zoom, solar charging, battery expansion, sonar radar, vital/environment HUDs, flashlight pod, and Lua programmable chips.

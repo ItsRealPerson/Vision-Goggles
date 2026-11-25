@@ -719,8 +719,7 @@ public class ThermalEntityPainter {
                     return DISCARD_VERTEX_CONSUMER;
                 }
 
-                // Apply per-slot thermal insulation factors to BOTH armor and underlying body zones
-                // so 3D/GeckoLib/tactical armor cutouts, joints, or blended layers never leak 255-alpha hot skin.
+                // Organic body/fur/robe layers carry full heat; armor emits no heat: drawn at minimum alpha (cold) so it still occludes body by depth
                 boolean isArmor = isArmorRenderType(type);
                 int baseAlpha = Math.round(finalHeat * 255.0f);
                 return new AlphaOverrideVertexConsumer(
@@ -730,7 +729,7 @@ public class ThermalEntityPainter {
                         worldUpView.x, worldUpView.y, worldUpView.z,
                         entityHeight,
                         !isArmor,
-                        slotFactors
+                        isArmor ? slotFactors : null
                 );
             };
 
@@ -790,7 +789,7 @@ public class ThermalEntityPainter {
         String raw = type.toString().toLowerCase(Locale.ROOT);
         int colonIdx = raw.indexOf(':');
         String rtName = (raw.startsWith("rendertype[") && colonIdx > 11) ? raw.substring(11, colonIdx) : raw;
-        return rtName.contains("armor") || raw.contains("armor") || raw.contains("hazmat") || raw.contains("mekasuit") || raw.contains("space_suit") || raw.contains("diving");
+        return rtName.contains("armor") || raw.contains("textures/models/armor/") || raw.contains("/armor/") || rtName.contains("armor_") || raw.contains("hazmat") || raw.contains("mekasuit") || raw.contains("space_suit") || raw.contains("diving");
     }
 
     private static void compositeIntoMask(int rgbColor, int restoreProgram) {
@@ -1147,9 +1146,11 @@ public class ThermalEntityPainter {
     public static final TagKey<net.minecraft.world.item.Item> INSULATION_HIGH = TagKey.create(Registries.ITEM, new ResourceLocation("vision_goggles", "thermal_insulation_high"));
     public static final TagKey<net.minecraft.world.item.Item> INSULATION_FULL = TagKey.create(Registries.ITEM, new ResourceLocation("vision_goggles", "thermal_insulation_full"));
 
-    /** Heat factor: 1.0 = no armor/full heat, 0.75 low, 0.50 medium, 0.25 high, 0.0 full insulation. Tags first, then stat fallback for modded armor. */
+    /** Heat factor: 1.0 = no armor/full heat, 0.75 low, 0.50 medium, 0.25 high, 0.0 full insulation. Vanilla armors only. */
     public static float getArmorThermalFactor(net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.EquipmentSlot slot) {
         if (stack == null || stack.isEmpty()) return 1.0f;
+        String ns = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+        if (!"minecraft".equals(ns)) return 1.0f;
         if (stack.is(INSULATION_FULL)) return 0.0f;
         if (stack.is(INSULATION_HIGH)) return 0.25f;
         if (stack.is(INSULATION_MEDIUM)) return 0.50f;
