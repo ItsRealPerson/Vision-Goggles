@@ -78,6 +78,16 @@ public class SonarRadarModule implements IHudModule {
         CompoundTag nbt = goggles.getTag();
         int mode = nbt != null ? nbt.getInt(ModConstants.TAG_SONAR_MODE) : 0; // 0=Todos, 1=Jugadores, 2=No-Muertos
 
+        // Advancing acoustic wave ring on the 2D radar
+        int waveR = Math.max(2, Math.min(radius - 1, Math.round(pingProgress * (radius - 1))));
+        int waveAlpha = (int) (opacity * 120.0f);
+        int waveCol = (waveAlpha << 24) | 0x00FFCC;
+        gui.fill(centerX - waveR, centerY - waveR, centerX + waveR, centerY - waveR + 1, waveCol);
+        gui.fill(centerX - waveR, centerY + waveR - 1, centerX + waveR, centerY + waveR, waveCol);
+        gui.fill(centerX - waveR, centerY - waveR, centerX - waveR + 1, centerY + waveR, waveCol);
+        gui.fill(centerX + waveR - 1, centerY - waveR, centerX + waveR, centerY + waveR, waveCol);
+
+        int echoMarkersDrawn = 0;
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (entity == player) continue;
             if (!(entity instanceof LivingEntity living)) continue;
@@ -104,8 +114,41 @@ public class SonarRadarModule implements IHudModule {
             int blipX = centerX + (int) (Math.cos(angle) * radarDist);
             int blipY = centerY + (int) (Math.sin(angle) * radarDist);
 
-            // Draw blip
-            gui.fill(blipX - 1, blipY - 1, blipX + 1, blipY + 1, dotColor);
+            // Draw 2D radar blip
+            boolean isHostile = living instanceof net.minecraft.world.entity.monster.Enemy;
+            int blipRgb = (living instanceof Player) ? 0x00EEFF : (isHostile ? 0xFF4455 : 0x00FFAA);
+            gui.fill(blipX - 1, blipY - 1, blipX + 1, blipY + 1, (alpha << 24) | blipRgb);
+
+            // Project 3D acoustic echo pulse marker onto screen (works even through solid walls)
+            if (echoMarkersDrawn < 10) {
+                double ex = net.minecraft.util.Mth.lerp(partialTicks, living.xo, living.getX());
+                double ey = net.minecraft.util.Mth.lerp(partialTicks, living.yo, living.getY()) + living.getBbHeight() * 0.55;
+                double ez = net.minecraft.util.Mth.lerp(partialTicks, living.zo, living.getZ());
+                float[] proj = dev.itsrealperson.vision_goggles.client.VisionHUDOverlay.projectWorldToGui(mc, ex, ey, ez, partialTicks);
+                if (proj != null && proj[3] > 0.5f) {
+                    echoMarkersDrawn++;
+                    int sx = Math.round(proj[0]);
+                    int sy = Math.round(proj[1]);
+                    int echoRgb = isHostile ? 0xFF4466 : ((living instanceof Player) ? 0x00FFFF : 0x00FFBB);
+                    int echoColor = (alpha << 24) | echoRgb;
+                    int pulseRingR = 4 + Math.round(pingProgress * 8.0f);
+                    int ringAlpha = Math.max(0, (int) (opacity * 170.0f));
+                    int ringColor = (ringAlpha << 24) | 0x00FFFF;
+
+                    // Acoustic expanding pulse brackets & center diamond
+                    dev.itsrealperson.vision_goggles.client.VisionHUDOverlay.drawCornerBrackets(gui, sx, sy, pulseRingR, 3, ringColor);
+                    gui.fill(sx - 2, sy, sx + 3, sy + 1, echoColor);
+                    gui.fill(sx, sy - 2, sx + 1, sy + 3, echoColor);
+
+                    if (opacity > 0.22f) {
+                        String echoTag = String.format("[ECHO %.0fm]", proj[2]);
+                        int tagW = Math.round(mc.font.width(echoTag) * 0.62f);
+                        dev.itsrealperson.vision_goggles.client.VisionHUDOverlay.drawScaledText(
+                                gui, mc, echoTag, sx - tagW / 2, sy + pulseRingR + 2, 0.62f, echoColor
+                        );
+                    }
+                }
+            }
         }
     }
 }

@@ -1,16 +1,15 @@
 package dev.itsrealperson.vision_goggles.client.hud;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.resources.ResourceLocation;
-
-import dev.itsrealperson.vision_goggles.util.ModConfig;
-
+import com.mojang.blaze3d.systems.RenderSystem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
+import dev.itsrealperson.vision_goggles.util.ModConfig;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 public class DurabilityModule implements IHudModule {
 
@@ -24,52 +23,51 @@ public class DurabilityModule implements IHudModule {
     @Override
     public boolean shouldRender(Player player, ItemStack goggles) {
         if (!ModConfig.shouldShowDurabilityWarning()) return false;
-        return getDamagePercent(goggles) > 0.7f;
+        return getDamagePercent(goggles) > 0.70f;
     }
 
     @Override
     public void render(GuiGraphics gui, ItemStack goggles, float partialTicks, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
         float damagePct = getDamagePercent(goggles);
+        if (damagePct <= 0.70f) return;
 
-        // Determine color based on active mode
+        // Determine subtle tint based on active mode
         float r = 1.0f, g = 1.0f, b = 1.0f;
         if (goggles.hasTag() && goggles.getTag().getBoolean(ModConstants.TAG_ACTIVE)) {
-             VisionMode mode = VisionGogglesItem.getActiveVisionMode(goggles);
-             if (mode == null) mode = VisionMode.NIGHT_VISION;
-             switch (mode) {
-                 case NIGHT_VISION -> { r = 0.2f; g = 1.0f; b = 0.2f; } // Verde
-                 case THERMAL -> { r = 0.2f; g = 0.5f; b = 1.0f; }      // Azul (Térmica)
-                 case HYDRO -> { 
-                     // Solo aplicar tinte si está bajo el agua
-                     if (mc.player != null && mc.player.isUnderWater()) {
-                        r = 0.0f; g = 1.0f; b = 0.8f; // Cian/Turquesa (Hydro activo)
-                     } else {
-                        r = 1.0f; g = 1.0f; b = 1.0f; // Blanco (Hydro inactivo/fuera del agua)
-                     }
-                 }
-                 case BIOMETRIC -> { r = 1.0f; g = 0.5f; b = 0.0f; }    // Naranja (Biométrica)
-             }
+            VisionMode mode = VisionGogglesItem.getActiveVisionMode(goggles);
+            if (mode != null) {
+                switch (mode) {
+                    case NIGHT_VISION -> { r = 0.45f; g = 1.0f; b = 0.55f; }
+                    case THERMAL -> { r = 0.55f; g = 0.75f; b = 1.0f; }
+                    case HYDRO -> {
+                        if (mc.player != null && mc.player.isUnderWater()) {
+                            r = 0.35f; g = 1.0f; b = 0.90f;
+                        }
+                    }
+                    case BIOMETRIC -> { r = 1.0f; g = 0.72f; b = 0.30f; }
+                }
+            }
         }
 
-        // 1. Overlay de grietas (si el daño es superior al 70%)
-        if (damagePct > 0.7f) {
-            gui.setColor(r, g, b, 0.4F); // 40% Opacity with tint
-            gui.blit(CRACKED_LENS, 0, 0, 0, 0, width, height, width, height);
-            gui.setColor(1.0F, 1.0F, 1.0F, 1.0F); // Reset color
-        }
-        
-        // 2. Efecto de interferencia/glitch visual (si el daño es crítico > 85%)
-        if (damagePct > 0.85f && mc.level.random.nextFloat() > 0.7f) {
-            // Dibujar un rectángulo semitransparente que parpadea
-            // Usamos el mismo color del modo pero muy transparente
-            int color = (int)(r*255) << 16 | (int)(g*255) << 8 | (int)(b*255);
-            gui.fill(0, 0, width, height, 0x33000000 | color); 
-            
-            // Simular líneas de interferencia
-            for (int i = 0; i < 5; i++) {
-                int y = mc.level.random.nextInt(height);
-                gui.fill(0, y, width, y + 1, 0x55FFFFFF);
+        // Progressive opacity from ~0.14 at 70% damage (30% durability left) up to ~0.42 at >= 95% damage
+        float severity = Math.max(0.0f, Math.min(1.0f, (damagePct - 0.70f) / 0.25f));
+        float alpha = 0.14f + severity * 0.28f;
+
+        gui.flush();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(r, g, b, alpha);
+        gui.blit(CRACKED_LENS, 0, 0, 0, 0, width, height, width, height);
+        gui.flush();
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.disableBlend();
+
+        // Critical damage optical scanline glitch (> 85% damage)
+        if (damagePct > 0.85f && mc.level != null && mc.level.random.nextFloat() > 0.74f) {
+            for (int i = 0; i < 4; i++) {
+                int y = mc.level.random.nextInt(Math.max(1, height));
+                gui.fill(0, y, width, y + 1, 0x44FFFFFF);
             }
         }
     }

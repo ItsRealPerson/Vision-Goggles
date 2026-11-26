@@ -37,10 +37,10 @@ public enum ModuleType {
         public void tickPower(ItemStack stack, ServerPlayer player) {
             if (stack.getOrCreateTag().getBoolean(ModConstants.TAG_ACTIVE)) {
                 int mode = stack.getOrCreateTag().getInt(ModConstants.TAG_SONAR_MODE); // 0=Todos, 1=Jugadores, 2=No-Muertos
-                float drain = 0.0f;
-                if (mode == 0) drain = 1.0f; // Todos
-                else if (mode == 1) drain = 1.5f; // Jugadores (frecuencia específica más potente)
-                else if (mode == 2) drain = 0.5f; // No-Muertos
+                float baseDrain = 0.12f;
+                if (mode == 1) baseDrain = 0.15f; // Jugadores (frecuencia específica)
+                else if (mode == 2) baseDrain = 0.08f; // No-Muertos
+                float drain = baseDrain * ModConfig.getBatteryDrainMultiplier();
 
                 float current = stack.getOrCreateTag().getFloat(ModConstants.TAG_BATTERY);
                 if (current > 0) {

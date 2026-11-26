@@ -815,6 +815,18 @@ public class VisionShaderManager {
     }
 
     public static boolean isDspAvailable() {
+        if (activeMode == VisionMode.BIOMETRIC) {
+            return true;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.player != null) {
+            net.minecraft.world.item.ItemStack helmet = dev.itsrealperson.vision_goggles.util.PlatformMethods.getEquippedHelmet(mc.player);
+            if (!helmet.isEmpty() && helmet.getItem() instanceof dev.itsrealperson.vision_goggles.item.ProModularGogglesItem) {
+                if (activeMode == VisionMode.THERMAL || isThermalShaderActive()) {
+                    return true;
+                }
+            }
+        }
         return dev.architectury.platform.Platform.isModLoaded("computercraft");
     }
 
