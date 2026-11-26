@@ -237,7 +237,7 @@ public class ThermalEntityPainter {
      * intermediate = attenuated through THERMAL_TRANSPARENT wood/glass/leaves).
      */
     public static float computeEntityThermalHeat(LivingEntity entity, Vec3 camPos, float partialTick, net.minecraft.world.level.Level level) {
-        if (entity == null || level == null || camPos == null || !emitsThermalHeat(entity)) {
+        if (entity == null || level == null || camPos == null) {
             return 0.0f;
         }
         double lerpX = entity.xOld + (entity.getX() - entity.xOld) * partialTick;
@@ -251,29 +251,31 @@ public class ThermalEntityPainter {
             return 0.0f;
         }
 
-        // Interpolate bounding box with partialTick and slightly inset Y to avoid floor-block false hits
-        AABB bb = entity.getBoundingBox().move(lerpX - entity.getX(), lerpY - entity.getY(), lerpZ - entity.getZ());
-        double minY = Math.min(bb.maxY, bb.minY + 0.08);
-        double maxY = Math.max(minY, bb.maxY - 0.05);
-        Vec3[] points = new Vec3[]{
-            new Vec3(lerpX, lerpY + entity.getBbHeight() * 0.5, lerpZ),
-            new Vec3(bb.minX, minY, bb.minZ),
-            new Vec3(bb.minX, minY, bb.maxZ),
-            new Vec3(bb.minX, maxY, bb.minZ),
-            new Vec3(bb.minX, maxY, bb.maxZ),
-            new Vec3(bb.maxX, minY, bb.minZ),
-            new Vec3(bb.maxX, minY, bb.maxZ),
-            new Vec3(bb.maxX, maxY, bb.minZ),
-            new Vec3(bb.maxX, maxY, bb.maxZ)
-        };
-
         float maxHeat = 0.0f;
-        for (Vec3 pt : points) {
-            float ptHeat = getThermalAttenuation(camPos, pt, level);
-            if (ptHeat > maxHeat) maxHeat = ptHeat;
-            if (maxHeat >= 1.0f) break;
+        if (emitsThermalHeat(entity)) {
+            // Interpolate bounding box with partialTick and slightly inset Y to avoid floor-block false hits
+            AABB bb = entity.getBoundingBox().move(lerpX - entity.getX(), lerpY - entity.getY(), lerpZ - entity.getZ());
+            double minY = Math.min(bb.maxY, bb.minY + 0.08);
+            double maxY = Math.max(minY, bb.maxY - 0.05);
+            Vec3[] points = new Vec3[]{
+                new Vec3(lerpX, lerpY + entity.getBbHeight() * 0.5, lerpZ),
+                new Vec3(bb.minX, minY, bb.minZ),
+                new Vec3(bb.minX, minY, bb.maxZ),
+                new Vec3(bb.minX, maxY, bb.minZ),
+                new Vec3(bb.minX, maxY, bb.maxZ),
+                new Vec3(bb.maxX, minY, bb.minZ),
+                new Vec3(bb.maxX, minY, bb.maxZ),
+                new Vec3(bb.maxX, maxY, bb.minZ),
+                new Vec3(bb.maxX, maxY, bb.maxZ)
+            };
+
+            for (Vec3 pt : points) {
+                float ptHeat = getThermalAttenuation(camPos, pt, level);
+                if (ptHeat > maxHeat) maxHeat = ptHeat;
+                if (maxHeat >= 1.0f) break;
+            }
         }
-        return maxHeat;
+        return dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.applyThermalEntityModifiers(entity, maxHeat);
     }
 
     /** Call from RenderLevelStageEvent.AFTER_BLOCK_ENTITIES / WorldRenderEvents.AFTER_ENTITIES */

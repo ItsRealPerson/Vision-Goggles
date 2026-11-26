@@ -45,6 +45,7 @@ public class VisionHUDOverlay {
         }
 
         dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.onRenderHud(gui, partialTicks);
+        dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.renderHudOverlayLayers(gui, partialTicks);
     }
 
     private static void renderCrackedLensOverlay(GuiGraphics gui, ItemStack goggles, int width, int height) {

@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -41,12 +42,25 @@ public final class StationBlueprints {
     }
 
     private static List<Blueprint> BLUEPRINTS;
+    private static final List<Blueprint> EXTERNAL_BLUEPRINTS = new ArrayList<>();
 
     private StationBlueprints() {}
 
-    public static List<Blueprint> getAll() {
+    public static synchronized void registerBlueprint(Blueprint blueprint) {
+        if (blueprint == null || blueprint.id() == null || blueprint.id().isBlank()) {
+            return;
+        }
+        EXTERNAL_BLUEPRINTS.removeIf(b -> b.id().equals(blueprint.id()));
+        EXTERNAL_BLUEPRINTS.add(blueprint);
+        if (BLUEPRINTS != null) {
+            BLUEPRINTS.removeIf(b -> b.id().equals(blueprint.id()));
+            BLUEPRINTS.add(blueprint);
+        }
+    }
+
+    public static synchronized List<Blueprint> getAll() {
         if (BLUEPRINTS == null) {
-            BLUEPRINTS = List.of(
+            BLUEPRINTS = new ArrayList<>(List.of(
                     new Blueprint(
                             "night_vision_goggles",
                             ModItems.NIGHT_VISION_GOGGLES,
@@ -130,7 +144,11 @@ public final class StationBlueprints {
                             ),
                             false
                     )
-            );
+            ));
+            for (Blueprint ext : EXTERNAL_BLUEPRINTS) {
+                BLUEPRINTS.removeIf(b -> b.id().equals(ext.id()));
+                BLUEPRINTS.add(ext);
+            }
         }
         return BLUEPRINTS;
     }

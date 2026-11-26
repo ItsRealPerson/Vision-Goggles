@@ -103,6 +103,10 @@ public class VisionShaderManager {
         // Uniforms are updated inside processShader() every render frame.
     }
 
+    public static VisionMode getActiveMode() {
+        return activeMode;
+    }
+
     public static void updateFlashlightState(float batteryPct, boolean flicker) {
         currentBatteryPct = batteryPct;
         damageFlicker = flicker;

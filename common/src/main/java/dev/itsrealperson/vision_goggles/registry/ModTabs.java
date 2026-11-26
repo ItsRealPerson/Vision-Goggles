@@ -50,7 +50,8 @@ public class ModTabs {
             () -> new ItemStack(ModItems.FLASHLIGHT_BODY.get()),
             () -> new ItemStack(ModItems.TACTICAL_PROCESSOR.get()),
             () -> new ItemStack(ModItems.THERMAL_CORE.get()),
-            () -> new ItemStack(ModItems.LIFESIGN_SENSOR.get())
+            () -> new ItemStack(ModItems.LIFESIGN_SENSOR.get()),
+            () -> new ItemStack(ModItems.TACTICAL_MANUAL.get())
         );
     }
 }

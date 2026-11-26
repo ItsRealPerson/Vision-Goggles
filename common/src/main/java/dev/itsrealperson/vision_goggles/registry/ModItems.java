@@ -103,6 +103,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> LIFESIGN_SENSOR = ITEMS.register("lifesign_sensor",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistrySupplier<Item> TACTICAL_MANUAL = ITEMS.register("tactical_manual",
+            () -> new dev.itsrealperson.vision_goggles.item.TacticalManualItem());
+
     public static void register() {
         ITEMS.register();
     }
