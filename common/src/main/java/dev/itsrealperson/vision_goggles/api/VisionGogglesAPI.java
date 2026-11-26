@@ -4,12 +4,14 @@ import dev.itsrealperson.vision_goggles.item.ModularGogglesItem;
 import dev.itsrealperson.vision_goggles.item.TacticalFlashlightItem;
 import dev.itsrealperson.vision_goggles.item.VisionGogglesItem;
 import dev.itsrealperson.vision_goggles.recipe.StationBlueprints;
+import dev.itsrealperson.vision_goggles.scripting.LuaModuleManager;
 import dev.itsrealperson.vision_goggles.util.FlashlightMode;
 import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.ModuleType;
 import dev.itsrealperson.vision_goggles.util.PlatformMethods;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
@@ -18,23 +20,54 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Common/server-safe public API for Vision Goggles addons.
+ * Common/server-safe public API for Vision Goggles 2.0.0 addons.
  * Never imports client-only classes; use {@link VisionGogglesClientAPI} on the client.
  */
 public final class VisionGogglesAPI {
+    public static final String MOD_ID = "vision_goggles";
 
     private static final Map<String, String> EXTERNAL_LUA_SCRIPTS = new ConcurrentHashMap<>();
 
-    private VisionGogglesAPI() {}
+    private VisionGogglesAPI() {
+    }
 
-    /** Returns the equipped Vision Goggles stack (helmet or Curios/Accessories), or {@link ItemStack#EMPTY}. */
+    /**
+     * Returns true if the player currently has any Vision Goggles equipped in the head slot
+     * or compatible accessory/curio slot.
+     */
+    public static boolean hasEquippedGoggles(Player player) {
+        return !getEquippedGoggles(player).isEmpty();
+    }
+
+    /**
+     * Returns the equipped Vision Goggles stack (Curios/Accessories or {@link EquipmentSlot#HEAD}),
+     * or {@link ItemStack#EMPTY} if none are equipped.
+     */
     public static ItemStack getEquippedGoggles(Player player) {
-        if (player == null) return ItemStack.EMPTY;
-        ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
-        if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
-            return helmet;
+        if (player == null) {
+            return ItemStack.EMPTY;
+        }
+        try {
+            ItemStack helmet = PlatformMethods.getEquippedHelmet(player);
+            if (!helmet.isEmpty() && helmet.getItem() instanceof VisionGogglesItem) {
+                return helmet;
+            }
+        } catch (Throwable ignored) {
+        }
+        ItemStack headSlot = player.getItemBySlot(EquipmentSlot.HEAD);
+        if (!headSlot.isEmpty() && headSlot.getItem() instanceof VisionGogglesItem) {
+            return headSlot;
         }
         return ItemStack.EMPTY;
+    }
+
+    /** Returns true if the given goggles stack is valid and currently switched ON (active in NBT). */
+    public static boolean isGogglesActive(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof VisionGogglesItem)) {
+            return false;
+        }
+        CompoundTag tag = stack.getTag();
+        return tag != null && tag.getBoolean(ModConstants.TAG_ACTIVE);
     }
 
     /** Returns true if the player has Vision Goggles equipped, switched on, and with battery > 0. */
@@ -51,18 +84,32 @@ public final class VisionGogglesAPI {
         return VisionGogglesItem.getActiveVisionMode(getEquippedGoggles(player));
     }
 
+    /** Returns true if the given goggles stack has the specified hardware or Lua module installed. */
+    public static boolean hasModuleInstalled(ItemStack stack, String moduleId) {
+        if (stack == null || stack.isEmpty() || moduleId == null || moduleId.isEmpty()) {
+            return false;
+        }
+        if (stack.getItem() instanceof VisionGogglesItem goggles) {
+            return goggles.hasModule(stack, moduleId);
+        }
+        return false;
+    }
+
     /** Returns true if the player's equipped modular goggles contain the given module ID. */
     public static boolean hasModule(Player player, String moduleId) {
         if (player == null || moduleId == null || moduleId.isEmpty()) return false;
         ItemStack goggles = getEquippedGoggles(player);
-        if (goggles.isEmpty() || !(goggles.getItem() instanceof ModularGogglesItem modular)) {
+        if (goggles.isEmpty()) {
             return false;
         }
-        if (modular.getModules(goggles).contains(moduleId)) {
+        if (hasModuleInstalled(goggles, moduleId)) {
             return true;
         }
-        ModuleType type = ModuleType.byId(moduleId);
-        return type != null && modular.getUtilityModules(goggles).contains(type);
+        if (goggles.getItem() instanceof ModularGogglesItem modular) {
+            ModuleType type = ModuleType.byId(moduleId);
+            return type != null && modular.getUtilityModules(goggles).contains(type);
+        }
+        return false;
     }
 
     /** Returns true if the given goggles stack has the specified {@link ModuleType} installed. */
@@ -70,6 +117,25 @@ public final class VisionGogglesAPI {
         if (stack == null || stack.isEmpty() || type == null) return false;
         if (!(stack.getItem() instanceof ModularGogglesItem modular)) return false;
         return modular.getUtilityModules(stack).contains(type) || modular.getModules(stack).contains(type.getId());
+    }
+
+    /**
+     * Attempts to install a module into a {@link ModularGogglesItem} stack if compatible and capacity permits.
+     *
+     * @return true if the module was newly installed, false otherwise.
+     */
+    public static boolean installModule(ItemStack stack, String moduleId) {
+        if (stack == null || stack.isEmpty() || moduleId == null || moduleId.isEmpty()) {
+            return false;
+        }
+        if (stack.getItem() instanceof ModularGogglesItem modular) {
+            if (!modular.canInstallModule(stack, moduleId)) {
+                return false;
+            }
+            modular.installModule(stack, moduleId);
+            return modular.hasModule(stack, moduleId);
+        }
+        return false;
     }
 
     /** Returns true if the player has an active Tactical Flashlight or active Modular Flashlight module. */
@@ -156,11 +222,20 @@ public final class VisionGogglesAPI {
         StationBlueprints.registerBlueprint(blueprint);
     }
 
-    /** Registers an external Lua script to be deployed alongside bundled scripts. */
+    /**
+     * Registers an external Lua script provided by a satellite mod so {@link LuaModuleManager}
+     * writes it to the config scripts directory and loads it on startup and reload.
+     */
     public static void registerExternalLuaScript(String fileName, String luaSource) {
-        if (fileName != null && !fileName.isBlank() && luaSource != null) {
-            EXTERNAL_LUA_SCRIPTS.put(fileName, luaSource);
+        if (fileName == null || fileName.isBlank() || luaSource == null || luaSource.isBlank()) {
+            return;
         }
+        String cleanName = fileName.trim();
+        if (!cleanName.toLowerCase().endsWith(".lua")) {
+            cleanName = cleanName + ".lua";
+        }
+        EXTERNAL_LUA_SCRIPTS.put(cleanName, luaSource);
+        LuaModuleManager.syncExternalScriptIfInitialized(cleanName, luaSource);
     }
 
     public static Map<String, String> getRegisteredExternalLuaScripts() {
