@@ -47,8 +47,6 @@ public class TacticalManualScreen extends Screen {
             new Entry(ModItems.SONAR_MODULE, "gui.vision_goggles.manual.mod.sonar.title", "gui.vision_goggles.manual.mod.sonar.desc"),
             new Entry(ModItems.SOLAR_MODULE, "gui.vision_goggles.manual.mod.solar.title", "gui.vision_goggles.manual.mod.solar.desc"),
             new Entry(ModItems.BATTERY_EXPANSION_MODULE, "gui.vision_goggles.manual.mod.battery.title", "gui.vision_goggles.manual.mod.battery.desc"),
-            new Entry(ModItems.VITAL_INFO_MODULE, "gui.vision_goggles.manual.mod.vital.title", "gui.vision_goggles.manual.mod.vital.desc"),
-            new Entry(ModItems.ENVIRONMENT_MODULE, "gui.vision_goggles.manual.mod.env.title", "gui.vision_goggles.manual.mod.env.desc"),
             new Entry(ModItems.FLASHLIGHT_MODULE, "gui.vision_goggles.manual.mod.flashlight.title", "gui.vision_goggles.manual.mod.flashlight.desc"),
             new Entry(ModItems.PROGRAMMABLE_MODULE, "gui.vision_goggles.manual.mod.lua.title", "gui.vision_goggles.manual.mod.lua.desc")
     );
@@ -151,7 +149,7 @@ public class TacticalManualScreen extends Screen {
         drawBeveledPanel(g, boxX, boxY, boxW, boxH, 0xFF1B1E23, 0xFF111317, 0xFF3A414C);
 
         List<Entry> entries = switch (activeTab) {
-            case TAB_MODULES -> modulePage == 0 ? MODULE_ENTRIES.subList(0, 6) : MODULE_ENTRIES.subList(6, 12);
+            case TAB_MODULES -> modulePage == 0 ? MODULE_ENTRIES.subList(0, 5) : MODULE_ENTRIES.subList(5, 10);
             case TAB_FLASHLIGHT -> FLASHLIGHT_ENTRIES;
             case TAB_STATION -> STATION_ENTRIES;
             default -> GOGGLES_ENTRIES;
