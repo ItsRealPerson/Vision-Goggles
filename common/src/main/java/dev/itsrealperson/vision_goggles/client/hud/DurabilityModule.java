@@ -7,6 +7,7 @@ import dev.itsrealperson.vision_goggles.util.ModConstants;
 import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -63,12 +64,17 @@ public class DurabilityModule implements IHudModule {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.disableBlend();
 
-        // Critical damage optical scanline glitch (> 85% damage)
-        if (damagePct > 0.85f && mc.level != null && mc.level.random.nextFloat() > 0.74f) {
-            for (int i = 0; i < 4; i++) {
-                int y = mc.level.random.nextInt(Math.max(1, height));
-                gui.fill(0, y, width, y + 1, 0x44FFFFFF);
+        // Critical damage optical scanline glitch & warning text (> 85% damage)
+        if (damagePct > 0.85f) {
+            if (mc.level != null && mc.level.random.nextFloat() > 0.74f) {
+                for (int i = 0; i < 4; i++) {
+                    int y = mc.level.random.nextInt(Math.max(1, height));
+                    gui.fill(0, y, width, y + 1, 0x44FFFFFF);
+                }
             }
+            String warn = Component.translatable("hud.vision_goggles.damage_critical").getString();
+            int x = (width / 2) - (mc.font.width(warn) / 2);
+            gui.drawString(mc.font, warn, x, 40, 0xFFFF0000, true);
         }
     }
 }

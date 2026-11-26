@@ -34,8 +34,6 @@ public class ModTabs {
             () -> new ItemStack(ModItems.ZOOM_MODULE.get()),
             () -> new ItemStack(ModItems.SOLAR_MODULE.get()),
             () -> new ItemStack(ModItems.SONAR_MODULE.get()),
-            () -> new ItemStack(ModItems.VITAL_INFO_MODULE.get()),
-            () -> new ItemStack(ModItems.ENVIRONMENT_MODULE.get()),
             () -> new ItemStack(ModItems.BATTERY_EXPANSION_MODULE.get()),
             () -> new ItemStack(ModItems.FLASHLIGHT_MODULE.get()),
             () -> new ItemStack(ModItems.TACTICAL_FLASHLIGHT.get()),

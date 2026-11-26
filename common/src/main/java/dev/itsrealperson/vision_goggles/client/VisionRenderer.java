@@ -309,15 +309,6 @@ public class VisionRenderer {
                 mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 1.0f);
             }
 
-            // Oxygen Alert
-            if (isOpticsActiveAndPowered && goggles.hasModule(helmet, ModConstants.ID_ENVIRONMENT)) {
-                int air = mc.player.getAirSupply();
-                int maxAir = mc.player.getMaxAirSupply();
-                if (air < maxAir * 0.20 && mc.level.getGameTime() % 20 == 0) {
-                    mc.player.playSound(dev.itsrealperson.vision_goggles.registry.ModSounds.BLIP.get(), 1.0f, 0.8f);
-                }
-            }
-
             if (isOpticsActiveAndPowered && hasZoom && (ModKeyMappings.zoomKey.isDown() || zoomLocked)) {
                 zoomActive = true;
                 if (targetZoomFactor < 1.2f) {

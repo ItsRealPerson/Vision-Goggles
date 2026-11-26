@@ -84,8 +84,6 @@ public class VisionGogglesJeiPluginCommon {
             new ModuleEntry(ModItems.FLASHLIGHT_MODULE.get(), ModConstants.ID_FLASHLIGHT),
             new ModuleEntry(ModItems.ZOOM_MODULE.get(), ModConstants.ID_ZOOM),
             new ModuleEntry(ModItems.SONAR_MODULE.get(), ModConstants.ID_SONAR),
-            new ModuleEntry(ModItems.VITAL_INFO_MODULE.get(), ModConstants.ID_VITAL_INFO),
-            new ModuleEntry(ModItems.ENVIRONMENT_MODULE.get(), ModConstants.ID_ENVIRONMENT),
             new ModuleEntry(ModItems.SOLAR_MODULE.get(), ModConstants.ID_SOLAR),
             new ModuleEntry(ModItems.BATTERY_EXPANSION_MODULE.get(), ModConstants.ID_BATTERY_EXPANSION)
         );

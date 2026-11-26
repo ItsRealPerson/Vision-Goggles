@@ -91,9 +91,18 @@ public class ModularGogglesItem extends VisionGogglesItem {
         };
     }
 
+    public static boolean isRetiredModuleId(String rawId) {
+        if (rawId == null || rawId.isEmpty()) return false;
+        String stripped = rawId.contains(":") ? rawId.substring(rawId.indexOf(':') + 1) : rawId;
+        return "vital_info".equalsIgnoreCase(stripped)
+                || "environment".equalsIgnoreCase(stripped)
+                || "vital_info_module".equalsIgnoreCase(stripped)
+                || "environment_module".equalsIgnoreCase(stripped);
+    }
+
     @Override
     public boolean hasModule(ItemStack stack, String moduleName) {
-        if (moduleName == null || moduleName.isEmpty()) return false;
+        if (moduleName == null || moduleName.isEmpty() || isRetiredModuleId(moduleName)) return false;
         CompoundTag tag = stack.getTag();
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
@@ -102,6 +111,9 @@ public class ModularGogglesItem extends VisionGogglesItem {
 
             for (int i = 0; i < modules.size(); i++) {
                 String mod = modules.getString(i);
+                if (isRetiredModuleId(mod)) {
+                    continue;
+                }
                 if (reqVisionMode != null) {
                     // Hardware vision mode queries must match real vision hardware only (never Lua scripts like thermal_palette)
                     if (resolveHardwareVisionMode(mod) == reqVisionMode) {
@@ -188,7 +200,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
     }
 
     public boolean canInstallModule(ItemStack stack, String moduleId) {
-        if (hasModule(stack, moduleId)) return false;
+        if (isRetiredModuleId(moduleId) || hasModule(stack, moduleId)) return false;
 
         List<VisionMode> modes = getModes(stack);
         List<ModuleType> utils = getUtilityModules(stack);
@@ -221,6 +233,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
             ListTag list = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             for (int i = 0; i < list.size(); i++) {
                 String m = list.getString(i);
+                if (isRetiredModuleId(m)) continue;
                 if (VisionMode.byLocation(m) == null && ModuleType.byId(m) == null) {
                     customCount++;
                 }
@@ -248,7 +261,10 @@ public class ModularGogglesItem extends VisionGogglesItem {
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             for (int i = 0; i < modules.size(); i++) {
-                list.add(modules.getString(i));
+                String m = modules.getString(i);
+                if (!isRetiredModuleId(m)) {
+                    list.add(m);
+                }
             }
         }
         return list;
@@ -308,15 +324,18 @@ public class ModularGogglesItem extends VisionGogglesItem {
         CompoundTag tag = stack.getTag();
         if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
             ListTag modules = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
-            if (!modules.isEmpty()) {
-                return modules.getString(modules.size() - 1);
+            for (int i = modules.size() - 1; i >= 0; i--) {
+                String mod = modules.getString(i);
+                if (!isRetiredModuleId(mod)) {
+                    return mod;
+                }
             }
         }
         return null;
     }
 
     public static ItemStack createModuleItemFromId(String moduleId, @Nullable CompoundTag gogglesTag) {
-        if (moduleId == null || moduleId.isEmpty()) return ItemStack.EMPTY;
+        if (moduleId == null || moduleId.isEmpty() || isRetiredModuleId(moduleId)) return ItemStack.EMPTY;
 
         // 1. Vision Modes
         VisionMode mode = VisionMode.byLocation(moduleId);
@@ -338,8 +357,6 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 case ZOOM -> dev.itsrealperson.vision_goggles.registry.ModItems.ZOOM_MODULE.get();
                 case SOLAR -> dev.itsrealperson.vision_goggles.registry.ModItems.SOLAR_MODULE.get();
                 case SONAR -> dev.itsrealperson.vision_goggles.registry.ModItems.SONAR_MODULE.get();
-                case VITAL_INFO -> dev.itsrealperson.vision_goggles.registry.ModItems.VITAL_INFO_MODULE.get();
-                case ENVIRONMENT -> dev.itsrealperson.vision_goggles.registry.ModItems.ENVIRONMENT_MODULE.get();
                 case FLASHLIGHT -> dev.itsrealperson.vision_goggles.registry.ModItems.FLASHLIGHT_MODULE.get();
             };
             return new ItemStack(item);
@@ -379,6 +396,7 @@ public class ModularGogglesItem extends VisionGogglesItem {
             ListTag list = tag.getList(ModConstants.TAG_MODULES, Tag.TAG_STRING);
             for (int i = 0; i < list.size(); i++) {
                 String m = list.getString(i);
+                if (isRetiredModuleId(m)) continue;
                 if (VisionMode.byLocation(m) == null && ModuleType.byId(m) == null) {
                     customModules.add(m);
                 }

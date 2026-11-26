@@ -460,8 +460,6 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                 ModItems.ZOOM_MODULE.get(), ModConstants.ID_ZOOM,
                 ModItems.SOLAR_MODULE.get(), ModConstants.ID_SOLAR,
                 ModItems.SONAR_MODULE.get(), ModConstants.ID_SONAR,
-                ModItems.VITAL_INFO_MODULE.get(), ModConstants.ID_VITAL_INFO,
-                ModItems.ENVIRONMENT_MODULE.get(), ModConstants.ID_ENVIRONMENT,
                 ModItems.FLASHLIGHT_MODULE.get(), ModConstants.ID_FLASHLIGHT
             );
         }

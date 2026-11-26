@@ -14,8 +14,6 @@ public class ModConstants {
     public static final String MODULE_ZOOM = "ZOOM";
     public static final String MODULE_SONAR = "SONAR";
     public static final String MODULE_BATTERY_EXPANSION = "BATTERY_EXPANSION";
-    public static final String MODULE_VITAL_INFO = "VITAL_INFO";
-    public static final String MODULE_ENVIRONMENT = "ENVIRONMENT";
     public static final String MODULE_THERMAL = "THERMAL";
     public static final String MODULE_CHUNK_VIEWER = "CHUNK_VIEWER";
     public static final String MODULE_FLASHLIGHT = "FLASHLIGHT";
@@ -29,8 +27,6 @@ public class ModConstants {
     public static final String ID_ZOOM = "vision_goggles:zoom";
     public static final String ID_SONAR = "vision_goggles:sonar";
     public static final String ID_BATTERY_EXPANSION = "vision_goggles:battery_expansion";
-    public static final String ID_VITAL_INFO = "vision_goggles:vital_info";
-    public static final String ID_ENVIRONMENT = "vision_goggles:environment";
     public static final String ID_CHUNK_VIEWER = "vision_goggles:chunk_viewer";
     public static final String ID_FLASHLIGHT = "vision_goggles:flashlight";
     

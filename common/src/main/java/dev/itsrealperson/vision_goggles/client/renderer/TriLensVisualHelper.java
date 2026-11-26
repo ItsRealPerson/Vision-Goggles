@@ -197,8 +197,6 @@ public final class TriLensVisualHelper {
         boolean hasFlashlight = hasValidStack && modular.hasModule(stack, ModConstants.ID_FLASHLIGHT);
         boolean hasLuaChip = hasValidStack && modular.hasModule(stack, "programmable");
         boolean hasSonar = hasValidStack && modular.hasModule(stack, ModConstants.ID_SONAR);
-        boolean hasVitalInfo = hasValidStack && modular.hasModule(stack, ModConstants.ID_VITAL_INFO);
-        boolean hasEnvironment = hasValidStack && modular.hasModule(stack, ModConstants.ID_ENVIRONMENT);
         boolean hasZoom = hasValidStack && modular.hasModule(stack, ModConstants.ID_ZOOM);
 
         boolean hasNvg = hasValidStack && modular.hasModule(stack, ModConstants.ID_NIGHT_VISION);
@@ -213,8 +211,8 @@ public final class TriLensVisualHelper {
         setBoneHidden(model, BONE_FLASHLIGHT, !hasFlashlight);
         setBoneHidden(model, BONE_LUA_CHIP, !hasLuaChip);
         setBoneHidden(model, BONE_SONAR, !hasSonar);
-        setBoneHidden(model, BONE_VITAL_INFO, !hasVitalInfo);
-        setBoneHidden(model, BONE_ENVIRONMENT, !hasEnvironment);
+        setBoneHidden(model, BONE_VITAL_INFO, true);
+        setBoneHidden(model, BONE_ENVIRONMENT, true);
         setBoneHidden(model, BONE_ZOOM, !hasZoom);
 
         setBoneHidden(model, BONE_OPTICS_NVG, !hasNvg);

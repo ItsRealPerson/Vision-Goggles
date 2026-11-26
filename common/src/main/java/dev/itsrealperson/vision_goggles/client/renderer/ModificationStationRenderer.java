@@ -394,10 +394,6 @@ public class ModificationStationRenderer implements BlockEntityRenderer<Modifica
                 if (modular.hasModule(stack, ModConstants.ID_ZOOM)) return 0.2556f;
                 return 0.2400f;
             }
-            if (modular.hasModule(stack, ModConstants.ID_VITAL_INFO)
-                    || modular.hasModule(stack, ModConstants.ID_ENVIRONMENT)) {
-                return 0.1244f;
-            }
             return 0.0994f;
         }
         VisionMode mode = goggles.getVisionMode();

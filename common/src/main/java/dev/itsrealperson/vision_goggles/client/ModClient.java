@@ -8,8 +8,6 @@ import dev.itsrealperson.vision_goggles.client.renderer.ModificationStationRende
 import dev.itsrealperson.vision_goggles.registry.ModBlockEntities;
 import dev.itsrealperson.vision_goggles.registry.ModMenus;
 
-import dev.itsrealperson.vision_goggles.client.hud.VitalInfoModule;
-import dev.itsrealperson.vision_goggles.client.hud.OxygenModule;
 import dev.itsrealperson.vision_goggles.client.hud.DurabilityModule;
 import dev.itsrealperson.vision_goggles.client.hud.GogglesStatusModule;
 
@@ -24,8 +22,6 @@ public class ModClient {
         VisionHUDOverlay.registerModule(new DurabilityModule()); // Primero las grietas (fondo)
         VisionHUDOverlay.registerModule(new GogglesStatusModule()); // Batería y Modo (Encima)
         VisionHUDOverlay.registerModule(new dev.itsrealperson.vision_goggles.client.hud.SonarRadarModule());
-        VisionHUDOverlay.registerModule(new VitalInfoModule());
-        VisionHUDOverlay.registerModule(new OxygenModule());
         VisionHUDOverlay.registerModule(new dev.itsrealperson.vision_goggles.client.hud.ElytraModule());
 
         // Registrar ItemProperties para las gafas modulares
