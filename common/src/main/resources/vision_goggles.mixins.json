@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "vision_goggles.refmap.json",
   "mixins": [
-    "ItemStackMixin"
+    "ItemStackMixin",
+    "MixinPlayer"
   ],
   "client": [
     "client.MixinLevelRenderer",

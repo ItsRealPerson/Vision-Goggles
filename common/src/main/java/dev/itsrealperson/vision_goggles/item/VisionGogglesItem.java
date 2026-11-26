@@ -195,6 +195,16 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
                 }
 
                 float baseDrain = (mode != null) ? ((mode == VisionMode.THERMAL) ? 2.0f : 1.0f) : 0.0f;
+                if (mode == VisionMode.HYDRO) {
+                    if (player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)
+                            && player.getAirSupply() < player.getMaxAirSupply()
+                            && player.tickCount % 2 == 0) {
+                        player.setAirSupply(Math.min(player.getMaxAirSupply(), player.getAirSupply() + 1));
+                    }
+                    if (player.isInWater()) {
+                        baseDrain += 0.18f;
+                    }
+                }
                 if (this instanceof ModularGogglesItem modular) {
                     for (String modId : modular.getModules(stack)) {
                         dev.itsrealperson.vision_goggles.scripting.LuaCustomModule luaMod =

@@ -68,6 +68,7 @@ public class VisionHUDOverlay {
         }
 
         renderBiometricTargetLockOn(gui, mc, goggles, partialTicks, width, height);
+        renderHydroSubmergedHud(gui, mc, width, height);
 
         dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.onRenderHud(gui, partialTicks);
         dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.renderHudOverlayLayers(gui, partialTicks);
@@ -284,6 +285,36 @@ public class VisionHUDOverlay {
         gui.pose().scale(scale, scale, 1.0f);
         gui.drawString(mc.font, text, 0, 0, color, true);
         gui.pose().popPose();
+    }
+
+    private static void renderHydroSubmergedHud(GuiGraphics gui, Minecraft mc, int width, int height) {
+        if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != VisionMode.HYDRO) {
+            return;
+        }
+        Player player = mc.player;
+        if (player == null || !player.isInWater()) {
+            return;
+        }
+
+        int airTicks = Math.max(0, player.getAirSupply());
+        int maxAirTicks = Math.max(1, player.getMaxAirSupply());
+        // With 2x O2 rebreather while eyes are submerged, effective remaining seconds double
+        int effectiveSeconds = Math.round((airTicks * 2.0f) / 20.0f);
+        float airPct = Mth.clamp((float) airTicks / (float) maxAirTicks, 0.0f, 1.0f);
+
+        String hudLine = String.format("REBREATHER: 2x O2 (%ds) | HYDRO-PROP: +20%% | AQUA-MINE", effectiveSeconds);
+        float scale = 0.75f;
+        int textW = Math.round(mc.font.width(hudLine) * scale);
+        int boxW = textW + 12;
+        int boxH = 14;
+        int boxX = (width - boxW) / 2;
+        int boxY = height - 56;
+
+        int accentColor = airPct < 0.25f ? 0xFFFF5555 : 0xFF22EEFF;
+        gui.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xA806141C);
+        gui.fill(boxX, boxY, boxX + 2, boxY + boxH, accentColor);
+        gui.fill(boxX + boxW - 2, boxY, boxX + boxW, boxY + boxH, accentColor);
+        drawScaledText(gui, mc, hudLine, boxX + 6, boxY + 4, scale, accentColor);
     }
 
     private static void renderWaterShortCircuitOverlay(GuiGraphics gui, Minecraft mc, int width, int height) {
