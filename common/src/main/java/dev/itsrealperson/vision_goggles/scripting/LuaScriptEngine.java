@@ -13,11 +13,17 @@ import org.luaj.vm2.lib.VarArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JsePlatform;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class LuaScriptEngine {
 
     private static Globals globals;
+    private static final Map<String, Map<String, Object>> EXTERNAL_GLOBAL_TABLES = new ConcurrentHashMap<>();
 
     public static synchronized void init() {
         try {
@@ -80,6 +86,11 @@ public class LuaScriptEngine {
                 }
             }
 
+            // Re-apply any external global tables registered by addon mods
+            for (Map.Entry<String, Map<String, Object>> entry : EXTERNAL_GLOBAL_TABLES.entrySet()) {
+                applyGlobalTableToGlobals(globals, entry.getKey(), entry.getValue());
+            }
+
             Vision_goggles.LOGGER.info("[Vision Goggles] LuaScriptEngine initialized successfully with sandbox protection.");
         } catch (Exception e) {
             Vision_goggles.LOGGER.error("[Vision Goggles] Failed to initialize LuaScriptEngine: " + e.getMessage(), e);
@@ -91,6 +102,96 @@ public class LuaScriptEngine {
             init();
         }
         return globals;
+    }
+
+    /**
+     * Registers a global Lua table using standard Java types ({@link Map}, {@link Supplier}, {@link Function})
+     * so external addon mods never need to link directly against {@code org.luaj.vm2.*} (which is shaded and
+     * relocated in production JARs).
+     */
+    public static void registerGlobalTable(String tableName, Map<String, Object> members) {
+        if (tableName == null || tableName.isBlank() || members == null) {
+            return;
+        }
+        EXTERNAL_GLOBAL_TABLES.put(tableName, members);
+        Globals g = getGlobals();
+        if (g != null) {
+            applyGlobalTableToGlobals(g, tableName, members);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyGlobalTableToGlobals(Globals g, String tableName, Map<String, Object> members) {
+        LuaTable table = new LuaTable();
+        for (Map.Entry<String, Object> entry : members.entrySet()) {
+            String key = entry.getKey();
+            Object val = entry.getValue();
+            if (key == null || val == null) continue;
+            if (val instanceof Supplier<?> supplier) {
+                table.set(key, new ZeroArgFunction() {
+                    @Override
+                    public LuaValue call() {
+                        try {
+                            return toLuaValue(supplier.get());
+                        } catch (Throwable t) {
+                            return LuaValue.NIL;
+                        }
+                    }
+                });
+            } else if (val instanceof Function<?, ?> fn) {
+                Function<Object, Object> rawFn = (Function<Object, Object>) fn;
+                table.set(key, new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg) {
+                        try {
+                            return toLuaValue(rawFn.apply(fromLuaValue(arg)));
+                        } catch (Throwable t) {
+                            return LuaValue.NIL;
+                        }
+                    }
+                });
+            } else {
+                table.set(key, toLuaValue(val));
+            }
+        }
+        g.set(tableName, table);
+    }
+
+    public static Object fromLuaValue(LuaValue v) {
+        if (v == null || v.isnil()) return null;
+        if (v.isboolean()) return v.toboolean();
+        if (v.isnumber()) return v.todouble();
+        if (v.isstring()) return v.tojstring();
+        return v.tojstring();
+    }
+
+    public static LuaValue toLuaValue(Object obj) {
+        if (obj == null) return LuaValue.NIL;
+        if (obj instanceof LuaValue lv) return lv;
+        if (obj instanceof Boolean b) return LuaValue.valueOf(b);
+        if (obj instanceof Integer i) return LuaValue.valueOf(i);
+        if (obj instanceof Long l) return LuaValue.valueOf(l.doubleValue());
+        if (obj instanceof Float f) return LuaValue.valueOf(f.doubleValue());
+        if (obj instanceof Double d) return LuaValue.valueOf(d);
+        if (obj instanceof Number n) return LuaValue.valueOf(n.doubleValue());
+        if (obj instanceof String s) return LuaValue.valueOf(s);
+        if (obj instanceof Map<?, ?> map) {
+            LuaTable t = new LuaTable();
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                if (e.getKey() != null) {
+                    t.set(String.valueOf(e.getKey()), toLuaValue(e.getValue()));
+                }
+            }
+            return t;
+        }
+        if (obj instanceof List<?> list) {
+            LuaTable t = new LuaTable();
+            for (int i = 0; i < list.size(); i++) {
+                t.set(i + 1, toLuaValue(list.get(i)));
+            }
+            return t;
+        }
+        return LuaValue.valueOf(String.valueOf(obj));
     }
 
     public static LuaValue executeString(String code) {

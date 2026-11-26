@@ -241,4 +241,12 @@ public final class VisionGogglesAPI {
     public static Map<String, String> getRegisteredExternalLuaScripts() {
         return Collections.unmodifiableMap(EXTERNAL_LUA_SCRIPTS);
     }
+
+    /**
+     * Registers a global Lua table using standard Java types ({@link Map}, {@link java.util.function.Supplier},
+     * {@link java.util.function.Function}) without exposing relocated {@code org.luaj.vm2.*} classes.
+     */
+    public static void registerLuaGlobalTable(String tableName, Map<String, Object> members) {
+        dev.itsrealperson.vision_goggles.scripting.LuaScriptEngine.registerGlobalTable(tableName, members);
+    }
 }
