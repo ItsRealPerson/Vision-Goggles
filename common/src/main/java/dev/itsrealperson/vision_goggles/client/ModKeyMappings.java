@@ -33,7 +33,13 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
-    public static void init() {
+    private static boolean initialized = false;
+
+    public static synchronized void init() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
         try {
             KeyMappingRegistry.register(toggleGrayscaleKey);
             KeyMappingRegistry.register(zoomKey);

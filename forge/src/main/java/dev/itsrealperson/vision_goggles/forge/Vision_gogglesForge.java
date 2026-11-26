@@ -25,8 +25,11 @@ public final class Vision_gogglesForge {
         modEventBus.addListener(this::clientSetup);
         modEventBus.addListener(this::enqueueIMC);
         
-        // Register Cloth Config Screen for Forge safely on client only
-        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> Vision_gogglesForgeClient.registerConfigScreen());
+        // Register Cloth Config Screen and KeyMappings for Forge safely on client only (before RegisterKeyMappingsEvent fires)
+        net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            dev.itsrealperson.vision_goggles.client.ModKeyMappings.init();
+            Vision_gogglesForgeClient.registerConfigScreen();
+        });
 
         // Run our common setup.
         Vision_goggles.init();
