@@ -787,6 +787,21 @@ public class VisionShaderManager {
 
         float scopeRadius = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionScopeRadius();
         boolean dspActive = (scopeRadius <= 0.0f) && isDspAvailable();
+        float gogglesOuterMode = 0.0f;
+        float scopeOuterDim = 1.0f;
+        if (scopeRadius > 0.0f) {
+            if (VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive()) {
+                VisionMode gMode = VisionRenderer.getCurrentVisionMode();
+                gogglesOuterMode = (gMode == VisionMode.THERMAL) ? 2.0f : 1.0f;
+            } else if (mc.player != null && mc.level != null) {
+                net.minecraft.core.BlockPos eyePos = net.minecraft.core.BlockPos.containing(mc.player.getEyePosition());
+                int skyLight = Math.max(0, mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, eyePos) - mc.level.getSkyDarken());
+                int blockLight = mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, eyePos);
+                float ambient = Math.max(0.0f, Math.min(1.0f, Math.max(skyLight, blockLight) / 15.0f));
+                // Keep outer periphery dark at night/caves (blocking free vanilla NVG under True Darkness), normal in daylight
+                scopeOuterDim = 0.07f + 0.93f * (ambient * ambient);
+            }
+        }
 
         for (PostPass pass : passes) {
             var shader = pass.getEffect();
@@ -807,6 +822,8 @@ public class VisionShaderManager {
             if (shader.getUniform("focus") != null) shader.getUniform("focus").set(focus);
             if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
             if (shader.getUniform("ScopeRadius") != null) shader.getUniform("ScopeRadius").set(scopeRadius);
+            if (shader.getUniform("ScopeOuterDim") != null) shader.getUniform("ScopeOuterDim").set(scopeOuterDim);
+            if (shader.getUniform("GogglesOuterMode") != null) shader.getUniform("GogglesOuterMode").set(gogglesOuterMode);
             if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(dspActive ? 1.0f : 0.0f);
             if (shader.getUniform("IrisActive") != null) shader.getUniform("IrisActive").set(IrisCompat.isShaderPackInUse() ? 1.0f : 0.0f);
         }

@@ -16,6 +16,8 @@
         { "name": "Interference", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "AspectRatio", "type": "float", "count": 1, "values": [ 1.0 ] },
         { "name": "ScopeRadius", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "ScopeOuterDim", "type": "float", "count": 1, "values": [ 1.0 ] },
+        { "name": "GogglesOuterMode", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "u_DSPActive", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "IrisActive", "type": "float", "count": 1, "values": [ 0.0 ] }
     ]

@@ -75,10 +75,9 @@ public class VisionRenderer {
 
     public static boolean shouldApplyNightVisionLight() {
         VisionMode ext = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride();
-        // Only brighten the full-screen lightmap for full-screen external overrides (scopeRadius <= 0).
-        // Weapon scopes (scopeRadius > 0) amplify night luminance strictly inside the circular lens in nvg.fsh.
-        if ((ext == VisionMode.NIGHT_VISION || ext == VisionMode.THERMAL)
-                && dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionScopeRadius() <= 0.0f) {
+        // Always supply clean NVG lightmap for external NVG/Thermal optics so True Darkness renders real geometry
+        // inside the circular lens; nvg.fsh/thermal.fsh dim the outer periphery via ScopeOuterDim when goggles are off.
+        if (ext == VisionMode.NIGHT_VISION || ext == VisionMode.THERMAL) {
             return true;
         }
         return visorActive && (

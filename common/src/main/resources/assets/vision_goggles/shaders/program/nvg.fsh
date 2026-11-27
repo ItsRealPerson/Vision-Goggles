@@ -12,6 +12,8 @@ uniform float Glare;
 uniform float u_DSPActive;
 uniform float AspectRatio;
 uniform float ScopeRadius;
+uniform float ScopeOuterDim;
+uniform float GogglesOuterMode;
 
 float hashNoise(vec2 p, float t) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -25,11 +27,15 @@ void main() {
     vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
     float dist = length(aspectVec);
 
-    // Weapon-mounted NVG scope mode: clip strictly to circular lens aperture and preserve unmodified view outside
+    // Weapon-mounted NVG scope mode:
+    // - If goggles are NOT active, dim the outer periphery by ScopeOuterDim (prevents free vanilla NVG under True Darkness).
+    // - If goggles ARE active (GogglesOuterMode > 0.5), keep coherent NVG goggles view outside and sharper NVG inside the lens.
     bool isScopeMode = ScopeRadius > 0.001;
+    bool keepGogglesOuter = isScopeMode && (GogglesOuterMode > 0.5);
     vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
-    if (isScopeMode && dist > ScopeRadius + 0.008) {
-        fragColor = rawScene;
+    if (isScopeMode && !keepGogglesOuter && dist > ScopeRadius + 0.008) {
+        vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+        fragColor = vec4(outerDark, 1.0);
         return;
     }
 
@@ -82,11 +88,6 @@ void main() {
     }
 
     float lum = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
-    // In weapon-scope mode the world lightmap stays naturally dark outside the lens,
-    // so apply Gen-3 optical tube low-light gain strictly inside the circular scope aperture.
-    if (isScopeMode) {
-        lum = pow(clamp(lum, 0.0, 1.0), 0.45) * 1.45 + 0.04;
-    }
     
     // 1. Optical Tube Halation / Bloom around intense light sources (torches, fire, lava)
     float bloom = 0.0;
@@ -144,10 +145,17 @@ void main() {
 
     // 5. Dual-stage Military Ocular Vignette (or clean scope aperture clip)
     if (isScopeMode) {
-        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.35;
-        vec3 scopedColor = visionColor * scopeEdgeVignette * globalAlpha;
+        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.30;
+        vec3 scopedColor = visionColor * (keepGogglesOuter ? 1.12 : 1.0) * scopeEdgeVignette * globalAlpha;
         float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.004, ScopeRadius + 0.006, dist);
-        fragColor = vec4(mix(rawScene.rgb, scopedColor, scopeMask), 1.0);
+        if (keepGogglesOuter) {
+            float ocularVignette = 1.0 - smoothstep(0.42 - focus * 0.08, 0.69 - focus * 0.14, dist);
+            vec3 outerNvg = visionColor * ocularVignette * globalAlpha;
+            fragColor = vec4(mix(outerNvg, scopedColor, scopeMask), 1.0);
+        } else {
+            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+            fragColor = vec4(mix(outerDark, scopedColor, scopeMask), 1.0);
+        }
     } else {
         float ocularVignette = 1.0 - smoothstep(0.42 - focus * 0.08, 0.69 - focus * 0.14, dist);
         visionColor *= ocularVignette;

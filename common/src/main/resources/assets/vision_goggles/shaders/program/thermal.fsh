@@ -12,6 +12,8 @@ uniform float Interference;
 uniform float u_DSPActive;
 uniform float AspectRatio;
 uniform float ScopeRadius;
+uniform float ScopeOuterDim;
+uniform float GogglesOuterMode;
 uniform float IrisActive;
 uniform vec2 OutSize;
 
@@ -65,11 +67,25 @@ void main() {
     vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
     float dist = length(aspectVec);
 
-    // Weapon-mounted FLIR thermal scope mode: clip strictly to circular lens aperture and preserve unmodified view outside
+    // Weapon-mounted FLIR thermal scope mode:
+    // - No goggles active: dim outer periphery by ScopeOuterDim (prevents free vanilla NVG under True Darkness).
+    // - NVG goggles active (GogglesOuterMode ~ 1.0): render coherent green NVG in periphery, FLIR Thermal inside lens.
+    // - Thermal goggles active (GogglesOuterMode ~ 2.0): render coherent FLIR Thermal outside and inside lens.
     bool isScopeMode = ScopeRadius > 0.001;
+    bool keepThermalOuter = isScopeMode && (GogglesOuterMode > 1.5);
+    bool keepNvgOuter = isScopeMode && (GogglesOuterMode > 0.5 && GogglesOuterMode <= 1.5);
     vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
-    if (isScopeMode && dist > ScopeRadius + 0.008) {
-        fragColor = rawScene;
+    if (isScopeMode && !keepThermalOuter && dist > ScopeRadius + 0.008) {
+        if (keepNvgOuter) {
+            float oLum = dot(rawScene.rgb, vec3(0.3, 0.59, 0.11));
+            vec3 oNvg = vec3(oLum * 0.08, oLum * 1.0, oLum * 0.12) * 1.5;
+            oNvg = oNvg / (1.0 + oNvg * 0.25);
+            oNvg *= (1.0 - smoothstep(0.42, 0.69, dist));
+            fragColor = vec4(oNvg, 1.0);
+        } else {
+            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+            fragColor = vec4(outerDark, 1.0);
+        }
         return;
     }
 
@@ -157,7 +173,7 @@ void main() {
     }
 
     // World Thermal Ironbow calculation
-    float baseTemp = isScopeMode ? (pow(clamp(lum, 0.0, 1.0), 0.60) * 0.35) : (lum * 0.35);
+    float baseTemp = lum * 0.35;
     float finalTemp = clamp(baseTemp + clamp(heatSignal, 0.0, 1.0) * 0.75 - coldSignal * 0.50, 0.0, 1.0);
     vec3 visionColor = ironbow(finalTemp);
 
@@ -229,10 +245,22 @@ void main() {
 
     // Military thermal ocular vignette (or clean circular scope aperture clip)
     if (isScopeMode) {
-        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.30;
+        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.28;
         vec3 scopedColor = visionColor * scopeEdgeVignette * globalAlpha;
         float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.004, ScopeRadius + 0.006, dist);
-        fragColor = vec4(mix(rawScene.rgb, scopedColor, scopeMask), 1.0);
+        if (keepThermalOuter) {
+            float ocularVignette = 1.0 - smoothstep(0.44 - focus * 0.08, 0.70 - focus * 0.14, dist);
+            fragColor = vec4(mix(visionColor * ocularVignette * globalAlpha, scopedColor, scopeMask), 1.0);
+        } else if (keepNvgOuter) {
+            float oLum = dot(rawScene.rgb, vec3(0.3, 0.59, 0.11));
+            vec3 oNvg = vec3(oLum * 0.08, oLum * 1.0, oLum * 0.12) * 1.5;
+            oNvg = oNvg / (1.0 + oNvg * 0.25);
+            oNvg *= (1.0 - smoothstep(0.42, 0.69, dist));
+            fragColor = vec4(mix(oNvg, scopedColor, scopeMask), 1.0);
+        } else {
+            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+            fragColor = vec4(mix(outerDark, scopedColor, scopeMask), 1.0);
+        }
     } else {
         visionColor *= (1.0 - smoothstep(0.44 - focus * 0.08, 0.70 - focus * 0.14, dist));
         fragColor = vec4(visionColor * globalAlpha, 1.0);
