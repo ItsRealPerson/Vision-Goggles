@@ -183,7 +183,7 @@ public class VisionHUDOverlay {
         Player player = mc.player;
         if (player == null || mc.level == null) return;
 
-        final double maxRange = getEffectiveDetectionRange(player, 48.0);
+        final double maxRange = getEffectiveDetectionRange(player, 32.0);
         final int maxTargets = 10;
         final float midX = width * 0.5f;
         final float midY = height * 0.5f;
@@ -257,7 +257,7 @@ public class VisionHUDOverlay {
 
     /**
      * Returns the effective entity detection radius: full {@code surfaceRange} above water,
-     * reduced underwater ({@code 20m} near surface {@code Y >= 56}, scaling smoothly down to {@code 12m} at {@code Y <= 0}).
+     * reduced underwater ({@code 18m} near surface {@code Y >= 56}, scaling smoothly down to {@code 10m} at {@code Y <= 0}).
      */
     public static double getEffectiveDetectionRange(Player player, double surfaceRange) {
         if (player == null || !player.isEyeInFluid(FluidTags.WATER)) {
@@ -265,13 +265,13 @@ public class VisionHUDOverlay {
         }
         double y = player.getY();
         if (y >= 56.0) {
-            return Math.min(surfaceRange, 20.0);
+            return Math.min(surfaceRange, 18.0);
         }
         if (y <= 0.0) {
-            return Math.min(surfaceRange, 12.0);
+            return Math.min(surfaceRange, 10.0);
         }
         double t = y / 56.0;
-        return Math.min(surfaceRange, 12.0 + t * 8.0);
+        return Math.min(surfaceRange, 10.0 + t * 8.0);
     }
 
     private static void renderBiometricEntityAr(
