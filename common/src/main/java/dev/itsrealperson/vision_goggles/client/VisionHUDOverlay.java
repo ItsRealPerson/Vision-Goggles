@@ -118,6 +118,27 @@ public class VisionHUDOverlay {
         float ndcX = right / (forward * halfWidth);
         float ndcY = up / (forward * halfHeight);
 
+        // Apply exact inverse of nvg.fsh / thermal.fsh barrel distortion:
+        // shader samples world UV at center + (uv - center) * (0.45 * rs^2 + 0.82)
+        boolean hasBarrelDistortion = VisionShaderManager.isShaderActive()
+                && dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalScopeRadius() <= 0.001f
+                && (VisionShaderManager.getActiveMode() == VisionMode.NIGHT_VISION
+                    || VisionShaderManager.getActiveMode() == VisionMode.THERMAL);
+        if (hasBarrelDistortion) {
+            float rw = 0.5f * (float) Math.hypot(ndcX * aspectRatio, ndcY);
+            if (rw > 1.0e-5f) {
+                float rs = rw / 0.82f;
+                for (int iter = 0; iter < 5; iter++) {
+                    float f = rs * (0.45f * rs * rs + 0.82f) - rw;
+                    float df = 1.35f * rs * rs + 0.82f;
+                    rs -= f / df;
+                }
+                float scale = rs / rw;
+                ndcX *= scale;
+                ndcY *= scale;
+            }
+        }
+
         float screenWidth = (float) mc.getWindow().getGuiScaledWidth();
         float screenHeight = (float) mc.getWindow().getGuiScaledHeight();
 
