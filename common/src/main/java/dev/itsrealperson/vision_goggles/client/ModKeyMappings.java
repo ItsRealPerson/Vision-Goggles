@@ -33,6 +33,13 @@ public class ModKeyMappings {
             "key.categories.vision_goggles"
     );
 
+    public static final KeyMapping markTargetKey = new KeyMapping(
+            "key.vision_goggles.mark_target",
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_G,
+            "key.categories.vision_goggles"
+    );
+
     private static boolean initialized = false;
 
     public static synchronized void init() {
@@ -45,6 +52,7 @@ public class ModKeyMappings {
             KeyMappingRegistry.register(zoomKey);
             KeyMappingRegistry.register(toggleFlashlightKey);
             KeyMappingRegistry.register(cycleFlashlightModeKey);
+            KeyMappingRegistry.register(markTargetKey);
         } catch (Exception e) {
             // Log or ignore if already registered
         }

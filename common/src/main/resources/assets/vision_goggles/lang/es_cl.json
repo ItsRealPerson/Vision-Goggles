@@ -252,5 +252,6 @@
   "gui.vision_goggles.manual.station.lua.title": "Grabación de Scripts Lua",
   "gui.vision_goggles.manual.station.lua.desc": "Combina Módulo Programable + Script de Instalación en Modificar.",
   "gui.vision_goggles.manual.station.controls.title": "Controles Principales",
-  "gui.vision_goggles.manual.station.controls.desc": "[N] Toque: Visor | [N] Mantener: Rueda | [V]+Rueda: Zoom | [L]/[K]: Luz"
+  "gui.vision_goggles.manual.station.controls.desc": "[N] Toque: Visor | [N] Mantener: Rueda | [V]+Rueda: Zoom | [L]/[K]: Luz",
+  "key.vision_goggles.mark_target": "Mark Biometric Target"
 }

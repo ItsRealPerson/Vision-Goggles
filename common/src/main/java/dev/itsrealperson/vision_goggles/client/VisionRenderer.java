@@ -207,6 +207,10 @@ public class VisionRenderer {
             }
         }
 
+        while (ModKeyMappings.markTargetKey.consumeClick()) {
+            VisionHUDOverlay.handleMarkTargetKey(mc);
+        }
+
         if (hasHelmet) {
             CompoundTag nbt = helmet.getOrCreateTag();
             boolean isServerActive = nbt.getBoolean(ModConstants.TAG_ACTIVE);

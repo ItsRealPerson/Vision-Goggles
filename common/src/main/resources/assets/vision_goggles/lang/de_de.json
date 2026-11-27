@@ -252,5 +252,6 @@
   "gui.vision_goggles.manual.station.lua.title": "Lua Script Flashing",
   "gui.vision_goggles.manual.station.lua.desc": "Combine Programmable Module + Installation Script in Modify tab.",
   "gui.vision_goggles.manual.station.controls.title": "Core Keybinds",
-  "gui.vision_goggles.manual.station.controls.desc": "[N] Tap: Flip | [N] Hold: Radial | [V]+Wheel: Zoom | [L]: Light | [K]: Mode"
+  "gui.vision_goggles.manual.station.controls.desc": "[N] Tap: Flip | [N] Hold: Radial | [V]+Wheel: Zoom | [L]: Light | [K]: Mode",
+  "key.vision_goggles.mark_target": "Biometrisches Ziel markieren"
 }

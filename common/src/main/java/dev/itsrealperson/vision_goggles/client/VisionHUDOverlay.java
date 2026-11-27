@@ -27,16 +27,26 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.npc.Npc;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public class VisionHUDOverlay {
     private static final List<IHudModule> MODULES = new ArrayList<>();
+    private static final Set<UUID> MARKED_BIOMETRIC_TARGETS = new HashSet<>();
     private static int lastBiometricTargetId = -1;
     private static long biometricLockStartMs = 0L;
 
@@ -167,6 +177,69 @@ public class VisionHUDOverlay {
         }
     }
 
+    /**
+     * Handles the configurable {@code Mark Target} keybind ({@link ModKeyMappings#markTargetKey}) in BIOMETRIC mode:
+     * toggles manual lock-on on the entity under the crosshair (up to effective range), or clears all marks on
+     * Shift+press / empty-space press.
+     */
+    public static void handleMarkTargetKey(Minecraft mc) {
+        if (mc == null || mc.player == null || mc.level == null) {
+            return;
+        }
+        if (!VisionRenderer.isVisorActive() || !VisionRenderer.isVisionModeActive()
+                || VisionRenderer.getCurrentVisionMode() != VisionMode.BIOMETRIC) {
+            return;
+        }
+        Player player = mc.player;
+        if (player.isShiftKeyDown()) {
+            if (!MARKED_BIOMETRIC_TARGETS.isEmpty()) {
+                MARKED_BIOMETRIC_TARGETS.clear();
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 0.85F, 0.25F));
+            }
+            return;
+        }
+
+        double maxRange = getEffectiveDetectionRange(player, 32.0);
+        LivingEntity hitEntity = raycastBiometricEntity(mc, player, maxRange, 1.0f);
+        if (hitEntity != null) {
+            UUID uuid = hitEntity.getUUID();
+            if (MARKED_BIOMETRIC_TARGETS.contains(uuid)) {
+                MARKED_BIOMETRIC_TARGETS.remove(uuid);
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 1.1F, 0.25F));
+            } else {
+                MARKED_BIOMETRIC_TARGETS.add(uuid);
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 1.75F, 0.30F));
+            }
+        } else if (!MARKED_BIOMETRIC_TARGETS.isEmpty()) {
+            MARKED_BIOMETRIC_TARGETS.clear();
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 0.85F, 0.25F));
+        }
+    }
+
+    private static LivingEntity raycastBiometricEntity(Minecraft mc, Player player, double maxRange, float partialTicks) {
+        Vec3 eyePos = player.getEyePosition(partialTicks);
+        Vec3 look = player.getViewVector(partialTicks);
+        Vec3 targetEnd = eyePos.add(look.scale(maxRange));
+        double maxDist = maxRange;
+
+        BlockHitResult blockHit = mc.level.clip(new ClipContext(
+                eyePos, targetEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player
+        ));
+        if (blockHit.getType() == HitResult.Type.BLOCK) {
+            maxDist = eyePos.distanceTo(blockHit.getLocation());
+            targetEnd = blockHit.getLocation();
+        }
+
+        AABB searchBox = player.getBoundingBox().expandTowards(look.scale(maxDist)).inflate(1.2);
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
+                player, eyePos, targetEnd, searchBox,
+                e -> e != player && e.isAlive() && !e.isSpectator() && !e.isInvisible()
+                        && e.isPickable() && e instanceof LivingEntity && !(e instanceof ArmorStand),
+                maxDist * maxDist
+        );
+        return (hit != null && hit.getEntity() instanceof LivingEntity living) ? living : null;
+    }
+
     private static void renderBiometricTargetLockOn(GuiGraphics gui, Minecraft mc, ItemStack goggles, float partialTicks, int width, int height) {
         if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != VisionMode.BIOMETRIC) {
             lastBiometricTargetId = -1;
@@ -189,6 +262,9 @@ public class VisionHUDOverlay {
         final float midY = height * 0.5f;
         final float lensRadius = Math.min(width, height) * 0.47f;
         final float lensRadiusSq = lensRadius * lensRadius;
+
+        LivingEntity directHit = raycastBiometricEntity(mc, player, maxRange, partialTicks);
+        int directHitId = directHit != null ? directHit.getId() : -1;
 
         List<LivingEntity> nearby = mc.level.getEntitiesOfClass(
                 LivingEntity.class,
@@ -234,11 +310,11 @@ public class VisionHUDOverlay {
         candidates.sort(Comparator.comparingDouble(c -> c.sortScore));
         int count = Math.min(maxTargets, candidates.size());
 
-        // Primary target = closest to crosshair (within 75px)
+        // Trigger soft audio blip when focusing a new direct crosshair target
         BiometricCandidate primary = candidates.get(0);
-        boolean primaryFocused = primary.centerDistSq <= (75.0f * 75.0f);
+        boolean primaryDirect = (primary.entity.getId() == directHitId) || (primary.centerDistSq <= (22.0f * 22.0f));
         long now = System.currentTimeMillis();
-        if (primaryFocused) {
+        if (primaryDirect) {
             if (primary.entity.getId() != lastBiometricTargetId) {
                 lastBiometricTargetId = primary.entity.getId();
                 biometricLockStartMs = now;
@@ -250,8 +326,10 @@ public class VisionHUDOverlay {
 
         for (int i = count - 1; i >= 0; i--) {
             BiometricCandidate cand = candidates.get(i);
-            boolean isPrimary = (i == 0);
-            renderBiometricEntityAr(gui, mc, cand, isPrimary, partialTicks, width, height);
+            boolean isLookedAt = (cand.entity.getId() == directHitId)
+                    || (i == 0 && cand.centerDistSq <= (22.0f * 22.0f));
+            boolean isMarked = MARKED_BIOMETRIC_TARGETS.contains(cand.entity.getUUID());
+            renderBiometricEntityAr(gui, mc, cand, isLookedAt, isMarked, partialTicks, width, height);
         }
     }
 
@@ -278,12 +356,14 @@ public class VisionHUDOverlay {
             GuiGraphics gui,
             Minecraft mc,
             BiometricCandidate cand,
-            boolean isPrimary,
+            boolean isLookedAt,
+            boolean isMarked,
             float partialTicks,
             int screenW,
             int screenH
     ) {
         LivingEntity target = cand.entity;
+        boolean expanded = isLookedAt || isMarked;
         boolean isHostile = target instanceof Enemy || target instanceof Monster
                 || (target instanceof NeutralMob neutral && neutral.isAngry());
         boolean isFriendly = (target instanceof Player)
@@ -300,6 +380,9 @@ public class VisionHUDOverlay {
             iffColor = 0xFFFFAA22; // Tactical Amber
         }
 
+        // High-contrast frame color when manually marked (Gold) or directly looked at (Bright Cyan)
+        int frameColor = isMarked ? 0xFFFFD700 : (isLookedAt ? 0xFF00F5FF : iffColor);
+
         Vec3 basePos = target.getPosition(partialTicks);
         float[] topProj = projectWorldToGui(mc, basePos.x, basePos.y + target.getBbHeight() + 0.12, basePos.z, partialTicks);
         float[] botProj = projectWorldToGui(mc, basePos.x, basePos.y - 0.05, basePos.z, partialTicks);
@@ -314,17 +397,22 @@ public class VisionHUDOverlay {
         }
         int armLen = Mth.clamp(halfH / 3, 3, 9);
 
-        // 1. Tactical AR corner brackets around the entity
-        drawCornerBrackets(gui, cx, cy, halfH, armLen, iffColor);
+        // 1. Tactical AR corner brackets (double-reinforced when marked or directly focused)
+        drawCornerBrackets(gui, cx, cy, halfH, armLen, frameColor);
+        if (expanded) {
+            drawCornerBrackets(gui, cx, cy, halfH + 2, Math.max(2, armLen - 1), frameColor);
+        }
 
-        // 2. Distance + Health + HP Bar cleanly above the top bracket
+        // 2. Health bar & header above the top bracket
+        //    Tier 1 (peripheral): HP only (clean screen)
+        //    Tier 2 (looked at / marked): Distance + HP (+ [LOCK] badge if marked)
         float hp = Math.max(0.0f, target.getHealth());
         float maxHp = Math.max(1.0f, target.getMaxHealth());
         float hpPct = Mth.clamp(hp / maxHp, 0.0f, 1.0f);
 
-        int barW = Math.max(26, halfH * 2);
+        int barW = Math.max(24, halfH * 2);
         int barX = cx - barW / 2;
-        int barY = cy - halfH - 5;
+        int barY = cy - halfH - (expanded ? 7 : 5);
 
         gui.fill(barX - 1, barY - 1, barX + barW + 1, barY + 3, 0xA0080C12);
         int fillW = Math.round(barW * hpPct);
@@ -333,15 +421,23 @@ public class VisionHUDOverlay {
             gui.fill(barX, barY, barX + fillW, barY + 2, barCol);
         }
 
-        String statsLine = String.format("%.1fm | %.0f/%.0f", cand.worldDist, hp, maxHp);
-        float textScale = isPrimary ? 0.66f : 0.58f;
+        String statsLine = expanded
+                ? (isMarked ? String.format("[LOCK] %.1fm | %.0f/%.0f", cand.worldDist, hp, maxHp)
+                : String.format("%.1fm | %.0f/%.0f", cand.worldDist, hp, maxHp))
+                : String.format("%.0f/%.0f", hp, maxHp);
+        float textScale = expanded ? 0.66f : 0.56f;
         int statsW = Math.round(mc.font.width(statsLine) * textScale);
         int statsX = Mth.clamp(cx - statsW / 2, 4, screenW - statsW - 4);
         int statsY = barY - Math.round(9 * textScale) - 1;
         gui.fill(statsX - 2, statsY - 1, statsX + statsW + 2, statsY + Math.round(8 * textScale), 0x88080C12);
-        drawScaledText(gui, mc, statsLine, statsX, statsY, textScale, 0xFFE8F2FF);
+        drawScaledText(gui, mc, statsLine, statsX, statsY, textScale, expanded ? frameColor : 0xFFE8F2FF);
 
-        // 3. Aim / Gaze Vector: projects where the target/player is looking/aiming + [! AIM !] threat alert
+        // Peripheral targets stop here (only AR frame + HP)
+        if (!expanded) {
+            return;
+        }
+
+        // 3. Aim / Gaze Vector (Tier 2 only): projects where the target/player is looking/aiming + [! AIM !] threat alert
         Vec3 targetEyePos = basePos.add(0.0, target.getEyeHeight(), 0.0);
         Vec3 viewVec = target.getViewVector(partialTicks);
         if (viewVec.lengthSqr() > 1.0e-5) {
@@ -384,7 +480,7 @@ public class VisionHUDOverlay {
             }
         }
 
-        // 4. Held Item & Worn Armor Inspector (mini item icons below the bottom bracket)
+        // 4. Held Item & Worn Armor Inspector (Tier 2 only: mini item icons below the bottom bracket + held item name)
         List<ItemStack> gear = new ArrayList<>(6);
         for (EquipmentSlot slot : INSPECT_SLOTS) {
             ItemStack st = target.getItemBySlot(slot);
@@ -392,7 +488,7 @@ public class VisionHUDOverlay {
                 gear.add(st);
             }
         }
-        int bottomY = cy + halfH + 3;
+        int bottomY = cy + halfH + 5;
         if (!gear.isEmpty()) {
             float iconScale = 0.55f;
             int iconStep = 10;
@@ -410,22 +506,19 @@ public class VisionHUDOverlay {
             bottomY += 12;
         }
 
-        // For the primary (closest-to-crosshair) target, also show held item name for instant weapon ID
-        if (isPrimary) {
-            ItemStack held = !target.getMainHandItem().isEmpty() ? target.getMainHandItem() : target.getOffhandItem();
-            if (!held.isEmpty()) {
-                String itemName = held.getHoverName().getString();
-                if (itemName.length() > 24) {
-                    itemName = itemName.substring(0, 22) + "..";
-                }
-                String handLine = "HAND: " + itemName;
-                float hScale = 0.62f;
-                int hW = Math.round(mc.font.width(handLine) * hScale);
-                int hX = Mth.clamp(cx - hW / 2, 4, screenW - hW - 4);
-                int hY = Math.min(screenH - 12, bottomY);
-                gui.fill(hX - 2, hY - 1, hX + hW + 2, hY + Math.round(8 * hScale), 0x99080C12);
-                drawScaledText(gui, mc, handLine, hX, hY, hScale, iffColor);
+        ItemStack held = !target.getMainHandItem().isEmpty() ? target.getMainHandItem() : target.getOffhandItem();
+        if (!held.isEmpty()) {
+            String itemName = held.getHoverName().getString();
+            if (itemName.length() > 24) {
+                itemName = itemName.substring(0, 22) + "..";
             }
+            String handLine = "HAND: " + itemName;
+            float hScale = 0.62f;
+            int hW = Math.round(mc.font.width(handLine) * hScale);
+            int hX = Mth.clamp(cx - hW / 2, 4, screenW - hW - 4);
+            int hY = Math.min(screenH - 12, bottomY);
+            gui.fill(hX - 2, hY - 1, hX + hW + 2, hY + Math.round(8 * hScale), 0x99080C12);
+            drawScaledText(gui, mc, handLine, hX, hY, hScale, frameColor);
         }
     }
 
