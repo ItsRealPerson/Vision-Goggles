@@ -14,9 +14,11 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.AbstractGolem;
@@ -181,7 +183,7 @@ public class VisionHUDOverlay {
         Player player = mc.player;
         if (player == null || mc.level == null) return;
 
-        final double maxRange = 48.0;
+        final double maxRange = getEffectiveDetectionRange(player, 48.0);
         final int maxTargets = 10;
         final float midX = width * 0.5f;
         final float midY = height * 0.5f;
@@ -253,6 +255,25 @@ public class VisionHUDOverlay {
         }
     }
 
+    /**
+     * Returns the effective entity detection radius: full {@code surfaceRange} above water,
+     * reduced underwater ({@code 20m} near surface {@code Y >= 56}, scaling smoothly down to {@code 12m} at {@code Y <= 0}).
+     */
+    public static double getEffectiveDetectionRange(Player player, double surfaceRange) {
+        if (player == null || !player.isEyeInFluid(FluidTags.WATER)) {
+            return surfaceRange;
+        }
+        double y = player.getY();
+        if (y >= 56.0) {
+            return Math.min(surfaceRange, 20.0);
+        }
+        if (y <= 0.0) {
+            return Math.min(surfaceRange, 12.0);
+        }
+        double t = y / 56.0;
+        return Math.min(surfaceRange, 12.0 + t * 8.0);
+    }
+
     private static void renderBiometricEntityAr(
             GuiGraphics gui,
             Minecraft mc,
@@ -320,24 +341,46 @@ public class VisionHUDOverlay {
         gui.fill(statsX - 2, statsY - 1, statsX + statsW + 2, statsY + Math.round(8 * textScale), 0x88080C12);
         drawScaledText(gui, mc, statsLine, statsX, statsY, textScale, 0xFFE8F2FF);
 
-        // 3. Lead / Movement Trajectory Prediction
-        double vx = target.getX() - target.xo;
-        double vy = target.onGround() ? 0.0 : (target.getY() - target.yo);
-        double vz = target.getZ() - target.zo;
-        double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
-        if (speed > 0.035) {
-            double leadTicks = Mth.clamp(Math.max(6.0, cand.worldDist * 0.45), 6.0, 28.0);
-            Vec3 predPos = cand.aimPos.add(vx * leadTicks, vy * leadTicks, vz * leadTicks);
-            float[] predProj = projectWorldToGui(mc, predPos.x, predPos.y, predPos.z, partialTicks);
-            if (predProj != null && predProj[3] >= 0.5f) {
-                int px = Math.round(predProj[0]);
-                int py = Math.round(predProj[1]);
-                float sepSq = (px - cx) * (px - cx) + (py - cy) * (py - cy);
-                if (sepSq >= 36.0f) {
-                    int leadColor = 0xDDFFEE55;
-                    drawDashedLine(gui, cx, cy, px, py, leadColor);
-                    drawLeadMarker(gui, px, py, iffColor, leadColor);
+        // 3. Aim / Gaze Vector: projects where the target/player is looking/aiming + [! AIM !] threat alert
+        Vec3 targetEyePos = basePos.add(0.0, target.getEyeHeight(), 0.0);
+        Vec3 viewVec = target.getViewVector(partialTicks);
+        if (viewVec.lengthSqr() > 1.0e-5) {
+            viewVec = viewVec.normalize();
+            Vec3 aimEndPos = targetEyePos.add(viewVec.scale(3.2));
+            float[] eyeProj = projectWorldToGui(mc, targetEyePos.x, targetEyePos.y, targetEyePos.z, partialTicks);
+            float[] endProj = projectWorldToGui(mc, aimEndPos.x, aimEndPos.y, aimEndPos.z, partialTicks);
+
+            Vec3 toLocalPlayer = mc.player.getEyePosition(partialTicks).subtract(targetEyePos);
+            double aimAtMeDot = toLocalPlayer.lengthSqr() > 1.0e-4 ? viewVec.dot(toLocalPlayer.normalize()) : -1.0;
+            boolean aimedAtMe = (aimAtMeDot > 0.92) || (target instanceof Mob mob && mob.getTarget() == mc.player);
+
+            boolean flashOn = ((System.currentTimeMillis() / 120L) % 2L) == 0L;
+            int lineColor = aimedAtMe
+                    ? (flashOn ? 0xFFFF2222 : 0xFFFF8844)
+                    : (isHostile ? 0xCCFF8844 : 0xCC55EEFF);
+            int markerCore = aimedAtMe ? 0xFFFF2222 : 0xEEFFEE55;
+
+            if (eyeProj != null && endProj != null && eyeProj[3] >= 0.5f && endProj[3] >= 0.5f) {
+                int ex = Math.round(eyeProj[0]);
+                int ey = Math.round(eyeProj[1]);
+                int ax = Math.round(endProj[0]);
+                int ay = Math.round(endProj[1]);
+                float sepSq = (ax - ex) * (ax - ex) + (ay - ey) * (ay - ey);
+                if (sepSq >= 16.0f) {
+                    drawDashedLine(gui, ex, ey, ax, ay, lineColor);
+                    drawLeadMarker(gui, ax, ay, lineColor, markerCore);
                 }
+            }
+
+            if (aimedAtMe) {
+                String warnTag = "[! AIM !]";
+                float wScale = 0.62f;
+                int wW = Math.round(mc.font.width(warnTag) * wScale);
+                int wX = Mth.clamp(cx - wW / 2, 4, screenW - wW - 4);
+                int wY = Math.max(4, statsY - Math.round(9 * wScale) - 1);
+                int warnCol = flashOn ? 0xFFFF2222 : 0xFFFFCC33;
+                gui.fill(wX - 2, wY - 1, wX + wW + 2, wY + Math.round(8 * wScale), 0xB0200404);
+                drawScaledText(gui, mc, warnTag, wX, wY, wScale, warnCol);
             }
         }
 

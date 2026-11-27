@@ -55,7 +55,7 @@ public class SonarRadarModule implements IHudModule {
         gui.fill(centerX - 2, centerY, centerX + 3, centerY + 1, 0x8800FFFF);
         gui.fill(centerX, centerY - 2, centerX + 1, centerY + 3, 0x8800FFFF);
 
-        float maxRange = 32.0f; // Blocks range
+        float maxRange = (float) dev.itsrealperson.vision_goggles.client.VisionHUDOverlay.getEffectiveDetectionRange(player, 32.0); // 32m on land; 20m -> 12m underwater by depth
         
         long time = mc.level.getGameTime();
         if (time % 200 == 0 && lastPingTime != time) {
