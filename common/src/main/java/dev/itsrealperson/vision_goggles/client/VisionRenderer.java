@@ -41,6 +41,7 @@ public class VisionRenderer {
     private static int cachedNbtModeId = -1;
     private static boolean lastOpticsEngaged = false;
     private static boolean opticsSyncedThisFrame = false;
+    private static boolean lastHadExternalOverride = false;
 
     private static boolean zoomActive = false;
     private static boolean zoomLocked = false;
@@ -73,6 +74,10 @@ public class VisionRenderer {
     public static VisionMode getCurrentVisionMode() { return currentVisionMode; }
 
     public static boolean shouldApplyNightVisionLight() {
+        VisionMode ext = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride();
+        if (ext == VisionMode.NIGHT_VISION || ext == VisionMode.THERMAL) {
+            return true;
+        }
         return visorActive && (
                 (currentVisionMode != null && (
                         currentVisionMode == VisionMode.NIGHT_VISION
@@ -96,6 +101,8 @@ public class VisionRenderer {
 
         dev.architectury.event.events.client.ClientPlayerEvent.CLIENT_PLAYER_QUIT.register(player -> {
             Minecraft mc = Minecraft.getInstance();
+            dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.setExternalVisionOverride(null);
+            lastHadExternalOverride = false;
             GogglesEquipAnimator.reset();
             StationWorkAnimator.reset();
             cleanup(mc);
@@ -104,7 +111,19 @@ public class VisionRenderer {
 
     public static void syncOpticsForRenderFrame(Minecraft mc) {
         opticsSyncedThisFrame = true;
-        if (mc == null || mc.player == null || mc.level == null || !cachedHasHelmet) {
+        if (mc == null || mc.player == null || mc.level == null) {
+            return;
+        }
+        VisionMode extOverride = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride();
+        if (extOverride != null) {
+            if (!VisionShaderManager.isShaderActive() || VisionShaderManager.getActiveMode() != extOverride) {
+                VisionShaderManager.enableShader(mc, extOverride);
+            }
+            VisionShaderManager.update(extOverride, 1.0f, false);
+            lastHadExternalOverride = true;
+            return;
+        }
+        if (!cachedHasHelmet) {
             return;
         }
         GogglesFlipAnimator.tickFrame();
@@ -330,9 +349,17 @@ public class VisionRenderer {
             }
             currentZoom = 1.0f / currentZoomFactor;
 
-            // Deterministic shader synchronization (handles mode switch, Hydro wet/dry swap, Lua reload/removal while optics engaged)
-            if (isOpticsOn && expectedShader != null) {
-                boolean needsShaderEnable = !lastFullyDown
+            // Deterministic shader synchronization (handles external scope override, mode switch, Hydro wet/dry swap, Lua reload/removal)
+            VisionMode extOverride = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride();
+            if (extOverride != null) {
+                if (!VisionShaderManager.isShaderActive() || VisionShaderManager.getActiveMode() != extOverride) {
+                    VisionShaderManager.enableShader(mc, extOverride);
+                }
+                VisionShaderManager.update(extOverride, 1.0f, false);
+                lastHadExternalOverride = true;
+            } else if (isOpticsOn && expectedShader != null) {
+                boolean needsShaderEnable = lastHadExternalOverride
+                        || !lastFullyDown
                         || !expectedShader.equals(lastShaderLocation)
                         || !VisionShaderManager.isShaderActive()
                         || !expectedShader.equals(VisionShaderManager.getActiveShaderLocation());
@@ -346,12 +373,16 @@ public class VisionRenderer {
                     lastModeId = nbtModeId;
                 }
                 VisionShaderManager.update(currentVisionMode, currentBatteryPct, damageFlickerTimer > 0);
-            } else if (isOpticsOn) {
-                if (VisionShaderManager.isShaderActive() || lastShaderLocation != null) {
-                    VisionShaderManager.disableShader(mc);
-                    lastShaderLocation = null;
-                    lastModeId = -1;
+                lastHadExternalOverride = false;
+            } else {
+                if (isOpticsOn || lastHadExternalOverride) {
+                    if (VisionShaderManager.isShaderActive() || lastShaderLocation != null) {
+                        VisionShaderManager.disableShader(mc);
+                        lastShaderLocation = null;
+                        lastModeId = -1;
+                    }
                 }
+                lastHadExternalOverride = false;
             }
             lastFullyDown = isOpticsOn;
             lastWasUnderwater = isUnderwater;
@@ -394,8 +425,18 @@ public class VisionRenderer {
                 VisionShaderManager.updateFlashlightState(currentBatteryPct, damageFlickerTimer > 0);
             }
 
-            if (grayscaleEnabled || lastServerActive || VisionShaderManager.isShaderActive()) {
-                cleanup(mc);
+            VisionMode extOverride = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride();
+            if (extOverride != null) {
+                if (!VisionShaderManager.isShaderActive() || VisionShaderManager.getActiveMode() != extOverride) {
+                    VisionShaderManager.enableShader(mc, extOverride);
+                }
+                VisionShaderManager.update(extOverride, 1.0f, false);
+                lastHadExternalOverride = true;
+            } else {
+                if (grayscaleEnabled || lastServerActive || lastHadExternalOverride || VisionShaderManager.isShaderActive()) {
+                    cleanup(mc);
+                }
+                lastHadExternalOverride = false;
             }
         }
 

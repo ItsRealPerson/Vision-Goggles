@@ -43,18 +43,40 @@ public final class VisionGogglesClientAPI {
     private static final List<QueuedIrSpot> QUEUED_IR_SPOTS = new CopyOnWriteArrayList<>();
     private static final List<BiConsumer<GuiGraphics, Float>> HUD_OVERLAY_LAYERS = new CopyOnWriteArrayList<>();
     private static volatile boolean insideFrameLightCallback = false;
+    private static volatile VisionMode externalVisionOverride = null;
 
     private VisionGogglesClientAPI() {
     }
 
-    /** Returns true if the local player's visor is currently down and an optical shader mode is active. */
-    public static boolean isVisionActive() {
-        return VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive();
+    /**
+     * Sets an external optical vision mode override (e.g. from weapon-mounted NVG or FLIR Thermal scopes).
+     * When non-null, Vision Goggles runs its full authentic shader, lightmap, and {@code ThermalMask} pipeline
+     * for that mode without drawing the helmet visor/battery HUD if goggles are not worn.
+     * Pass {@code null} to clear the override and immediately restore the player's normal or goggles state.
+     */
+    public static void setExternalVisionOverride(@org.jetbrains.annotations.Nullable VisionMode mode) {
+        externalVisionOverride = mode;
     }
 
-    /** Returns true if the local player's visor is currently active in Night Vision mode. */
+    /** Returns the active external optical vision mode override, or {@code null} if none is set. */
+    @org.jetbrains.annotations.Nullable
+    public static VisionMode getExternalVisionOverride() {
+        return externalVisionOverride;
+    }
+
+    /** Returns true if the local player's visor is currently down and an optical shader mode is active, or an external override is active. */
+    public static boolean isVisionActive() {
+        return externalVisionOverride != null || (VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive());
+    }
+
+    /** Returns true if the local player's visor or an external optic is currently active in Night Vision mode. */
     public static boolean isNightVisionActive() {
-        return isVisionActive() && VisionRenderer.getCurrentVisionMode() == VisionMode.NIGHT_VISION;
+        VisionMode ext = externalVisionOverride;
+        if (ext != null) {
+            return ext == VisionMode.NIGHT_VISION;
+        }
+        return VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive()
+                && VisionRenderer.getCurrentVisionMode() == VisionMode.NIGHT_VISION;
     }
 
     /** Alias for {@link #isNightVisionActive()}. */
@@ -62,9 +84,13 @@ public final class VisionGogglesClientAPI {
         return isNightVisionActive();
     }
 
-    /** Returns true if the local player's visor is currently active in Thermal mode. */
+    /** Returns true if the local player's visor or an external optic is currently active in Thermal mode. */
     public static boolean isThermalActive() {
-        return (isVisionActive() && VisionRenderer.getCurrentVisionMode() == VisionMode.THERMAL)
+        VisionMode ext = externalVisionOverride;
+        if (ext != null) {
+            return ext == VisionMode.THERMAL;
+        }
+        return (VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive() && VisionRenderer.getCurrentVisionMode() == VisionMode.THERMAL)
                 || (VisionRenderer.isVisorActive() && VisionShaderManager.isThermalShaderActive());
     }
 
@@ -73,23 +99,41 @@ public final class VisionGogglesClientAPI {
         return isThermalActive();
     }
 
-    /** Returns true if the local player's visor is currently active in Biometric mode. */
+    /** Returns true if the local player's visor or an external optic is currently active in Biometric mode. */
     public static boolean isBiometricActive() {
-        return isVisionActive() && VisionRenderer.getCurrentVisionMode() == VisionMode.BIOMETRIC;
+        VisionMode ext = externalVisionOverride;
+        if (ext != null) {
+            return ext == VisionMode.BIOMETRIC;
+        }
+        return VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive()
+                && VisionRenderer.getCurrentVisionMode() == VisionMode.BIOMETRIC;
     }
 
-    /** Returns true if the local player's visor is currently active in Hydro mode. */
+    /** Returns true if the local player's visor or an external optic is currently active in Hydro mode. */
     public static boolean isHydroActive() {
-        return isVisionActive() && VisionRenderer.getCurrentVisionMode() == VisionMode.HYDRO;
+        VisionMode ext = externalVisionOverride;
+        if (ext != null) {
+            return ext == VisionMode.HYDRO;
+        }
+        return VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive()
+                && VisionRenderer.getCurrentVisionMode() == VisionMode.HYDRO;
     }
 
     /** Returns the active {@link VisionMode} on the local client, or null if inactive. */
     public static VisionMode getActiveVisionMode() {
+        VisionMode ext = externalVisionOverride;
+        if (ext != null) {
+            return ext;
+        }
         return VisionRenderer.isVisorActive() ? VisionRenderer.getCurrentVisionMode() : null;
     }
 
     /** Alias for {@link #getActiveVisionMode()}. */
     public static VisionMode getLocalActiveMode() {
+        VisionMode ext = externalVisionOverride;
+        if (ext != null) {
+            return ext;
+        }
         if (!VisionRenderer.isVisorActive()) return null;
         VisionMode mode = VisionShaderManager.getActiveMode();
         return mode != null ? mode : VisionRenderer.getCurrentVisionMode();

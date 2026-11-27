@@ -74,7 +74,9 @@ public class VisionShaderManager {
 
     public static void gunFlash(double x, double y, double z, boolean checkHeld) {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        if (mc.player == null || !VisionRenderer.isVisorActive() || !isNvgOrThermalCustomShaderActive() || isThermalShaderActive()) return;
+        boolean opticsOrExternalNvg = VisionRenderer.isVisorActive()
+                || dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride() == VisionMode.NIGHT_VISION;
+        if (mc.player == null || !opticsOrExternalNvg || !isNvgOrThermalCustomShaderActive() || isThermalShaderActive()) return;
         long now = System.currentTimeMillis();
         if (now - lastGunFlash < 40) return;
         double d = Math.sqrt(mc.player.distanceToSqr(x, y, z));

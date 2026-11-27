@@ -286,9 +286,11 @@ public class ThermalEntityPainter {
             return;
         }
 
-        boolean isThermalMode = VisionRenderer.isVisionModeActive()
-                && (VisionRenderer.getCurrentVisionMode() == VisionMode.THERMAL
-                    || (VisionRenderer.getCurrentVisionMode() == null && VisionShaderManager.isThermalShaderActive()));
+        VisionMode extMode = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionOverride();
+        boolean isThermalMode = (extMode == VisionMode.THERMAL)
+                || (VisionRenderer.isVisionModeActive()
+                    && (VisionRenderer.getCurrentVisionMode() == VisionMode.THERMAL
+                        || (VisionRenderer.getCurrentVisionMode() == null && VisionShaderManager.isThermalShaderActive())));
         if (!isThermalMode) {
             maskValidThisFrame = false;
             return;
