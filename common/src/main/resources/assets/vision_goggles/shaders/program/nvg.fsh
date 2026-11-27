@@ -11,6 +11,7 @@ uniform float focus;
 uniform float Glare;
 uniform float u_DSPActive;
 uniform float AspectRatio;
+uniform float ScopeRadius;
 
 float hashNoise(vec2 p, float t) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -20,13 +21,23 @@ float hashNoise(vec2 p, float t) {
 
 void main() {
     vec2 uv = texCoord;
-    
-    // Ojo de Pez & Optical distance with Aspect Ratio correction
     vec2 center = vec2(0.5, 0.5);
     vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
     float dist = length(aspectVec);
-    vec2 distVec = uv - center;
-    uv = center + distVec * (dist * dist * 0.45 + 0.82);
+
+    // Weapon-mounted NVG scope mode: clip strictly to circular lens aperture and preserve unmodified view outside
+    bool isScopeMode = ScopeRadius > 0.001;
+    vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
+    if (isScopeMode && dist > ScopeRadius + 0.008) {
+        fragColor = rawScene;
+        return;
+    }
+
+    // Ojo de Pez barrel distortion only for full-screen goggles (disabled on weapon scopes for 1:1 reticle alignment)
+    if (!isScopeMode) {
+        vec2 distVec = uv - center;
+        uv = center + distVec * (dist * dist * 0.45 + 0.82);
+    }
 
     // Zoom-dependent distortions
     if (focus > 0.0) {
@@ -71,6 +82,11 @@ void main() {
     }
 
     float lum = dot(baseColor.rgb, vec3(0.3, 0.59, 0.11));
+    // In weapon-scope mode the world lightmap stays naturally dark outside the lens,
+    // so apply Gen-3 optical tube low-light gain strictly inside the circular scope aperture.
+    if (isScopeMode) {
+        lum = pow(clamp(lum, 0.0, 1.0), 0.45) * 1.45 + 0.04;
+    }
     
     // 1. Optical Tube Halation / Bloom around intense light sources (torches, fire, lava)
     float bloom = 0.0;
@@ -126,9 +142,15 @@ void main() {
     // 4. Optical S-Curve Tone Compression (Prevents hard ugly digital clipping)
     visionColor = visionColor / (1.0 + visionColor * 0.25);
 
-    // 5. Dual-stage Military Ocular Vignette
-    float ocularVignette = 1.0 - smoothstep(0.42 - focus * 0.08, 0.69 - focus * 0.14, dist);
-    visionColor *= ocularVignette;
-
-    fragColor = vec4(visionColor * globalAlpha, 1.0);
+    // 5. Dual-stage Military Ocular Vignette (or clean scope aperture clip)
+    if (isScopeMode) {
+        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.35;
+        vec3 scopedColor = visionColor * scopeEdgeVignette * globalAlpha;
+        float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.004, ScopeRadius + 0.006, dist);
+        fragColor = vec4(mix(rawScene.rgb, scopedColor, scopeMask), 1.0);
+    } else {
+        float ocularVignette = 1.0 - smoothstep(0.42 - focus * 0.08, 0.69 - focus * 0.14, dist);
+        visionColor *= ocularVignette;
+        fragColor = vec4(visionColor * globalAlpha, 1.0);
+    }
 }

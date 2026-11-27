@@ -11,6 +11,7 @@ uniform float focus;
 uniform float Interference;
 uniform float u_DSPActive;
 uniform float AspectRatio;
+uniform float ScopeRadius;
 uniform float IrisActive;
 uniform vec2 OutSize;
 
@@ -63,8 +64,20 @@ void main() {
     vec2 center = vec2(0.5, 0.5);
     vec2 aspectVec = vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5);
     float dist = length(aspectVec);
-    vec2 distVec = uv - center;
-    uv = center + distVec * (dist * dist * 0.45 + 0.82);
+
+    // Weapon-mounted FLIR thermal scope mode: clip strictly to circular lens aperture and preserve unmodified view outside
+    bool isScopeMode = ScopeRadius > 0.001;
+    vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
+    if (isScopeMode && dist > ScopeRadius + 0.008) {
+        fragColor = rawScene;
+        return;
+    }
+
+    // Barrel distortion only for full-screen goggles (disabled on weapon scopes so ThermalMask aligns 1:1)
+    if (!isScopeMode) {
+        vec2 distVec = uv - center;
+        uv = center + distVec * (dist * dist * 0.45 + 0.82);
+    }
 
     // Zoom Tightening
     if (focus > 0.0) {
@@ -144,7 +157,7 @@ void main() {
     }
 
     // World Thermal Ironbow calculation
-    float baseTemp = lum * 0.35;
+    float baseTemp = isScopeMode ? (pow(clamp(lum, 0.0, 1.0), 0.60) * 0.35) : (lum * 0.35);
     float finalTemp = clamp(baseTemp + clamp(heatSignal, 0.0, 1.0) * 0.75 - coldSignal * 0.50, 0.0, 1.0);
     vec3 visionColor = ironbow(finalTemp);
 
@@ -214,8 +227,14 @@ void main() {
 
     visionColor -= sin(uv.y * 600.0) * 0.02;
 
-    // Military thermal ocular vignette
-    visionColor *= (1.0 - smoothstep(0.44 - focus * 0.08, 0.70 - focus * 0.14, dist));
-
-    fragColor = vec4(visionColor * globalAlpha, 1.0);
+    // Military thermal ocular vignette (or clean circular scope aperture clip)
+    if (isScopeMode) {
+        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.30;
+        vec3 scopedColor = visionColor * scopeEdgeVignette * globalAlpha;
+        float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.004, ScopeRadius + 0.006, dist);
+        fragColor = vec4(mix(rawScene.rgb, scopedColor, scopeMask), 1.0);
+    } else {
+        visionColor *= (1.0 - smoothstep(0.44 - focus * 0.08, 0.70 - focus * 0.14, dist));
+        fragColor = vec4(visionColor * globalAlpha, 1.0);
+    }
 }

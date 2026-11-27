@@ -785,6 +785,9 @@ public class VisionShaderManager {
             }
         }
 
+        float scopeRadius = dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.getExternalVisionScopeRadius();
+        boolean dspActive = (scopeRadius <= 0.0f) && isDspAvailable();
+
         for (PostPass pass : passes) {
             var shader = pass.getEffect();
             if (isThermalShader && shader.getName() != null
@@ -803,7 +806,8 @@ public class VisionShaderManager {
             if (shader.getUniform("Glare") != null) shader.getUniform("Glare").set(currentGlare + strobeGlarePulse + waterGlareSpike);
             if (shader.getUniform("focus") != null) shader.getUniform("focus").set(focus);
             if (shader.getUniform("AspectRatio") != null) shader.getUniform("AspectRatio").set(aspectRatio);
-            if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(isDspAvailable() ? 1.0f : 0.0f);
+            if (shader.getUniform("ScopeRadius") != null) shader.getUniform("ScopeRadius").set(scopeRadius);
+            if (shader.getUniform("u_DSPActive") != null) shader.getUniform("u_DSPActive").set(dspActive ? 1.0f : 0.0f);
             if (shader.getUniform("IrisActive") != null) shader.getUniform("IrisActive").set(IrisCompat.isShaderPackInUse() ? 1.0f : 0.0f);
         }
 

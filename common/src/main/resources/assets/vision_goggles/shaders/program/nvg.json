@@ -19,6 +19,7 @@
         { "name": "focus", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "Glare", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "AspectRatio", "type": "float", "count": 1, "values": [ 1.0 ] },
+        { "name": "ScopeRadius", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "u_DSPActive", "type": "float", "count": 1, "values": [ 0.0 ] }
     ]
 }

@@ -44,24 +44,39 @@ public final class VisionGogglesClientAPI {
     private static final List<BiConsumer<GuiGraphics, Float>> HUD_OVERLAY_LAYERS = new CopyOnWriteArrayList<>();
     private static volatile boolean insideFrameLightCallback = false;
     private static volatile VisionMode externalVisionOverride = null;
+    private static volatile float externalVisionScopeRadius = 0.0f;
 
     private VisionGogglesClientAPI() {
     }
 
     /**
-     * Sets an external optical vision mode override (e.g. from weapon-mounted NVG or FLIR Thermal scopes).
-     * When non-null, Vision Goggles runs its full authentic shader, lightmap, and {@code ThermalMask} pipeline
-     * for that mode without drawing the helmet visor/battery HUD if goggles are not worn.
-     * Pass {@code null} to clear the override and immediately restore the player's normal or goggles state.
+     * Sets a full-screen external optical vision mode override.
      */
     public static void setExternalVisionOverride(@org.jetbrains.annotations.Nullable VisionMode mode) {
+        setExternalVisionOverride(mode, 0.0f);
+    }
+
+    /**
+     * Sets an external optical vision mode override (e.g. from weapon-mounted NVG or FLIR Thermal scopes).
+     * When {@code scopeRadius > 0.0f}, the shader clips strictly to a centered circular lens aperture
+     * ({@code length(vec2((uv.x - 0.5) * AspectRatio, uv.y - 0.5)) <= scopeRadius}) and leaves the
+     * surrounding view and world lightmap 100% untouched.
+     * Pass {@code null} to clear the override and immediately restore normal or goggles vision.
+     */
+    public static void setExternalVisionOverride(@org.jetbrains.annotations.Nullable VisionMode mode, float scopeRadius) {
         externalVisionOverride = mode;
+        externalVisionScopeRadius = (mode != null && scopeRadius > 0.0f) ? scopeRadius : 0.0f;
     }
 
     /** Returns the active external optical vision mode override, or {@code null} if none is set. */
     @org.jetbrains.annotations.Nullable
     public static VisionMode getExternalVisionOverride() {
         return externalVisionOverride;
+    }
+
+    /** Returns the circular scope mask radius in aspect-corrected Y-normalized units (0.0 = full screen). */
+    public static float getExternalVisionScopeRadius() {
+        return externalVisionOverride != null ? externalVisionScopeRadius : 0.0f;
     }
 
     /** Returns true if the local player's visor is currently down and an optical shader mode is active, or an external override is active. */
