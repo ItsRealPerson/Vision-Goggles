@@ -29,8 +29,27 @@ public class MixinFogRenderer {
                         VisionMode mode = VisionGogglesItem.getActiveVisionMode(helmet);
                         
                         if (mode == VisionMode.HYDRO) {
-                            RenderSystem.setShaderFogStart(viewDistance * 0.5F);
-                            RenderSystem.setShaderFogEnd(viewDistance * 5.0F);
+                            // Depth-dependent underwater visibility: crystal clear near surface (Y>=56 -> ~140m),
+                            // tapering with abyssal depth & pressure down to Y=20 (~75m), Y=0 (~48m), Y<=-40 (~24m).
+                            double y = player.getY();
+                            float fogEnd;
+                            if (y >= 56.0) {
+                                fogEnd = 140.0F;
+                            } else if (y >= 20.0) {
+                                float t = (float) ((y - 20.0) / 36.0);
+                                fogEnd = 75.0F + t * (140.0F - 75.0F);
+                            } else if (y >= 0.0) {
+                                float t = (float) (y / 20.0);
+                                fogEnd = 48.0F + t * (75.0F - 48.0F);
+                            } else if (y > -40.0) {
+                                float t = (float) ((y + 40.0) / 40.0);
+                                fogEnd = 24.0F + t * (48.0F - 24.0F);
+                            } else {
+                                fogEnd = 24.0F;
+                            }
+                            float fogStart = Math.min(fogEnd * 0.22F, 18.0F);
+                            RenderSystem.setShaderFogStart(fogStart);
+                            RenderSystem.setShaderFogEnd(fogEnd);
                         }
                     }
                 }

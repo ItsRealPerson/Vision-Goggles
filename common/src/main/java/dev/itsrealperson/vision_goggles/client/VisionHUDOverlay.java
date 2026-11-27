@@ -15,26 +15,22 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.AbstractGolem;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.npc.Npc;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class VisionHUDOverlay {
@@ -68,7 +64,6 @@ public class VisionHUDOverlay {
         }
 
         renderBiometricTargetLockOn(gui, mc, goggles, partialTicks, width, height);
-        renderHydroSubmergedHud(gui, mc, width, height);
 
         dev.itsrealperson.vision_goggles.client.scripting.LuaClientBridge.onRenderHud(gui, partialTicks);
         dev.itsrealperson.vision_goggles.api.VisionGogglesClientAPI.renderHudOverlayLayers(gui, partialTicks);
@@ -141,6 +136,35 @@ public class VisionHUDOverlay {
         gui.fill(x2, y2 - armLen + 1, x2 + 1, y2 + 1, color);
     }
 
+    private static final EquipmentSlot[] INSPECT_SLOTS = new EquipmentSlot[]{
+            EquipmentSlot.MAINHAND,
+            EquipmentSlot.OFFHAND,
+            EquipmentSlot.HEAD,
+            EquipmentSlot.CHEST,
+            EquipmentSlot.LEGS,
+            EquipmentSlot.FEET
+    };
+
+    private static final class BiometricCandidate {
+        final LivingEntity entity;
+        final float screenX;
+        final float screenY;
+        final float worldDist;
+        final float centerDistSq;
+        final Vec3 aimPos;
+        final float sortScore;
+
+        BiometricCandidate(LivingEntity entity, float screenX, float screenY, float worldDist, float centerDistSq, Vec3 aimPos) {
+            this.entity = entity;
+            this.screenX = screenX;
+            this.screenY = screenY;
+            this.worldDist = worldDist;
+            this.centerDistSq = centerDistSq;
+            this.aimPos = aimPos;
+            this.sortScore = centerDistSq * 0.002f + worldDist;
+        }
+    }
+
     private static void renderBiometricTargetLockOn(GuiGraphics gui, Minecraft mc, ItemStack goggles, float partialTicks, int width, int height) {
         if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != VisionMode.BIOMETRIC) {
             lastBiometricTargetId = -1;
@@ -157,45 +181,88 @@ public class VisionHUDOverlay {
         Player player = mc.player;
         if (player == null || mc.level == null) return;
 
-        double range = 32.0;
-        Vec3 eyePos = player.getEyePosition(partialTicks);
-        Vec3 look = player.getViewVector(partialTicks);
-        Vec3 targetEnd = eyePos.add(look.scale(range));
-        double maxDist = range;
+        final double maxRange = 48.0;
+        final int maxTargets = 10;
+        final float midX = width * 0.5f;
+        final float midY = height * 0.5f;
+        final float lensRadius = Math.min(width, height) * 0.47f;
+        final float lensRadiusSq = lensRadius * lensRadius;
 
-        BlockHitResult blockHit = mc.level.clip(new ClipContext(
-                eyePos, targetEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player
-        ));
-        if (blockHit.getType() == HitResult.Type.BLOCK) {
-            maxDist = eyePos.distanceTo(blockHit.getLocation());
-            targetEnd = blockHit.getLocation();
-        }
-
-        AABB searchBox = player.getBoundingBox().expandTowards(look.scale(maxDist)).inflate(1.0);
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
-                player, eyePos, targetEnd, searchBox,
-                e -> !e.isSpectator() && e.isPickable() && e instanceof LivingEntity,
-                maxDist * maxDist
+        List<LivingEntity> nearby = mc.level.getEntitiesOfClass(
+                LivingEntity.class,
+                player.getBoundingBox().inflate(maxRange),
+                e -> e != player
+                        && e.isAlive()
+                        && !e.isSpectator()
+                        && !e.isInvisible()
+                        && !(e instanceof ArmorStand)
         );
 
-        if (hit == null || !(hit.getEntity() instanceof LivingEntity target)) {
+        List<BiometricCandidate> candidates = new ArrayList<>();
+        for (LivingEntity entity : nearby) {
+            if (!player.hasLineOfSight(entity)) {
+                continue;
+            }
+            Vec3 basePos = entity.getPosition(partialTicks);
+            Vec3 aimPos = basePos.add(0.0, entity.getBbHeight() * 0.55, 0.0);
+            float[] proj = projectWorldToGui(mc, aimPos.x, aimPos.y, aimPos.z, partialTicks);
+            if (proj == null || proj[3] < 0.5f) {
+                continue;
+            }
+            float sx = proj[0];
+            float sy = proj[1];
+            float dist = proj[2];
+            if (dist > maxRange) {
+                continue;
+            }
+            float dx = sx - midX;
+            float dy = sy - midY;
+            float centerDistSq = dx * dx + dy * dy;
+            if (centerDistSq > lensRadiusSq) {
+                continue;
+            }
+            candidates.add(new BiometricCandidate(entity, sx, sy, dist, centerDistSq, aimPos));
+        }
+
+        if (candidates.isEmpty()) {
             lastBiometricTargetId = -1;
             return;
         }
 
+        candidates.sort(Comparator.comparingDouble(c -> c.sortScore));
+        int count = Math.min(maxTargets, candidates.size());
+
+        // Primary target = closest to crosshair (within 75px)
+        BiometricCandidate primary = candidates.get(0);
+        boolean primaryFocused = primary.centerDistSq <= (75.0f * 75.0f);
         long now = System.currentTimeMillis();
-        if (target.getId() != lastBiometricTargetId) {
-            lastBiometricTargetId = target.getId();
-            biometricLockStartMs = now;
-            mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 1.55F, 0.25F));
+        if (primaryFocused) {
+            if (primary.entity.getId() != lastBiometricTargetId) {
+                lastBiometricTargetId = primary.entity.getId();
+                biometricLockStartMs = now;
+                mc.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.BLIP.get(), 1.55F, 0.22F));
+            }
+        } else {
+            lastBiometricTargetId = -1;
         }
 
-        float lockAnim = Mth.clamp((now - biometricLockStartMs) / 220.0f, 0.0f, 1.0f);
-        int midX = width / 2;
-        int midY = height / 2;
+        for (int i = count - 1; i >= 0; i--) {
+            BiometricCandidate cand = candidates.get(i);
+            boolean isPrimary = (i == 0);
+            renderBiometricEntityAr(gui, mc, cand, isPrimary, partialTicks, width, height);
+        }
+    }
 
-        boolean isUndead = target.getMobType() == MobType.UNDEAD;
-        boolean isConstruct = target instanceof AbstractGolem;
+    private static void renderBiometricEntityAr(
+            GuiGraphics gui,
+            Minecraft mc,
+            BiometricCandidate cand,
+            boolean isPrimary,
+            float partialTicks,
+            int screenW,
+            int screenH
+    ) {
+        LivingEntity target = cand.entity;
         boolean isHostile = target instanceof Enemy || target instanceof Monster
                 || (target instanceof NeutralMob neutral && neutral.isAngry());
         boolean isFriendly = (target instanceof Player)
@@ -203,80 +270,150 @@ public class VisionHUDOverlay {
                 || (target instanceof TamableAnimal tamable && tamable.isTame())
                 || (target instanceof AbstractGolem && !isHostile);
 
-        String iffTag;
         int iffColor;
         if (isHostile) {
-            iffTag = "[HOSTIL]";
             iffColor = 0xFFFF3B3B; // Tactical Red
         } else if (isFriendly) {
-            iffTag = (target instanceof Player) ? "[JUGADOR]" : "[ALIADO]";
             iffColor = 0xFF22EEAA; // Cyan / Emerald Green
         } else {
-            iffTag = "[NEUTRAL]";
             iffColor = 0xFFFFAA22; // Tactical Amber
         }
 
-        int retHalf = Math.round(17.0f - lockAnim * 6.0f);
-        drawCornerBrackets(gui, midX, midY, retHalf, 4, iffColor);
+        Vec3 basePos = target.getPosition(partialTicks);
+        float[] topProj = projectWorldToGui(mc, basePos.x, basePos.y + target.getBbHeight() + 0.12, basePos.z, partialTicks);
+        float[] botProj = projectWorldToGui(mc, basePos.x, basePos.y - 0.05, basePos.z, partialTicks);
 
+        int cx = Math.round(cand.screenX);
+        int cy = Math.round(cand.screenY);
+        int halfH = 12;
+        if (topProj != null && botProj != null) {
+            halfH = Mth.clamp(Math.round(Math.abs(botProj[1] - topProj[1]) * 0.5f), 8, 34);
+        } else {
+            halfH = Mth.clamp(Math.round(180.0f / Math.max(3.0f, cand.worldDist)), 8, 30);
+        }
+        int armLen = Mth.clamp(halfH / 3, 3, 9);
+
+        // 1. Tactical AR corner brackets around the entity
+        drawCornerBrackets(gui, cx, cy, halfH, armLen, iffColor);
+
+        // 2. Distance + Health + HP Bar cleanly above the top bracket
         float hp = Math.max(0.0f, target.getHealth());
         float maxHp = Math.max(1.0f, target.getMaxHealth());
         float hpPct = Mth.clamp(hp / maxHp, 0.0f, 1.0f);
-        int armor = target.getArmorValue();
-        double dist = eyePos.distanceTo(target.position().add(0, target.getBbHeight() * 0.5, 0));
 
-        String vitalStatus;
-        int vitalColor;
-        if (isUndead) {
-            vitalStatus = "BPM: 0 [NECROTICO]";
-            vitalColor = 0xFFCC66FF;
-        } else if (isConstruct) {
-            vitalStatus = "BPM: -- [SINTETICO]";
-            vitalColor = 0xFF66DDFF;
-        } else {
-            int baseBpm = isHostile ? 98 : 72;
-            int stressBpm = Math.round((1.0f - hpPct) * 68.0f) + (target.hurtTime > 0 ? 24 : 0);
-            int jitter = (int) Math.round(Math.sin(now * 0.008 + target.getId()) * 3.0);
-            int bpm = Mth.clamp(baseBpm + stressBpm + jitter, 45, 210);
-            String stateLabel = hpPct < 0.25f ? "CRITICO" : (hpPct < 0.60f ? "HERIDO" : "ESTABLE");
-            vitalStatus = String.format("♥ %d BPM [%s]", bpm, stateLabel);
-            vitalColor = hpPct < 0.25f ? 0xFFFF4444 : (hpPct < 0.60f ? 0xFFFFCC33 : 0xFF55FF88);
-        }
+        int barW = Math.max(26, halfH * 2);
+        int barX = cx - barW / 2;
+        int barY = cy - halfH - 5;
 
-        String titleLine = iffTag + " " + target.getName().getString();
-        String hpLine = String.format("HP: %.1f / %.1f  ARM: %d", hp, maxHp, armor);
-        String distLine = String.format("DIST: %.1fm  |  %s", dist, vitalStatus);
-
-        float scale = 0.72f;
-        int wTitle = Math.round(mc.font.width(titleLine) * scale);
-        int wHp = Math.round(mc.font.width(hpLine) * scale);
-        int wDist = Math.round(mc.font.width(distLine) * scale);
-        int cardW = Math.max(124, Math.max(wTitle, Math.max(wHp, wDist)) + 12);
-        int cardH = 38;
-        int cardX = Math.min(width - cardW - 6, midX + 16);
-        int cardY = midY - cardH / 2;
-
-        // Tactical dark panel with IFF accent bar
-        gui.fill(cardX, cardY, cardX + cardW, cardY + cardH, 0xB8090D14);
-        gui.fill(cardX, cardY, cardX + 2, cardY + cardH, iffColor);
-        gui.fill(cardX + 2, cardY, cardX + cardW, cardY + 1, 0x55FFFFFF & iffColor | 0x44000000);
-
-        // Scaled text rendering
-        drawScaledText(gui, mc, titleLine, cardX + 6, cardY + 4, scale, iffColor);
-
-        // Health bar
-        int barX = cardX + 6;
-        int barY = cardY + 13;
-        int barW = cardW - 12;
-        gui.fill(barX, barY, barX + barW, barY + 4, 0xAA182028);
+        gui.fill(barX - 1, barY - 1, barX + barW + 1, barY + 3, 0xA0080C12);
         int fillW = Math.round(barW * hpPct);
         int barCol = hpPct < 0.25f ? 0xFFFF3333 : (hpPct < 0.60f ? 0xFFFFBB22 : iffColor);
         if (fillW > 0) {
-            gui.fill(barX, barY, barX + fillW, barY + 4, barCol);
+            gui.fill(barX, barY, barX + fillW, barY + 2, barCol);
         }
 
-        drawScaledText(gui, mc, hpLine, cardX + 6, cardY + 20, 0.68f, 0xFFE6EEF8);
-        drawScaledText(gui, mc, distLine, cardX + 6, cardY + 28, 0.66f, vitalColor);
+        String statsLine = String.format("%.1fm | %.0f/%.0f", cand.worldDist, hp, maxHp);
+        float textScale = isPrimary ? 0.66f : 0.58f;
+        int statsW = Math.round(mc.font.width(statsLine) * textScale);
+        int statsX = Mth.clamp(cx - statsW / 2, 4, screenW - statsW - 4);
+        int statsY = barY - Math.round(9 * textScale) - 1;
+        gui.fill(statsX - 2, statsY - 1, statsX + statsW + 2, statsY + Math.round(8 * textScale), 0x88080C12);
+        drawScaledText(gui, mc, statsLine, statsX, statsY, textScale, 0xFFE8F2FF);
+
+        // 3. Lead / Movement Trajectory Prediction
+        double vx = target.getX() - target.xo;
+        double vy = target.onGround() ? 0.0 : (target.getY() - target.yo);
+        double vz = target.getZ() - target.zo;
+        double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        if (speed > 0.035) {
+            double leadTicks = Mth.clamp(Math.max(6.0, cand.worldDist * 0.45), 6.0, 28.0);
+            Vec3 predPos = cand.aimPos.add(vx * leadTicks, vy * leadTicks, vz * leadTicks);
+            float[] predProj = projectWorldToGui(mc, predPos.x, predPos.y, predPos.z, partialTicks);
+            if (predProj != null && predProj[3] >= 0.5f) {
+                int px = Math.round(predProj[0]);
+                int py = Math.round(predProj[1]);
+                float sepSq = (px - cx) * (px - cx) + (py - cy) * (py - cy);
+                if (sepSq >= 36.0f) {
+                    int leadColor = 0xDDFFEE55;
+                    drawDashedLine(gui, cx, cy, px, py, leadColor);
+                    drawLeadMarker(gui, px, py, iffColor, leadColor);
+                }
+            }
+        }
+
+        // 4. Held Item & Worn Armor Inspector (mini item icons below the bottom bracket)
+        List<ItemStack> gear = new ArrayList<>(6);
+        for (EquipmentSlot slot : INSPECT_SLOTS) {
+            ItemStack st = target.getItemBySlot(slot);
+            if (!st.isEmpty()) {
+                gear.add(st);
+            }
+        }
+        int bottomY = cy + halfH + 3;
+        if (!gear.isEmpty()) {
+            float iconScale = 0.55f;
+            int iconStep = 10;
+            int totalW = gear.size() * iconStep - 1;
+            int startX = Mth.clamp(cx - totalW / 2, 4, screenW - totalW - 4);
+            gui.fill(startX - 2, bottomY - 1, startX + totalW + 2, bottomY + 10, 0x88080C12);
+            for (int g = 0; g < gear.size(); g++) {
+                int ix = startX + g * iconStep;
+                gui.pose().pushPose();
+                gui.pose().translate(ix, bottomY, 0.0f);
+                gui.pose().scale(iconScale, iconScale, 1.0f);
+                gui.renderItem(gear.get(g), 0, 0);
+                gui.pose().popPose();
+            }
+            bottomY += 12;
+        }
+
+        // For the primary (closest-to-crosshair) target, also show held item name for instant weapon ID
+        if (isPrimary) {
+            ItemStack held = !target.getMainHandItem().isEmpty() ? target.getMainHandItem() : target.getOffhandItem();
+            if (!held.isEmpty()) {
+                String itemName = held.getHoverName().getString();
+                if (itemName.length() > 24) {
+                    itemName = itemName.substring(0, 22) + "..";
+                }
+                String handLine = "HAND: " + itemName;
+                float hScale = 0.62f;
+                int hW = Math.round(mc.font.width(handLine) * hScale);
+                int hX = Mth.clamp(cx - hW / 2, 4, screenW - hW - 4);
+                int hY = Math.min(screenH - 12, bottomY);
+                gui.fill(hX - 2, hY - 1, hX + hW + 2, hY + Math.round(8 * hScale), 0x99080C12);
+                drawScaledText(gui, mc, handLine, hX, hY, hScale, iffColor);
+            }
+        }
+    }
+
+    private static void drawDashedLine(GuiGraphics gui, int x0, int y0, int x1, int y1, int color) {
+        int dx = x1 - x0;
+        int dy = y1 - y0;
+        int steps = Math.max(Math.abs(dx), Math.abs(dy));
+        if (steps <= 0) return;
+        float incX = dx / (float) steps;
+        float incY = dy / (float) steps;
+        float x = x0;
+        float y = y0;
+        for (int i = 0; i <= steps; i++) {
+            if ((i % 6) < 3) {
+                int px = Math.round(x);
+                int py = Math.round(y);
+                gui.fill(px, py, px + 1, py + 1, color);
+            }
+            x += incX;
+            y += incY;
+        }
+    }
+
+    private static void drawLeadMarker(GuiGraphics gui, int px, int py, int accentColor, int coreColor) {
+        // Compact tactical diamond + center crosshair (⊕) at predicted intercept point
+        gui.fill(px - 3, py, px + 4, py + 1, coreColor);
+        gui.fill(px, py - 3, px + 1, py + 4, coreColor);
+        gui.fill(px - 2, py - 2, px - 1, py - 1, accentColor);
+        gui.fill(px + 2, py - 2, px + 3, py - 1, accentColor);
+        gui.fill(px - 2, py + 2, px - 1, py + 3, accentColor);
+        gui.fill(px + 2, py + 2, px + 3, py + 3, accentColor);
     }
 
     public static void drawScaledText(GuiGraphics gui, Minecraft mc, String text, int x, int y, float scale, int color) {
@@ -285,36 +422,6 @@ public class VisionHUDOverlay {
         gui.pose().scale(scale, scale, 1.0f);
         gui.drawString(mc.font, text, 0, 0, color, true);
         gui.pose().popPose();
-    }
-
-    private static void renderHydroSubmergedHud(GuiGraphics gui, Minecraft mc, int width, int height) {
-        if (!VisionRenderer.isVisionModeActive() || VisionRenderer.getCurrentVisionMode() != VisionMode.HYDRO) {
-            return;
-        }
-        Player player = mc.player;
-        if (player == null || !player.isInWater()) {
-            return;
-        }
-
-        int airTicks = Math.max(0, player.getAirSupply());
-        int maxAirTicks = Math.max(1, player.getMaxAirSupply());
-        // With 2x O2 rebreather while eyes are submerged, effective remaining seconds double
-        int effectiveSeconds = Math.round((airTicks * 2.0f) / 20.0f);
-        float airPct = Mth.clamp((float) airTicks / (float) maxAirTicks, 0.0f, 1.0f);
-
-        String hudLine = String.format("REBREATHER: 2x O2 (%ds) | HYDRO-PROP: +20%% | AQUA-MINE", effectiveSeconds);
-        float scale = 0.75f;
-        int textW = Math.round(mc.font.width(hudLine) * scale);
-        int boxW = textW + 12;
-        int boxH = 14;
-        int boxX = (width - boxW) / 2;
-        int boxY = height - 56;
-
-        int accentColor = airPct < 0.25f ? 0xFFFF5555 : 0xFF22EEFF;
-        gui.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xA806141C);
-        gui.fill(boxX, boxY, boxX + 2, boxY + boxH, accentColor);
-        gui.fill(boxX + boxW - 2, boxY, boxX + boxW, boxY + boxH, accentColor);
-        drawScaledText(gui, mc, hudLine, boxX + 6, boxY + 4, scale, accentColor);
     }
 
     private static void renderWaterShortCircuitOverlay(GuiGraphics gui, Minecraft mc, int width, int height) {
