@@ -367,6 +367,12 @@ public class ModularGogglesItem extends VisionGogglesItem {
             return new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.PROGRAMMABLE_MODULE.get());
         }
 
+        // 3b. External addon module registered via VisionGogglesAPI
+        net.minecraft.world.item.Item addonItem = dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.getRegisteredAddonModuleItem(moduleId);
+        if (addonItem != null) {
+            return new ItemStack(addonItem);
+        }
+
         // 4. Custom Lua script module
         ItemStack prog = new ItemStack(dev.itsrealperson.vision_goggles.registry.ModItems.PROGRAMMABLE_MODULE.get());
         String name = gogglesTag != null ? gogglesTag.getString("mod_name_" + moduleId) : null;
@@ -417,6 +423,11 @@ public class ModularGogglesItem extends VisionGogglesItem {
                 tooltipComponents.add(Component.literal("- ").append(Component.translatable("item.vision_goggles." + utilName + "_module")).withStyle(ChatFormatting.YELLOW));
             }
             for (String customId : customModules) {
+                net.minecraft.world.item.Item addonItem = dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.getRegisteredAddonModuleItem(customId);
+                if (addonItem != null) {
+                    tooltipComponents.add(Component.literal("- ").append(addonItem.getDescription()).withStyle(ChatFormatting.AQUA));
+                    continue;
+                }
                 String name = tag != null && tag.contains("mod_name_" + customId) ? tag.getString("mod_name_" + customId) : customId;
                 if (ModConstants.ID_PROGRAMMABLE.equals(customId)) {
                     name = Component.translatable("item.vision_goggles.programmable_module.blank").getString();

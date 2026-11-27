@@ -68,9 +68,94 @@ public class VisionGogglesItem extends Item implements GeoItem, CustomReequipIte
     }
 
     public boolean hasModule(ItemStack stack, String moduleName) {
-        // Por defecto, las gafas especializadas pueden tener ciertos módulos integrados
-        // o simplemente no tener soporte para módulos adicionales.
+        if (stack == null || stack.isEmpty() || moduleName == null || moduleName.isEmpty()) {
+            return false;
+        }
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            net.minecraft.nbt.ListTag modules = tag.getList(ModConstants.TAG_MODULES, net.minecraft.nbt.Tag.TAG_STRING);
+            String strippedReq = moduleName.contains(":") ? moduleName.substring(moduleName.indexOf(':') + 1) : moduleName;
+            for (int i = 0; i < modules.size(); i++) {
+                String mod = modules.getString(i);
+                if (mod.equalsIgnoreCase(moduleName)) {
+                    return true;
+                }
+                String strippedMod = mod.contains(":") ? mod.substring(mod.indexOf(':') + 1) : mod;
+                if (strippedMod.equalsIgnoreCase(strippedReq)) {
+                    return true;
+                }
+            }
+        }
         return false;
+    }
+
+    public boolean canInstallAddonModule(ItemStack stack, String moduleId) {
+        if (stack == null || stack.isEmpty() || moduleId == null || moduleId.isBlank()) {
+            return false;
+        }
+        return !hasModule(stack, moduleId);
+    }
+
+    public void installAddonModule(ItemStack stack, String moduleId) {
+        if (!canInstallAddonModule(stack, moduleId)) {
+            return;
+        }
+        CompoundTag nbt = stack.getOrCreateTag();
+        net.minecraft.nbt.ListTag modules = nbt.getList(ModConstants.TAG_MODULES, net.minecraft.nbt.Tag.TAG_STRING);
+        modules.add(net.minecraft.nbt.StringTag.valueOf(moduleId));
+        nbt.put(ModConstants.TAG_MODULES, modules);
+    }
+
+    public String getLastInstalledAddonModule(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            net.minecraft.nbt.ListTag modules = tag.getList(ModConstants.TAG_MODULES, net.minecraft.nbt.Tag.TAG_STRING);
+            for (int i = modules.size() - 1; i >= 0; i--) {
+                String mod = modules.getString(i);
+                if (dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.isRegisteredAddonModule(mod)) {
+                    return mod;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean removeAddonModule(ItemStack stack, String moduleId) {
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            net.minecraft.nbt.ListTag modules = tag.getList(ModConstants.TAG_MODULES, net.minecraft.nbt.Tag.TAG_STRING);
+            String strippedReq = moduleId.contains(":") ? moduleId.substring(moduleId.indexOf(':') + 1) : moduleId;
+            for (int i = modules.size() - 1; i >= 0; i--) {
+                String mod = modules.getString(i);
+                String strippedMod = mod.contains(":") ? mod.substring(mod.indexOf(':') + 1) : mod;
+                if (mod.equalsIgnoreCase(moduleId) || strippedMod.equalsIgnoreCase(strippedReq)) {
+                    modules.remove(i);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable Level level, List<net.minecraft.network.chat.Component> tooltipComponents, net.minecraft.world.item.TooltipFlag isAdvanced) {
+        super.appendHoverText(stack, level, tooltipComponents, isAdvanced);
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(ModConstants.TAG_MODULES)) {
+            net.minecraft.nbt.ListTag modules = tag.getList(ModConstants.TAG_MODULES, net.minecraft.nbt.Tag.TAG_STRING);
+            boolean headerAdded = false;
+            for (int i = 0; i < modules.size(); i++) {
+                String mod = modules.getString(i);
+                Item addonItem = dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.getRegisteredAddonModuleItem(mod);
+                if (addonItem != null) {
+                    if (!headerAdded) {
+                        tooltipComponents.add(net.minecraft.network.chat.Component.translatable("tooltip.vision_goggles.installed_modules").withStyle(net.minecraft.ChatFormatting.GRAY));
+                        headerAdded = true;
+                    }
+                    tooltipComponents.add(net.minecraft.network.chat.Component.literal("- ").append(addonItem.getDescription()).withStyle(net.minecraft.ChatFormatting.AQUA));
+                }
+            }
+        }
     }
 
     public static VisionMode getActiveVisionMode(ItemStack stack) {

@@ -320,6 +320,13 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                     this.items.set(2, extracted);
                     return;
                 }
+            } else if (slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem goggles) {
+                String lastAddon = goggles.getLastInstalledAddonModule(slot0);
+                if (lastAddon != null) {
+                    ItemStack extracted = ModularGogglesItem.createModuleItemFromId(lastAddon, slot0.getTag());
+                    this.items.set(2, extracted);
+                    return;
+                }
             }
             this.items.set(2, ItemStack.EMPTY);
             return;
@@ -374,15 +381,15 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             }
         }
 
-        // SCENARIO 3: Installing Module into Modular Goggles (works in either slot!)
+        // SCENARIO 3: Installing Module into Modular Goggles or External Addon Module into any Vision Goggles
         if (newOutput.isEmpty()) {
             ItemStack gogglesStack = ItemStack.EMPTY;
             ItemStack moduleStack = ItemStack.EMPTY;
 
-            if (slot0.getItem() instanceof ModularGogglesItem) {
+            if (slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
                 gogglesStack = slot0;
                 moduleStack = slot1;
-            } else if (slot1.getItem() instanceof ModularGogglesItem) {
+            } else if (slot1.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem) {
                 gogglesStack = slot1;
                 moduleStack = slot0;
             }
@@ -433,6 +440,14 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
                         newOutput = result;
                     }
                 }
+            } else if (!gogglesStack.isEmpty() && gogglesStack.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem visionGoggles) {
+                String addonModuleId = dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.getRegisteredAddonModuleId(moduleStack.getItem());
+                if (addonModuleId != null && visionGoggles.canInstallAddonModule(gogglesStack, addonModuleId)) {
+                    ItemStack result = gogglesStack.copy();
+                    result.setCount(1);
+                    visionGoggles.installAddonModule(result, addonModuleId);
+                    newOutput = result;
+                }
             }
         }
 
@@ -442,6 +457,13 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
     private static java.util.Map<net.minecraft.world.item.Item, String> MODULE_MAP = null;
 
     private String getModuleIdFromStack(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return null;
+        }
+        String addonId = dev.itsrealperson.vision_goggles.api.VisionGogglesAPI.getRegisteredAddonModuleId(stack.getItem());
+        if (addonId != null) {
+            return addonId;
+        }
         if (stack.getItem() instanceof VisionModuleItem visionModule) {
             return visionModule.getVisionMode().getModuleLocation().toString();
         }
@@ -493,6 +515,11 @@ public class ModificationStationBlockEntity extends BlockEntity implements World
             String lastMod = modular.getLastInstalledModule(slot0);
             if (lastMod != null) {
                 modular.removeModule(slot0, lastMod);
+            }
+        } else if (slot1.isEmpty() && slot0.getItem() instanceof dev.itsrealperson.vision_goggles.item.VisionGogglesItem goggles) {
+            String lastAddon = goggles.getLastInstalledAddonModule(slot0);
+            if (lastAddon != null) {
+                goggles.removeAddonModule(slot0, lastAddon);
             }
         } else {
             // Ensamblaje, reparación o grabado de firmware: consumir entradas correspondientes

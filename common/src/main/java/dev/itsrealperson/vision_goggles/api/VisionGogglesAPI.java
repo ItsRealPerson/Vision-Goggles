@@ -13,6 +13,7 @@ import dev.itsrealperson.vision_goggles.util.VisionMode;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collections;
@@ -27,6 +28,8 @@ public final class VisionGogglesAPI {
     public static final String MOD_ID = "vision_goggles";
 
     private static final Map<String, String> EXTERNAL_LUA_SCRIPTS = new ConcurrentHashMap<>();
+    private static final Map<Item, String> ADDON_MODULE_ITEMS = new ConcurrentHashMap<>();
+    private static final Map<String, Item> ADDON_MODULE_BY_ID = new ConcurrentHashMap<>();
 
     private VisionGogglesAPI() {
     }
@@ -120,7 +123,8 @@ public final class VisionGogglesAPI {
     }
 
     /**
-     * Attempts to install a module into a {@link ModularGogglesItem} stack if compatible and capacity permits.
+     * Attempts to install a module into a {@link ModularGogglesItem} stack (or a registered addon
+     * module into any {@link VisionGogglesItem}) if compatible and capacity permits.
      *
      * @return true if the module was newly installed, false otherwise.
      */
@@ -135,7 +139,52 @@ public final class VisionGogglesAPI {
             modular.installModule(stack, moduleId);
             return modular.hasModule(stack, moduleId);
         }
+        if (stack.getItem() instanceof VisionGogglesItem goggles && isRegisteredAddonModule(moduleId)) {
+            if (!goggles.canInstallAddonModule(stack, moduleId)) {
+                return false;
+            }
+            goggles.installAddonModule(stack, moduleId);
+            return goggles.hasModule(stack, moduleId);
+        }
         return false;
+    }
+
+    /**
+     * Registers an external addon module item so it can be installed into and extracted from
+     * Vision Goggles in the Modification Station and displayed by its localized item name.
+     */
+    public static void registerAddonModule(Item item, String moduleId) {
+        if (item == null || moduleId == null || moduleId.isBlank()) {
+            return;
+        }
+        String cleanId = moduleId.trim();
+        ADDON_MODULE_ITEMS.put(item, cleanId);
+        ADDON_MODULE_BY_ID.put(cleanId, item);
+        if (cleanId.contains(":")) {
+            ADDON_MODULE_BY_ID.putIfAbsent(cleanId.substring(cleanId.indexOf(':') + 1), item);
+        }
+    }
+
+    public static String getRegisteredAddonModuleId(Item item) {
+        return item == null ? null : ADDON_MODULE_ITEMS.get(item);
+    }
+
+    public static Item getRegisteredAddonModuleItem(String moduleId) {
+        if (moduleId == null || moduleId.isBlank()) {
+            return null;
+        }
+        Item direct = ADDON_MODULE_BY_ID.get(moduleId);
+        if (direct != null) {
+            return direct;
+        }
+        if (moduleId.contains(":")) {
+            return ADDON_MODULE_BY_ID.get(moduleId.substring(moduleId.indexOf(':') + 1));
+        }
+        return null;
+    }
+
+    public static boolean isRegisteredAddonModule(String moduleId) {
+        return getRegisteredAddonModuleItem(moduleId) != null;
     }
 
     /** Returns true if the player has an active Tactical Flashlight or active Modular Flashlight module. */

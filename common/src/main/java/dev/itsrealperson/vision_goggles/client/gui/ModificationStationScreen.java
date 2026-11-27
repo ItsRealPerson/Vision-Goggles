@@ -27,10 +27,13 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
 
     private static final int GUI_W = 176;
     private static final int GUI_H = 188;
+    private static final int MAX_UNPAGINATED_BLUEPRINTS = 7;
+    private static final int PAGINATED_VISIBLE_BLUEPRINTS = 6;
 
     private Button btnAssembleTab;
     private Button btnModifyTab;
     private Button btnAssembleAction;
+    private int blueprintOffset = 0;
 
     public ModificationStationScreen(ModificationStationMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -61,7 +64,53 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         this.btnAssembleAction = this.addRenderableWidget(
                 new WorkstationButton(x + 6, y + 77, GUI_W - 12, 14, Component.translatable("gui.vision_goggles.button.assemble"), b -> triggerFinalizeAssembly(), false)
         );
+        ensureActiveBlueprintVisible();
         updateButtonStates();
+    }
+
+    private static boolean isBlueprintRackPaginated(int total) {
+        return total > MAX_UNPAGINATED_BLUEPRINTS;
+    }
+
+    private static int getVisibleBlueprintCount(int total) {
+        return isBlueprintRackPaginated(total) ? PAGINATED_VISIBLE_BLUEPRINTS : total;
+    }
+
+    private static int getMaxBlueprintOffset(int total) {
+        return Math.max(0, total - getVisibleBlueprintCount(total));
+    }
+
+    private static int getBlueprintButtonX(int guiX, int visibleSlot, boolean paginated) {
+        return paginated ? (guiX + 20 + visibleSlot * 23) : (guiX + 6 + visibleSlot * 24);
+    }
+
+    private void clampBlueprintOffset(int total) {
+        int max = getMaxBlueprintOffset(total);
+        if (this.blueprintOffset < 0) this.blueprintOffset = 0;
+        if (this.blueprintOffset > max) this.blueprintOffset = max;
+    }
+
+    private void ensureActiveBlueprintVisible() {
+        List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
+        if (!isBlueprintRackPaginated(all.size())) {
+            this.blueprintOffset = 0;
+            return;
+        }
+        StationBlueprints.Blueprint active = getSelectedBlueprint(getStation());
+        int activeIdx = 0;
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).id().equals(active.id())) {
+                activeIdx = i;
+                break;
+            }
+        }
+        int visible = getVisibleBlueprintCount(all.size());
+        if (activeIdx < this.blueprintOffset) {
+            this.blueprintOffset = activeIdx;
+        } else if (activeIdx >= this.blueprintOffset + visible) {
+            this.blueprintOffset = activeIdx - visible + 1;
+        }
+        clampBlueprintOffset(all.size());
     }
 
     @Override
@@ -134,15 +183,37 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             ModificationStationBlockEntity station = getStation();
             boolean busy = (station != null && station.isAssembling());
 
-            // 1. Blueprint selector row (7 icons across top)
+            // 1. Blueprint selector row (paginated with < / > arrows when > 7 blueprints)
             if (button == 0 && !busy) {
                 List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
-                for (int i = 0; i < all.size(); i++) {
-                    int bx = this.leftPos + 6 + i * 24;
-                    int by = this.topPos + 24;
+                boolean paginated = isBlueprintRackPaginated(all.size());
+                clampBlueprintOffset(all.size());
+                int by = this.topPos + 24;
+
+                if (paginated) {
+                    int maxOffset = getMaxBlueprintOffset(all.size());
+                    if (mouseX >= this.leftPos + 6 && mouseX < this.leftPos + 18 && mouseY >= by && mouseY < by + 18) {
+                        if (this.blueprintOffset > 0) {
+                            this.blueprintOffset--;
+                        }
+                        return true;
+                    }
+                    if (mouseX >= this.leftPos + 158 && mouseX < this.leftPos + 170 && mouseY >= by && mouseY < by + 18) {
+                        if (this.blueprintOffset < maxOffset) {
+                            this.blueprintOffset++;
+                        }
+                        return true;
+                    }
+                }
+
+                int visible = getVisibleBlueprintCount(all.size());
+                for (int slot = 0; slot < visible; slot++) {
+                    int idx = this.blueprintOffset + slot;
+                    if (idx >= all.size()) break;
+                    int bx = getBlueprintButtonX(this.leftPos, slot, paginated);
                     if (mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18) {
                         NetworkManager.INSTANCE.sendToServer(
-                                new AssembleBlueprintPacket(this.menu.getStationPos(), AssembleBlueprintPacket.Action.SELECT_BLUEPRINT, all.get(i).id(), i)
+                                new AssembleBlueprintPacket(this.menu.getStationPos(), AssembleBlueprintPacket.Action.SELECT_BLUEPRINT, all.get(idx).id(), idx)
                         );
                         return true;
                     }
@@ -183,6 +254,21 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (this.menu.getCurrentTab() == ModificationStationMenu.TAB_ASSEMBLE) {
+            List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
+            if (isBlueprintRackPaginated(all.size())
+                    && mouseX >= this.leftPos + 5 && mouseX < this.leftPos + GUI_W - 5
+                    && mouseY >= this.topPos + 23 && mouseY < this.topPos + 43) {
+                this.blueprintOffset += (delta > 0 ? -1 : 1);
+                clampBlueprintOffset(all.size());
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
@@ -242,13 +328,30 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
         StationBlueprints.Blueprint activeBp = getSelectedBlueprint(station);
         List<ItemStack> staged = (station != null) ? station.getStagedItems() : Collections.emptyList();
 
-        // 1. Recessed Blueprint Rack (7 blueprints across top)
+        // 1. Recessed Blueprint Rack (paginated with < / > arrows when > 7 blueprints)
         drawRecessedBox(guiGraphics, x + 5, y + 23, GUI_W - 10, 20, 0xFF1A1D22);
         List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
-        for (int i = 0; i < all.size(); i++) {
-            StationBlueprints.Blueprint bp = all.get(i);
-            int bx = x + 6 + i * 24;
-            int by = y + 24;
+        boolean paginated = isBlueprintRackPaginated(all.size());
+        clampBlueprintOffset(all.size());
+        int by = y + 24;
+
+        if (paginated) {
+            int maxOffset = getMaxBlueprintOffset(all.size());
+            boolean canLeft = this.blueprintOffset > 0;
+            boolean canRight = this.blueprintOffset < maxOffset;
+            boolean hoverLeft = mouseX >= x + 6 && mouseX < x + 18 && mouseY >= by && mouseY < by + 18;
+            boolean hoverRight = mouseX >= x + 158 && mouseX < x + 170 && mouseY >= by && mouseY < by + 18;
+
+            drawPageArrowButton(guiGraphics, x + 6, by, "<", canLeft, hoverLeft);
+            drawPageArrowButton(guiGraphics, x + 158, by, ">", canRight, hoverRight);
+        }
+
+        int visible = getVisibleBlueprintCount(all.size());
+        for (int slot = 0; slot < visible; slot++) {
+            int idx = this.blueprintOffset + slot;
+            if (idx >= all.size()) break;
+            StationBlueprints.Blueprint bp = all.get(idx);
+            int bx = getBlueprintButtonX(x, slot, paginated);
             boolean selected = bp.id().equals(activeBp.id());
             boolean hovered = mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18;
             if (selected) {
@@ -341,11 +444,16 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
     private void renderExtraTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (this.menu.getCurrentTab() != ModificationStationMenu.TAB_ASSEMBLE) return;
         List<StationBlueprints.Blueprint> all = StationBlueprints.getAll();
-        for (int i = 0; i < all.size(); i++) {
-            int bx = this.leftPos + 6 + i * 24;
-            int by = this.topPos + 24;
+        boolean paginated = isBlueprintRackPaginated(all.size());
+        clampBlueprintOffset(all.size());
+        int visible = getVisibleBlueprintCount(all.size());
+        int by = this.topPos + 24;
+        for (int slot = 0; slot < visible; slot++) {
+            int idx = this.blueprintOffset + slot;
+            if (idx >= all.size()) break;
+            int bx = getBlueprintButtonX(this.leftPos, slot, paginated);
             if (mouseX >= bx && mouseX < bx + 22 && mouseY >= by && mouseY < by + 18) {
-                guiGraphics.renderTooltip(this.font, all.get(i).createDefaultResult(), mouseX, mouseY);
+                guiGraphics.renderTooltip(this.font, all.get(idx).createDefaultResult(), mouseX, mouseY);
                 return;
             }
         }
@@ -365,6 +473,19 @@ public class ModificationStationScreen extends AbstractContainerScreen<Modificat
                 guiGraphics.renderTooltip(this.font, lines, java.util.Optional.empty(), mouseX, mouseY);
                 return;
             }
+        }
+    }
+
+    private void drawPageArrowButton(GuiGraphics guiGraphics, int bx, int by, String symbol, boolean enabled, boolean hovered) {
+        if (enabled) {
+            int body = hovered ? 0xFF3A414C : 0xFF282D35;
+            int light = hovered ? 0xFF677182 : 0xFF474E5A;
+            drawBevelPanel(guiGraphics, bx, by, 12, 18, body, light, 0xFF16181D, 0xFF0E1012);
+            int textCol = hovered ? 0xFFFFFFFF : 0xFFD0D8E2;
+            guiGraphics.drawCenteredString(this.font, symbol, bx + 6, by + 5, textCol);
+        } else {
+            drawRecessedBox(guiGraphics, bx, by, 12, 18, 0xFF1D2025);
+            guiGraphics.drawCenteredString(this.font, symbol, bx + 6, by + 5, 0xFF4D545E);
         }
     }
 
