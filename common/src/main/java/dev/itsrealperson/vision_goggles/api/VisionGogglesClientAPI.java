@@ -79,6 +79,11 @@ public final class VisionGogglesClientAPI {
         return externalVisionOverride != null ? externalVisionScopeRadius : 0.0f;
     }
 
+    /** Alias for {@link #getExternalVisionScopeRadius()}. */
+    public static float getExternalScopeRadius() {
+        return getExternalVisionScopeRadius();
+    }
+
     /** Returns true if the local player's visor is currently down and an optical shader mode is active, or an external override is active. */
     public static boolean isVisionActive() {
         return externalVisionOverride != null || (VisionRenderer.isVisorActive() && VisionRenderer.isVisionModeActive());

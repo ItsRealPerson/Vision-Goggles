@@ -798,15 +798,14 @@ public class VisionShaderManager {
                 int skyDarken = mc.level.getSkyDarken();
                 int rawSky = mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, eyePos);
                 int rawBlock = mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, eyePos);
-                if (mc.level.isNight() || skyDarken >= 4) {
-                    // At night / under True Darkness, ignore residual sky light so the outer periphery stays genuinely dark
-                    float blockAmb = Math.max(0.0f, Math.min(1.0f, rawBlock / 15.0f));
-                    scopeOuterDim = 0.012f + 0.22f * (blockAmb * blockAmb * blockAmb);
+                if (mc.level.isNight() || skyDarken >= 4 || rawBlock == 0 && rawSky == 0) {
+                    // Pure black (0.0) outside the scope lens at night / under True Darkness
+                    scopeOuterDim = 0.0f;
                 } else {
                     float skyAmb = Math.max(0.0f, Math.min(1.0f, (rawSky - skyDarken) / 15.0f));
                     float blockAmb = Math.max(0.0f, Math.min(1.0f, rawBlock / 15.0f));
                     float ambient = Math.max(skyAmb, blockAmb);
-                    scopeOuterDim = 0.012f + 0.988f * (ambient * ambient);
+                    scopeOuterDim = (ambient <= 0.25f) ? 0.0f : (ambient * ambient);
                 }
             }
         }

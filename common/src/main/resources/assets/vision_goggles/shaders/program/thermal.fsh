@@ -83,7 +83,7 @@ void main() {
             oNvg *= (1.0 - smoothstep(0.42, 0.69, dist));
             fragColor = vec4(oNvg, 1.0);
         } else {
-            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
+            vec3 outerDark = (ScopeOuterDim <= 0.001) ? vec3(0.0) : (pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim);
             fragColor = vec4(outerDark, 1.0);
         }
         return;
@@ -258,7 +258,7 @@ void main() {
             oNvg *= (1.0 - smoothstep(0.42, 0.69, dist));
             fragColor = vec4(mix(oNvg, scopedColor, scopeMask), 1.0);
         } else {
-            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
+            vec3 outerDark = (ScopeOuterDim <= 0.001) ? vec3(0.0) : (pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim);
             fragColor = vec4(mix(outerDark, scopedColor, scopeMask), 1.0);
         }
     } else {

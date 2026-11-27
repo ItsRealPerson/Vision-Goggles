@@ -34,7 +34,7 @@ void main() {
     bool keepGogglesOuter = isScopeMode && (GogglesOuterMode > 0.5);
     vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
     if (isScopeMode && !keepGogglesOuter && dist > ScopeRadius + 0.012) {
-        vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
+        vec3 outerDark = (ScopeOuterDim <= 0.001) ? vec3(0.0) : (pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim);
         fragColor = vec4(outerDark, 1.0);
         return;
     }
@@ -153,7 +153,7 @@ void main() {
             vec3 outerNvg = visionColor * ocularVignette * globalAlpha;
             fragColor = vec4(mix(outerNvg, scopedColor, scopeMask), 1.0);
         } else {
-            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
+            vec3 outerDark = (ScopeOuterDim <= 0.001) ? vec3(0.0) : (pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim);
             fragColor = vec4(mix(outerDark, scopedColor, scopeMask), 1.0);
         }
     } else {
