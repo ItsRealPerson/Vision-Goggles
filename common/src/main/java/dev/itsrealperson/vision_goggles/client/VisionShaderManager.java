@@ -795,11 +795,19 @@ public class VisionShaderManager {
                 gogglesOuterMode = (gMode == VisionMode.THERMAL) ? 2.0f : 1.0f;
             } else if (mc.player != null && mc.level != null) {
                 net.minecraft.core.BlockPos eyePos = net.minecraft.core.BlockPos.containing(mc.player.getEyePosition());
-                int skyLight = Math.max(0, mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, eyePos) - mc.level.getSkyDarken());
-                int blockLight = mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, eyePos);
-                float ambient = Math.max(0.0f, Math.min(1.0f, Math.max(skyLight, blockLight) / 15.0f));
-                // Keep outer periphery dark at night/caves (blocking free vanilla NVG under True Darkness), normal in daylight
-                scopeOuterDim = 0.07f + 0.93f * (ambient * ambient);
+                int skyDarken = mc.level.getSkyDarken();
+                int rawSky = mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, eyePos);
+                int rawBlock = mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, eyePos);
+                if (mc.level.isNight() || skyDarken >= 4) {
+                    // At night / under True Darkness, ignore residual sky light so the outer periphery stays genuinely dark
+                    float blockAmb = Math.max(0.0f, Math.min(1.0f, rawBlock / 15.0f));
+                    scopeOuterDim = 0.012f + 0.22f * (blockAmb * blockAmb * blockAmb);
+                } else {
+                    float skyAmb = Math.max(0.0f, Math.min(1.0f, (rawSky - skyDarken) / 15.0f));
+                    float blockAmb = Math.max(0.0f, Math.min(1.0f, rawBlock / 15.0f));
+                    float ambient = Math.max(skyAmb, blockAmb);
+                    scopeOuterDim = 0.012f + 0.988f * (ambient * ambient);
+                }
             }
         }
 

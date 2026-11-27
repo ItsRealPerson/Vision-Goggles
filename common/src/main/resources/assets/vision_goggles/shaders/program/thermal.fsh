@@ -75,7 +75,7 @@ void main() {
     bool keepThermalOuter = isScopeMode && (GogglesOuterMode > 1.5);
     bool keepNvgOuter = isScopeMode && (GogglesOuterMode > 0.5 && GogglesOuterMode <= 1.5);
     vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
-    if (isScopeMode && !keepThermalOuter && dist > ScopeRadius + 0.008) {
+    if (isScopeMode && !keepThermalOuter && dist > ScopeRadius + 0.012) {
         if (keepNvgOuter) {
             float oLum = dot(rawScene.rgb, vec3(0.3, 0.59, 0.11));
             vec3 oNvg = vec3(oLum * 0.08, oLum * 1.0, oLum * 0.12) * 1.5;
@@ -83,7 +83,7 @@ void main() {
             oNvg *= (1.0 - smoothstep(0.42, 0.69, dist));
             fragColor = vec4(oNvg, 1.0);
         } else {
-            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
             fragColor = vec4(outerDark, 1.0);
         }
         return;
@@ -245,9 +245,9 @@ void main() {
 
     // Military thermal ocular vignette (or clean circular scope aperture clip)
     if (isScopeMode) {
-        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.28;
+        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.78, ScopeRadius, dist) * 0.40;
         vec3 scopedColor = visionColor * scopeEdgeVignette * globalAlpha;
-        float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.004, ScopeRadius + 0.006, dist);
+        float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.010, ScopeRadius + 0.010, dist);
         if (keepThermalOuter) {
             float ocularVignette = 1.0 - smoothstep(0.44 - focus * 0.08, 0.70 - focus * 0.14, dist);
             fragColor = vec4(mix(visionColor * ocularVignette * globalAlpha, scopedColor, scopeMask), 1.0);
@@ -258,7 +258,7 @@ void main() {
             oNvg *= (1.0 - smoothstep(0.42, 0.69, dist));
             fragColor = vec4(mix(oNvg, scopedColor, scopeMask), 1.0);
         } else {
-            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
             fragColor = vec4(mix(outerDark, scopedColor, scopeMask), 1.0);
         }
     } else {

@@ -33,8 +33,8 @@ void main() {
     bool isScopeMode = ScopeRadius > 0.001;
     bool keepGogglesOuter = isScopeMode && (GogglesOuterMode > 0.5);
     vec4 rawScene = isScopeMode ? texture(DiffuseSampler, texCoord) : vec4(0.0);
-    if (isScopeMode && !keepGogglesOuter && dist > ScopeRadius + 0.008) {
-        vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+    if (isScopeMode && !keepGogglesOuter && dist > ScopeRadius + 0.012) {
+        vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
         fragColor = vec4(outerDark, 1.0);
         return;
     }
@@ -145,15 +145,15 @@ void main() {
 
     // 5. Dual-stage Military Ocular Vignette (or clean scope aperture clip)
     if (isScopeMode) {
-        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.84, ScopeRadius, dist) * 0.30;
+        float scopeEdgeVignette = 1.0 - smoothstep(ScopeRadius * 0.78, ScopeRadius, dist) * 0.42;
         vec3 scopedColor = visionColor * (keepGogglesOuter ? 1.12 : 1.0) * scopeEdgeVignette * globalAlpha;
-        float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.004, ScopeRadius + 0.006, dist);
+        float scopeMask = 1.0 - smoothstep(ScopeRadius - 0.010, ScopeRadius + 0.010, dist);
         if (keepGogglesOuter) {
             float ocularVignette = 1.0 - smoothstep(0.42 - focus * 0.08, 0.69 - focus * 0.14, dist);
             vec3 outerNvg = visionColor * ocularVignette * globalAlpha;
             fragColor = vec4(mix(outerNvg, scopedColor, scopeMask), 1.0);
         } else {
-            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.35)) * ScopeOuterDim;
+            vec3 outerDark = pow(max(rawScene.rgb, vec3(0.0)), vec3(1.65)) * ScopeOuterDim;
             fragColor = vec4(mix(outerDark, scopedColor, scopeMask), 1.0);
         }
     } else {
