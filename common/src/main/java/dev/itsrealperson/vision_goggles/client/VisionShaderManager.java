@@ -795,17 +795,23 @@ public class VisionShaderManager {
                 gogglesOuterMode = (gMode == VisionMode.THERMAL) ? 2.0f : 1.0f;
             } else if (mc.player != null && mc.level != null) {
                 net.minecraft.core.BlockPos eyePos = net.minecraft.core.BlockPos.containing(mc.player.getEyePosition());
-                int skyDarken = mc.level.getSkyDarken();
+                // Note: 0-arg mc.level.getSkyDarken() & isNight() stay 0/false on ClientLevel!
+                // Use getSkyDarken(1.0f) (1.0=noon, 0.2=midnight) + getDayTime() % 24000L for true client night detection.
+                float clientSkyFactor = mc.level.getSkyDarken(1.0f);
+                long dayTime = Math.floorMod(mc.level.getDayTime(), 24000L);
                 int rawSky = mc.level.getBrightness(net.minecraft.world.level.LightLayer.SKY, eyePos);
                 int rawBlock = mc.level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, eyePos);
-                if (mc.level.isNight() || skyDarken >= 4 || rawBlock == 0 && rawSky == 0) {
-                    // Pure black (0.0) outside the scope lens at night / under True Darkness
+                boolean isClientNight = (clientSkyFactor <= 0.45f)
+                        || (dayTime >= 12500L && dayTime <= 23500L)
+                        || !mc.level.dimensionType().hasSkyLight();
+                if (isClientNight || (rawSky <= 4 && rawBlock <= 4)) {
+                    // Pure black (0.0) outside the scope lens at night / in dark caves / under True Darkness
                     scopeOuterDim = 0.0f;
                 } else {
-                    float skyAmb = Math.max(0.0f, Math.min(1.0f, (rawSky - skyDarken) / 15.0f));
+                    float skyAmb = Math.max(0.0f, Math.min(1.0f, (rawSky / 15.0f) * clientSkyFactor));
                     float blockAmb = Math.max(0.0f, Math.min(1.0f, rawBlock / 15.0f));
                     float ambient = Math.max(skyAmb, blockAmb);
-                    scopeOuterDim = (ambient <= 0.25f) ? 0.0f : (ambient * ambient);
+                    scopeOuterDim = (ambient <= 0.30f) ? 0.0f : (ambient * ambient);
                 }
             }
         }
